@@ -1,0 +1,13 @@
+name = "RenewalDiD"
+uuid = "168ba0f3-27c8-4f61-a62a-678154ba4d3f"
+authors = ["Mark Pritchard <mark.pritchard@ndm.ox.ac.uk>"]
+version = "1.0.0-DEV"
+
+[compat]
+julia = "1.6.7"
+
+[extras]
+Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
+
+[targets]
+test = ["Test"]
