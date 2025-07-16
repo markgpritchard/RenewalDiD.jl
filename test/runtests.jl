@@ -222,27 +222,29 @@ end
         @test RenewalDiD._diagnosis(100, 0.5, 0.5, 1) == 50
         @test_throws ArgumentError RenewalDiD._diagnosis(100, 0.5, 1, 1)
         @test RenewalDiD._diagnosis(100, 1, 0.5, 1) == 100
-        @test seirrates([0, 0, 0, 0, 1, 0], 1, 0, 0, 0, 0) == [0, 0, 0, 0, 0]
-        @test_throws ArgumentError seirrates([0, 0, 0, 0, 1, 0, 0], 1, 0, 0, 0, 0) 
-        @test seirrates(
+        @test RenewalDiD._seirrates([0, 0, 0, 0, 1, 0], 1, 0, 0, 0, 0) == [0, 0, 0, 0, 0]
+        @test_throws ArgumentError RenewalDiD._seirrates(
+            [0, 0, 0, 0, 1, 0, 0], 1, 0, 0, 0, 0
+        ) 
+        @test RenewalDiD._seirrates(
             [10_000, 0, 500, 0, 9500, 0], 1, 0.5, 0, 0, 0
         ) == [125, 0, 0, 0, 0]
-        @test seirrates(
+        @test RenewalDiD._seirrates(
             [10_000, 0, 500, 500, 9000, 0], 1, 0.5, 0, 0, 0
         ) == [250, 0, 0, 0, 0]
-        @test seirrates(
+        @test RenewalDiD._seirrates(
             [10_000, 1000, 500, 500, 8000, 0], 1, 0.5, 0, 0, 0
         ) == [250, 0, 0, 0, 0]
-        @test seirrates(
+        @test RenewalDiD._seirrates(
             [10_000, 1000, 500, 500, 8000, 0], 1, 0.5, 0.5, 0, 0
         ) == [250, 500, 0, 0, 0]
-        @test seirrates(
+        @test RenewalDiD._seirrates(
             [10_000, 1000, 1000, 0, 8000, 0], 1, 0.5, 0.5, 0.4, 0
         ) == [250, 500, 0, 400, 0]
-        @test seirrates(
+        @test RenewalDiD._seirrates(
             [10_000, 1000, 1000, 1000, 7000, 0], 1, nothing, 0.5, 0.4, 0
         ) == [0, 500, 0, 400, 400]
-        @test seirrates(
+        @test RenewalDiD._seirrates(
             [10_000, 1000, 1000, 0, 8000, 0], 1, 0.5, 0.5, 0.4, 0.5
         ) == [250, 500, 400, 400, 0]
     end
@@ -267,18 +269,18 @@ end
         RenewalDiD._updateevent!(u1, 5)
         @test u1 == [99, 100, 99, 100, 102, 1]
         u2 = [1, 0, 0, 1, 0, 0]
-        simulateday!(StableRNG(1), u2, 1, 0, 0, 0, 0)
+        RenewalDiD._simulateday!(StableRNG(1), u2, 1, 0, 0, 0, 0)
         @test u2 == [1, 0, 0, 1, 0, 0]
-        simulateday!(StableRNG(1), u2, 1, 100, 0, 0, 0)
+        RenewalDiD._simulateday!(StableRNG(1), u2, 1, 100, 0, 0, 0)
         @test u2 == [0, 1, 0, 1, 0, 0]
         u3 = [0, 1, 0, 0, 0, 0]
-        simulateday!(StableRNG(1), u3, 1, 0, 1000, 0, 0)
+        RenewalDiD._simulateday!(StableRNG(1), u3, 1, 0, 1000, 0, 0)
         @test u3 == [0, 0, 1, 0, 0, 0]
         u4 = [0, 0, 1, 0, 0, 0]
-        simulateday!(StableRNG(1), u4, 1, 0, 0, 1, 0.999)
+        RenewalDiD._simulateday!(StableRNG(1), u4, 1, 0, 0, 1, 0.999)
         @test u4 == [0, 0, 0, 1, 0, 1]
         u5 = [0, 0, 1, 1, 0, 0]
-        simulateday!(StableRNG(1), u5, 1, 0, 0, 10, 0)
+        RenewalDiD._simulateday!(StableRNG(1), u5, 1, 0, 0, 10, 0)
         @test u5 == [0, 0, 0, 0, 2, 0]
         @test_throws ArgumentError runsimulation(
             [100, 10, 50, 30, 60], 20, 0.5, 0.5, 0.4, 0.5
