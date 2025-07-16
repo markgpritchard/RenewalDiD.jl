@@ -71,7 +71,36 @@ function vectorg_seir(gamma, sigma=automatic; t_max::Integer=28)
     return [_g_seir(t, gamma, sigma) for t in 0:1:t_max]
 end
 
-function generationtime(v::AbstractVector, t::Integer)
+function generationtime(t::Integer; func=automatic, vec=automatic, kwargs...)
+    return _generationtime(func, vec, t; kwargs...)
+end
+
+generationtime(f_or_v, t::Integer; kwargs...) = _generationtime(f_or_v, t; kwargs...)
+
+function _generationtime(func, ::Automatic, t::Integer; kwargs...)
+    return _generationtime(func, t; kwargs...)
+end
+
+function _generationtime(::Automatic, vec, t::Integer; kwargs...)
+    return _generationtime(vec, t; kwargs...)
+end
+
+function _generationtime(::Automatic, ::Automatic, ::Integer; kwargs...)
+    throw(ArgumentError("""
+        a function or vector must be passed as either a positional or keyword argument
+    """))
+end
+
+function _generationtime(func, vec, ::Integer; kwargs...)
+    throw(ArgumentError("only one of the `func`, `vec` keyword arguments may be used"))
+end
+
+function _generationtime(f::Function, t::Integer; t_max=automatic, kwargs...)
+    _testgenerationtime(f, t_max; kwargs...)
+    return __generationtime(f, t, t_max; kwargs...)
+end
+
+function _generationtime(v::AbstractVector, t::Integer)
     _testgenerationtime(v)
     if t < 0 || t >= length(v)
         return zero(v[1])
@@ -80,24 +109,19 @@ function generationtime(v::AbstractVector, t::Integer)
     end
 end
 
-function generationtime(f::Function, t::Integer; t_max=automatic)
-    _testgenerationtime(f, t_max)
-    _generationtime(f, t, t_max)
-end
-
-function _generationtime(f::Function, t::Integer, ::Automatic)
+function __generationtime(f::Function, t::Integer, ::Automatic; kwargs...)
     if t < 0 
-        return zero(f(0))
+        return zero(f(0; kwargs...))
     else
-        return f(t)
+        return f(t; kwargs...)
     end
 end
 
-function _generationtime(f::Function, t::Integer, t_max::Integer)
+function __generationtime(f::Function, t::Integer, t_max::Integer; kwargs...)
     if t < 0 || t > t_max
-        return zero(f(0))
+        return zero(f(0; kwargs...))
     else
-        return f(t)
+        return f(t; kwargs...)
     end
 end
 
@@ -109,10 +133,12 @@ function _testgenerationtime(v::AbstractVector)
     )
 end
 
-_testgenerationtime(f::Function, ::Automatic) = _testgenerationtime(f, 1000)
+function _testgenerationtime(f::Function, ::Automatic; kwargs...)
+    return _testgenerationtime(f, 1000; kwargs...)
+end
 
-function _testgenerationtime(f::Function, t_max::Integer)
-    v = [f(x) for x in 0:1:t_max]
+function _testgenerationtime(f::Function, t_max::Integer; kwargs...)
+    v = [f(x; kwargs...) for x in 0:1:t_max]
     return __testgenerationtime(
         v,
         "all values of f(x) must be positive (tested on x ∈ {0, 1, …, $t_max})",

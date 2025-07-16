@@ -124,7 +124,7 @@ using StableRNGs
         O4 = "5×3 InterventionMatrix{Float64}\n time │   1    2    3\n──────┼───────────────\n    1 │ 0.0  0.0  0.0\n    2 │ 1.0  0.0  0.0\n    3 │ 1.0  1.0  0.0\n    ⋮ │   ⋮    ⋮    ⋮\n    5 │ 1.0  1.0  0.0\n"
         @test repr("text/plain", M4) == O4
     end
-end
+end  # @testset "intervention matrix"
 
 @testset "generation interval" begin
     @test g_covid(0) == 0
@@ -181,7 +181,7 @@ end
         @test generationtime(v4, 2) == g_seir(2; gamma=0.4)
         @test generationtime(v4, 12) == 0
     end
-end
+end  # @testset "generation interval"
 
 @testset "simulations" begin
     @testset "parameters" begin
@@ -207,8 +207,8 @@ end
         @test RenewalDiD._foi(x -> x == 2 ? 1 : 0, 1, 1, 10, 2) == 0.2
     end
     @testset "event rates" begin
-        @test RenewalDiD._infections(0, 50, 1, 1, 100, 1) == 0
-        @test RenewalDiD._infections(1, 50, 1, 1, 100, 1) == 1
+        @test RenewalDiD._simulatedinfections(0, 50, 1, 1, 100, 1) == 0
+        @test RenewalDiD._simulatedinfections(1, 50, 1, 1, 100, 1) == 1
         @test RenewalDiD._diseaseprogression(0, 0, 1) == 0
         @test RenewalDiD._diseaseprogression(10_000, 0.1, 1) == 1000
         @test RenewalDiD._diseaseprogression(10_000, x -> x == 1 ? 1 : 0, 1) == 10_000
@@ -282,19 +282,21 @@ end
         u5 = [0, 0, 1, 1, 0, 0]
         RenewalDiD._simulateday!(StableRNG(1), u5, 1, 0, 0, 10, 0)
         @test u5 == [0, 0, 0, 0, 2, 0]
+    end
+    @testset "run whole simulation" begin
         @test_throws ArgumentError runsimulation(
-            [100, 10, 50, 30, 60], 20, 0.5, 0.5, 0.4, 0.5
+            20, [100, 10, 50, 30, 60], 0.5, 0.5, 0.4, 0.5
         )
         @test_throws MethodError runsimulation(
-            [100, 10, 50, 30, 60, 0], 20.2, 0.5, 0.5, 0.4, 0.5
+            20.2, [100, 10, 50, 30, 60, 0], 0.5, 0.5, 0.4, 0.5
         )
         @test_throws ErrorException runsimulation(
-            [100, 10, 50, 30, 60, 0], 20, x -> 0.5 - 0.1 * x, 0.5, 0.4, 0.5
+            20, [100, 10, 50, 30, 60, 0], x -> 0.5 - 0.1 * x, 0.5, 0.4, 0.5
         )
         @test_throws ArgumentError runsimulation(
-            [100, 10, 50, 30, 60, 0], 20, 1.5, 0.5, 0.4, x -> 0.5 + 0.1 * x
+            20, [100, 10, 50, 30, 60, 0], 1.5, 0.5, 0.4, x -> 0.5 + 0.1 * x
         )
-        S1 = runsimulation(StableRNG(1), [100, 10, 50, 30, 60, 0], 20,  0, 0.5, 0.4, 0.5)
+        S1 = runsimulation(StableRNG(1), 20, [100, 10, 50, 30, 60, 0], 0, 0.5, 0.4, 0.5)
         @test S1 == [
             100  10  50  30   60   0
             100   7  24  34   85  13
@@ -318,7 +320,7 @@ end
             100   0   0   0  150  24
             100   0   0   0  150  24
         ]
-        S2 = runsimulation(StableRNG(1), [100, 10, 50, 30, 60, 0], 20,  0.5, 0.5, 0.4, 0.5)
+        S2 = runsimulation(StableRNG(1), 20, [100, 10, 50, 30, 60, 0], 0.5, 0.5, 0.4, 0.5)
         @test S2 == [
             100  10  50  30   60   0
              90  16  23  33   88  16
@@ -342,7 +344,253 @@ end
              53   0   1   0  196  54
              52   1   1   0  196  54
         ]
+        @test simulationcases(zeros(10, 6)) == zeros(10)
+        @test simulationcases(zeros(12, 6)) == zeros(12)
+        @test_throws ArgumentError simulationcases(zeros(12, 4))
+        SC1 = [
+             0
+            13
+             4
+             3
+             2
+             1
+             1
+             0
+             0
+             0
+             0
+             0
+             0
+             0
+             0
+             0
+             0
+             0
+             0
+             0
+             0
+        ]
+        @test simulationcases(S1) == SC1
+        @test simulationcases(
+            StableRNG(1), 20, [100, 10, 50, 30, 60, 0], 0, 0.5, 0.4, 0.5
+        ) == SC1
+        SC2 = simulationcases(20, [100, 10, 50, 30, 60, 0], 0.5, 0.5, 0.4, 0.5)
+        @test SC2 isa Vector{Int}
+        @test length(SC2) == 21
     end 
-end
+end  # @testset "simulations"
+
+@testset "fitting parameters" begin
+    @test RenewalDiD._ntimes(zeros(2, 3)) == 2
+    @test RenewalDiD._ntimes(zeros(3, 2)) == 3
+    M1 = InterventionMatrix(4, [2, 3, nothing]) 
+    @test RenewalDiD._ntimes(M1) == 4
+    @test RenewalDiD._ngroups(zeros(2, 3)) == 3
+    @test RenewalDiD._ngroups(zeros(3, 2)) == 2
+    @test RenewalDiD._ngroups(M1) == 3
+    @test_throws MethodError RenewalDiD._ntimes(zeros(2))
+    @test_throws MethodError RenewalDiD._ngroups(zeros(2))
+    @test RenewalDiD._gammavec(0, 1, zeros(3)) == zeros(3)
+    @test RenewalDiD._gammavec(0, 1, zeros(4)) == zeros(4)
+    @test RenewalDiD._gammavec(1, 1, zeros(3)) == ones(3)
+    @test RenewalDiD._gammavec(1, 1, [1, -1, 0]) == [2, 0, 1]
+    @test RenewalDiD._gammavec(1, 0.5, [1, -1, 0]) == [1.5, 0.5, 1]
+    @test RenewalDiD._thetavec(0, zeros(3), 1) == zeros(4)
+    @test RenewalDiD._thetavec(0, zeros(4), 1) == zeros(5)
+    @test RenewalDiD._thetavec(1, zeros(3), 1) == ones(4)
+    @test RenewalDiD._thetavec(1, ones(3), 1) == [1, 2, 3, 4]
+    @test RenewalDiD._thetavec(1, ones(3), 0.5) == [1, 1.5, 2, 2.5]
+    @test RenewalDiD._thetavec(1, [-2.5, 0.5, 0.5], 0.5) == [1, -0.25, 0, 0.25]
+    @test RenewalDiD._predictedlogR_0(0, zeros(3), zeros(4), 0, M1) == zeros(4, 3)
+    M2 = InterventionMatrix(5, [nothing, nothing]; mutewarnings=true) 
+    @test RenewalDiD._predictedlogR_0(0, zeros(2), zeros(5), 2, M2) == zeros(5, 2)
+    @test_throws DimensionMismatch RenewalDiD._predictedlogR_0(0, zeros(2), zeros(4), 0, M1)
+    @test_throws DimensionMismatch RenewalDiD._predictedlogR_0(0, zeros(3), zeros(3), 0, M1)
+    @test RenewalDiD._predictedlogR_0(1, zeros(3), zeros(4), 0, M1) == ones(4, 3)
+    @test RenewalDiD._predictedlogR_0(1, [-1, 0, 1], zeros(4), 0, M1) == [
+        0  1  2
+        0  1  2
+        0  1  2
+        0  1  2
+    ]
+    @test RenewalDiD._predictedlogR_0(1, [-1, 0, 1], [-1, 0.5, 2.5, 0], 0, M1) == [
+        -1    0    1
+         0.5  1.5  2.5
+         2.5  3.5  4.5
+         0    1    2
+    ]
+    @test RenewalDiD._predictedlogR_0(1, [-1, 0, 1], [-1, 0.5, 2.5, 0], -1, M1) == [
+        -1    0    1
+        -0.5  1.5  2.5
+         1.5  2.5  4.5
+        -1    0    2
+    ]
+    @test RenewalDiD._expectedseedcases(zeros(20, 2), 7) == zeros(7, 2)
+    @test RenewalDiD._expectedseedcases(zeros(20, 2), 5) == zeros(5, 2)
+    @test RenewalDiD._expectedseedcases(zeros(20, 3), 5) == zeros(5, 3)
+    obs1 = (_obs = zeros(Int, 20, 2); _obs[1, :] .+= 1; _obs[1:5, :] .+= 1; _obs)
+    @test RenewalDiD._expectedseedcases(obs1, 5) == [
+         0                          0
+         0                          0
+         0                          0
+         0                          0
+        (log(6 / 5) - log(2) / 5)  (log(6 / 5) - log(2) / 5)
+    ]
+    @test RenewalDiD._expectedseedcases(obs1, 5; doubletime=5) == [
+         0                          0
+         0                          0
+         0                          0
+         0                          0
+        (log(6 / 5) - log(2) / 5)  (log(6 / 5) - log(2) / 5)
+    ]
+    @test RenewalDiD._expectedseedcases(obs1, 5; doubletime=10) == [
+         0                               0
+         0                               0
+         0                               0
+        (log(6 / 5) - 2 * log(2) / 10)  (log(6 / 5) - 2 * log(2) / 10) 
+        (log(6 / 5) - log(2) / 10)      (log(6 / 5) - log(2) / 10)
+    ]
+    @test RenewalDiD._expectedseedcases(obs1, 5; sampletime=5) == [
+         0                          0
+         0                          0
+         0                          0
+         0                          0
+        (log(6 / 5) - log(2) / 5)  (log(6 / 5) - log(2) / 5)
+    ]
+    @test RenewalDiD._expectedseedcases(obs1, 5; sampletime=3) == [
+         0                              0
+         0                              0
+         0                              0
+        (log(4 / 3) - 2 * log(2) / 5)  (log(4 / 3) - 2 * log(2) / 5)
+        (log(4 / 3) - log(2) / 5)      (log(4 / 3) - log(2) / 5)
+    ]
+    obs2 = (_obs = zeros(Int, 20, 2); _obs[1, 1] += 1; _obs[1:5, :] .+= 1; _obs)
+    @test RenewalDiD._expectedseedcases(obs2, 5) == [
+         0                         0
+         0                         0
+         0                         0
+         0                         0
+        (log(6 / 5) - log(2) / 5)  0
+    ]
+    @test RenewalDiD._expectedseedcases(zeros(2, 3), 5) == zeros(5, 3)
+    @test_throws BoundsError RenewalDiD._expectedseedcases(zeros(2, 3), 5; sampletime=5)
+    # showing `log(0)` and `log(1)` to emphasize that these parameters are natural logarithms
+    @test RenewalDiD._expectedinfections(g_covid, log(0), zeros(10)) == 0
+    @test RenewalDiD._expectedinfections(g_covid, log(1), ones(10)) == 
+        sum(RenewalDiD.COVIDSERIALINTERVAL[2:11])
+    @test RenewalDiD._expectedinfections(g_covid, log(1), ones(6)) == 
+        sum(RenewalDiD.COVIDSERIALINTERVAL[2:7])
+    @test RenewalDiD._expectedinfections(g_covid, log(1), [0, 0, 0, 0, 0, 1]) == 0.0440204506
+    @test RenewalDiD._expectedinfections(g_covid, log(1), [1, 0, 0, 0, 0, 0]) == 0.0917470443
+    @test RenewalDiD._expectedinfections(g_seir, log(0), zeros(10); gamma=0.5) == 0
+    @test RenewalDiD._expectedinfections(g_seir, log(1), [1, 0, 0, 0, 0, 0]; gamma=0.5) == 
+        0.07468060255179591
+    @test_throws UndefKeywordError RenewalDiD._expectedinfections(g_seir, log(0), zeros(10))
+    # we do not need to use `generationtime` with `g_seir` but test it as though `g_seir` 
+    # were a user-generated function
+    @test RenewalDiD._expectedinfections(
+        generationtime, log(0), zeros(10); 
+        func=g_seir, gamma=0.5,
+    ) == 0
+    @test RenewalDiD._expectedinfections(
+        generationtime, log(1), [1, 0, 0, 0, 0, 0]; 
+        func=g_seir, gamma=0.5,
+    ) == 0.07468060255179591
+    @test RenewalDiD._expectedinfections(
+        generationtime, log(1), [1, 0, 0, 0, 0, 0]; 
+        func=g_seir, gamma=0.5, t_max=5,
+    ) == 0
+    @test RenewalDiD._expectedinfections(
+        generationtime, log(1), zeros(10); 
+        vec=[0, 0, 0, 0, 0, 1],
+    ) == 0
+    @test RenewalDiD._expectedinfections(
+        generationtime, log(1), [1, 0, 0, 0, 0, 0]; 
+        vec=[0, 0, 0, 0, 0, 0, 1],
+    ) == 1
+    @test RenewalDiD._expectedinfections(
+        generationtime, log(2), ones(3); 
+        vec=[0, 0, 0, 1, 0, 0, 0],
+    ) == 2
+    @test_throws ArgumentError RenewalDiD._expectedinfections(
+        generationtime, log(0), zeros(10)
+    ) 
+    @test_throws ArgumentError RenewalDiD._expectedinfections(
+        generationtime, log(0), zeros(10);
+        func=g_seir, gamma=0.5, vec=[0, 0, 0, 0, 0, 1],
+    ) 
+    @test RenewalDiD._approxcases(0, 0) == 0
+    @test RenewalDiD._approxcases(1, 0) == 1
+    @test RenewalDiD._approxcases(1, 0.5) == 1.5
+    @test RenewalDiD._approxcases(2, 0.5) == 3
+    @test RenewalDiD._approxcases(2, -1.5) == 0
+    @test RenewalDiD._infections(
+        g_covid, zeros(5, 2), log.(zeros(3, 2)), zeros(2, 2), zeros(2), 2
+    ) == zeros(5, 2)
+    @test RenewalDiD._infections(
+        g_covid, zeros(6, 2), log.(zeros(4, 2)), zeros(2, 2), zeros(2), 2
+    ) == zeros(6, 2)
+    @test_throws DimensionMismatch RenewalDiD._infections(
+        g_covid, zeros(5, 2), log.(zeros(3, 3)), zeros(2, 2), zeros(2), 2
+    ) 
+    @test_throws DimensionMismatch RenewalDiD._infections(
+        g_covid, zeros(5, 2), log.(zeros(3, 2)), zeros(2, 3), zeros(2), 2
+    ) 
+    @test_throws DimensionMismatch RenewalDiD._infections(
+        g_covid, zeros(5, 2), log.(zeros(3, 2)), zeros(2, 2), zeros(3), 2
+    ) 
+    @test_throws DimensionMismatch RenewalDiD._infections(
+        g_covid, zeros(5, 2), log.(zeros(4, 2)), zeros(2, 2), zeros(2), 2
+    ) 
+    @test_throws DimensionMismatch RenewalDiD._infections(
+        g_covid, zeros(5, 2), log.(zeros(3, 2)), zeros(2, 2), zeros(2), 3
+    ) 
+    seedinfections1 = [
+        1  0
+        2  1
+    ]
+    @test RenewalDiD._infections(
+        generationtime, zeros(5, 2), log.(zeros(3, 2)), seedinfections1, 1000 .* ones(2), 2;
+        vec=[0, 1]
+    ) == [
+        1  0
+        2  1 
+        0  0
+        0  0
+        0  0
+    ]
+    @test RenewalDiD._infections(
+        generationtime, 
+        zeros(5, 2), 
+        log.(1.5 .* ones(3, 2)), 
+        seedinfections1, 
+        1000 .* ones(2), 
+        2;
+        vec=[0, 1]
+    ) == [
+        1     0
+        2     1 
+        3     1.5
+        4.5   2.25
+        6.75  3.375
+    ]
+    M_x1 = [
+         2    0
+        -0.5  1
+         1    0.5
+        -2    1
+         0    1
+    ]
+    @test RenewalDiD._infections(
+        generationtime, M_x1, log.(ones(3, 2)), seedinfections1, 1000 .* ones(2), 2;
+        vec=[0, 1]
+    ) == [
+        3   0
+        1   2 
+        2   3
+        0   6
+        0  12
+    ]
+end  # @testset "fitting parameters"
 
 end  # @testset "RenewalDiD.jl"
