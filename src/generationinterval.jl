@@ -1,3 +1,7 @@
+# Estimates of generation interval 
+
+## Constants ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 const COVIDSERIALINTERVAL = [  # not exported but can be accessed via `g_covid`
 # result from https://github.com/mrc-ide/EpiEstim/blob/master/data/covid_deaths_2020_uk.rda
     0.0000000000,
@@ -33,6 +37,20 @@ const COVIDSERIALINTERVAL = [  # not exported but can be accessed via `g_covid`
     0.0002057625
 ]
 
+
+## Functions ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+## Provided generation intervals
+
+"""
+    g_covid(t::Integer)
+
+Estimate of serial interval for SARS-CoV-2.
+
+`t` is time in days since infection.
+
+Data from https://github.com/mrc-ide/EpiEstim/blob/master/data/covid_deaths_2020_uk.rda
+"""
 function g_covid(t::Integer)
     if t < 0 || t > 30
         return zero(COVIDSERIALINTERVAL[1])
@@ -41,25 +59,34 @@ function g_covid(t::Integer)
     end
 end
 
-g_seir(t; gamma, sigma=automatic) = _g_seir(t, gamma, sigma)
+"""
+    g_seir(t; gamma, sigma)
+
+Generation interval for a susceptible–exposed–infectious–recovered model.
+
+`t` is time in days since infection. `sigma` is the rate of progression from exposed to 
+infectious, and `gamma` is the recovery rate.
+
+If `gamma == sigma` only input `gamma` and leave `sigma=RenewalDiD.automatic` (the default).
+
+Equations from D. Champredon, J. Dushoff, and D.J. Earn (2018). Equivalence of the 
+Erlang-distributed SEIR epidemic model and the renewal equation. *SIAM J Appl Math*
+**78**: 3258–3278. 
+"""
+function g_seir(t; gamma, sigma=automatic)
+    if t < 0 
+        return zero(g_seir(0; gamma, sigma))
+    else
+        return _g_seir(t, gamma, sigma)
+    end
+end
+
+_g_seir(t, gamma, ::Automatic) = _gseirequalgammasigma(t, gamma)
 
 function _g_seir(t, gamma, sigma)
-    if t < 0 
-        return __g_seir(0, gamma, sigma)
-    else
-        return __g_seir(t, gamma, sigma) 
-    end
+    gamma == sigma && return _gseirequalgammasigma(t, gamma)
+    return _gseirunequalgammasigma(t, sigma, gamma)
 end
-
-function __g_seir(t, gamma, sigma)
-    if gamma == sigma 
-        return _gseirequalgammasigma(t, gamma)
-    else
-        return _gseirunequalgammasigma(t, sigma, gamma)
-    end
-end
-
-__g_seir(t, gamma, ::Automatic) = _gseirequalgammasigma(t, gamma)
 
 _gseirequalgammasigma(t, gamma) = gamma^2 * t * exp(-gamma * t)
 
@@ -71,6 +98,17 @@ function vectorg_seir(gamma, sigma=automatic; t_max::Integer=28)
     return [_g_seir(t, gamma, sigma) for t in 0:1:t_max]
 end
 
+## Functions for user-supplied generation intervals
+
+"""
+    generationtime(t::Integer; func=automatic, vec=automatic, kwargs...)
+    generationtime(f_or_v, t::Integer; kwargs...)
+    
+Return generation time from a user-supplied vector or function.
+
+Note that this function does not check whether the negative values will be returned or if
+the sum of outputs will exceed 1. Use `testgenerationtime` for this.
+"""
 function generationtime(t::Integer; func=automatic, vec=automatic, kwargs...)
     return _generationtime(func, vec, t; kwargs...)
 end
@@ -86,22 +124,20 @@ function _generationtime(::Automatic, vec, t::Integer; kwargs...)
 end
 
 function _generationtime(::Automatic, ::Automatic, ::Integer; kwargs...)
-    throw(ArgumentError("""
-        a function or vector must be passed as either a positional or keyword argument
-    """))
+    throw(_generationtimenofunctionvectorerror())
+    return nothing
 end
 
 function _generationtime(func, vec, ::Integer; kwargs...)
-    throw(ArgumentError("only one of the `func`, `vec` keyword arguments may be used"))
+    throw(_generationtimebothfunctionvectorerror())
+    return nothing
 end
 
 function _generationtime(f::Function, t::Integer; t_max=automatic, kwargs...)
-    _testgenerationtime(f, t_max; kwargs...)
     return __generationtime(f, t, t_max; kwargs...)
 end
 
 function _generationtime(v::AbstractVector, t::Integer)
-    _testgenerationtime(v)
     if t < 0 || t >= length(v)
         return zero(v[1])
     else
@@ -125,29 +161,57 @@ function __generationtime(f::Function, t::Integer, t_max::Integer; kwargs...)
     end
 end
 
-function _testgenerationtime(v::AbstractVector)
-    return __testgenerationtime(
-        v,
-        "all values of v must be positive",
-        "sum of v must be ≤ 1"
-    )
+testgenerationtime(x; kwargs...) = _testgenerationtime(x; kwargs...)
+
+function _testgenerationtime(f::Function; t_max=automatic, kwargs...)
+    return _testgenerationtime(f, t_max; kwargs...)
 end
 
 function _testgenerationtime(f::Function, ::Automatic; kwargs...)
     return _testgenerationtime(f, 1000; kwargs...)
 end
 
-function _testgenerationtime(f::Function, t_max::Integer; kwargs...)
+function _testgenerationtime(f::Function, t_max::Number; muteinfo=false, kwargs...)
     v = [f(x; kwargs...) for x in 0:1:t_max]
-    return __testgenerationtime(
-        v,
-        "all values of f(x) must be positive (tested on x ∈ {0, 1, …, $t_max})",
-        "sum of f(x) must be ≤ 1 (tested on x ∈ {0, 1, …, $t_max})"
+    return _testgenerationtime(
+        v; 
+        funclengthinfo=" (function tested on x ∈ {0, 1, …, $t_max})", muteinfo
     )
 end
 
-function __testgenerationtime(v, minerror, sumerror)
-    minimum(v) >= 0 || throw(ArgumentError("$(minimum(v)): $minerror"))
-    sum(v) <= 1 || throw(ArgumentError("$(sum(v)): $sumerror"))
-    return nothing
+function _testgenerationtime(v::AbstractVector; funclengthinfo="", muteinfo=false)
+    sv = sum(v)
+    sv <= 1  || throw(_toolargegenerationtimerror(sv, funclengthinfo))
+    mv = minimum(v) 
+    mv >= 0 || throw(_negativegenerationtimerror(mv, funclengthinfo))
+    sum(v) <= 1
+    muteinfo || @info "Vector sum is $sv, with minimum value $mv"
+    return nothing 
+end 
+
+
+# Error messages ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+function _g_seirequalgammasigmaerror(gamma, sigma)
+    return ArgumentError(
+        "$gamma, $sigma: if gamma==sigma only the gamma keyword argument should be provided"
+    )
+end
+
+function _generationtimebothfunctionvectorerror()
+    return ArgumentError("only one of the `func`, `vec` keyword arguments may be used")
+end
+
+function _generationtimenofunctionvectorerror()
+    return ArgumentError("""
+        a function or vector must be passed as either a positional or keyword argument
+    """)
+end
+
+function _negativegenerationtimerror(mv, funclengthinfo)
+    return ArgumentError("$mv: generation interval values can never be negative$funclengthinfo")
+end
+
+function _toolargegenerationtimerror(sv, funclengthinfo)
+    return ArgumentError("$sv: sum of all generation times must be ≤ 1$funclengthinfo")
 end

@@ -4,19 +4,15 @@ authors = ["Mark Pritchard <mark.pritchard@ndm.ox.ac.uk>"]
 version = "0.0.1-DEV"
 
 [deps]
-Distributions = "31c24e10-a181-5473-b8eb-7969acd0382f"
 PrettyTables = "08abe8d2-0d0c-5749-adfa-8a2ac140af0d"
 Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
-Reexport = "189a3867-3050-52da-a836-e630ba90ab69"
 StableRNGs = "860ef19b-820b-49d6-a774-d7a799459cd3"
 StatsBase = "2913bbd2-ae8a-5f71-8c99-4fb6c76f3a91"
 Turing = "fce5fe82-541a-59a6-adf8-730c64b5f9a0"
 UnPack = "3a884ed6-31ef-47d7-9d2a-63182c4928ed"
 
 [compat]
-Distributions = "0.25"
 PrettyTables = "2"
-Reexport = "1"
 StableRNGs = "1"
 StatsBase = "0.34"
 Turing = "0.39"

@@ -1,3 +1,9 @@
+# Use Turing.jl to fit parameters to a dataset
+
+## Functions ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ 
+
+## Functions called by `_renewaldid`
+
 _ntimes(M::AbstractMatrix) = size(M, 1)
 _ngroups(M::AbstractMatrix) = size(M, 2)
 
@@ -10,8 +16,8 @@ _gammavec(mu_gamma, sigma_gamma, gammas_raw) = mu_gamma .+ sigma_gamma .* gammas
 _thetavec(theta_0, thetas_raw, sigma_theta) = cumsum([theta_0; thetas_raw .* sigma_theta])
 
 function _predictedlogR_0(alpha, gammavec, thetavec, tau, interventions)
-    length(gammavec) == _ngroups(interventions) || _ngroupsmmerror(gammavec, interventions)
-    length(thetavec) == _ntimes(interventions) || _ntimesmmerror(thetavec, interventions)
+    length(gammavec) == _ngroups(interventions) || throw(_ngroupsmmerror(gammavec, interventions))
+    length(thetavec) == _ntimes(interventions) || throw(_ntimesmmerror(thetavec, interventions))
     R_0 = alpha .* ones(size(interventions)...) 
     for (g, gamma) in enumerate(gammavec)
         R_0[:, g] .+=  gamma
@@ -23,32 +29,7 @@ function _predictedlogR_0(alpha, gammavec, thetavec, tau, interventions)
     return R_0
 end
 
-function _ngroupsmmerror(gammavec, interventions)
-    throw(
-        _R_0_dimensionmismatch(
-            length(gammavec), "gammavec", "width", _ngroups(interventions)
-        )
-    )
-end
-
-function _ntimesmmerror(thetavec, interventions)
-    throw(
-        _R_0_dimensionmismatch(
-            length(thetavec), "thetavec", "height", _ntimes(interventions)
-        )
-    )
-end
-
-function _R_0_dimensionmismatch(len, vec, dim, size)
-    return DimensionMismatch(
-        "length of `$vec`, $len, should equal $dim of `interventions`, $size"
-    )
-end
-
-function _expectedseedcases(
-    observedcases, n_seeds; 
-    doubletime=n_seeds, sampletime=automatic
-)
+function _expectedseedcases(observedcases, n_seeds; doubletime=n_seeds, sampletime=automatic)
     return __expectedseedcases(observedcases, n_seeds, doubletime, sampletime)
 end
 
@@ -84,11 +65,11 @@ function _infections(
     g, M_x, logR_0::Matrix{T}, exptdseedcases, Ns, n_seeds; 
     kwargs...
 ) where T
-    _ngroups(M_x) == _ngroups(logR_0) || throw(DimensionMismatch("`M_x` and `logR_0` must have the same width"))
-    _ngroups(M_x) == _ngroups(exptdseedcases) || throw(DimensionMismatch("`M_x` and `exptdseedcases` must have the same width"))
-    _ngroups(M_x) == length(Ns) || throw(DimensionMismatch("length of `Ns`, $(length(Ns)), should equal width of `M_x`, $(_ngroups(M_x))"))
-    _ntimes(M_x) == _ntimes(logR_0) + _ntimes(exptdseedcases) || throw(DimensionMismatch("height of `Mx` must equal sum of heights of `logR_0` and `exptdseedcases`"))
-    _ntimes(exptdseedcases) == n_seeds || throw(DimensionMismatch("height of `exptdseedcases` must equal `n_seeds`"))
+    _ngroups(M_x) == _ngroups(logR_0) || throw(_widthmismatch("M_x", "logR_0"))
+    _ngroups(M_x) == _ngroups(exptdseedcases) || throw(_widthmismatch("M_x", "exptdseedcases"))
+    _ngroups(M_x) == length(Ns) || throw(_MxNserror(Ns, M_x))
+    _ntimes(M_x) == _ntimes(logR_0) + _ntimes(exptdseedcases) || throw(_infectionsntimeserror())
+    _ntimes(exptdseedcases) == n_seeds || throw(_infectionsnseedserror())
     
     infn = zeros(T, _ntimes(logR_0) + n_seeds, _ngroups(logR_0))
     for j in 1:_ngroups(M_x), t in 1:n_seeds
@@ -130,7 +111,7 @@ function packpriors( ;
 end
 
 function renewaldid(
-    data, g, priors; 
+    data, g, priors=packpriors(); 
     n_seeds=7, doubletime=n_seeds, sampletime=automatic, kwargs...
 )
     @unpack observedcases, interventions, Ns = data 
@@ -200,3 +181,38 @@ end
 
 
 
+# Error messages ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+function _infectionsnseedserror()
+    return DimensionMismatch("height of `exptdseedcases` must equal `n_seeds`")
+end
+
+function _infectionsntimeserror()
+    return DimensionMismatch(
+        "height of `Mx` must equal sum of heights of `logR_0` and `exptdseedcases`"
+    )
+end
+
+_MxNserror(Ns, M_x) = _vm_dimensionmismatch(length(Ns), "Ns", "width", "M_x", _ngroups(M_x))
+
+function _ngroupsmmerror(gammavec, interventions)
+    return _R_0_dimensionmismatch(
+        length(gammavec), "gammavec", "width", _ngroups(interventions)
+    )
+end
+
+function _ntimesmmerror(thetavec, interventions)
+    return _R_0_dimensionmismatch(
+        length(thetavec), "thetavec", "height", _ntimes(interventions)
+    )
+end
+
+function _R_0_dimensionmismatch(len, vec, dim, size)
+    return _vm_dimensionmismatch(len, vec, dim, "interventions", size)
+end
+
+function _vm_dimensionmismatch(len, vec, dim, mat, size)
+    return DimensionMismatch("length of `$vec`, $len, should equal $dim of `$mat`, $size")
+end
+
+_widthmismatch(a, b) = DimensionMismatch("`$a` and `$b` must have the same width")
