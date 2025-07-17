@@ -3,7 +3,7 @@ module RenewalDiD
 using PrettyTables: pretty_table
 using Random: AbstractRNG, default_rng
 using StatsBase: Weights, sample
-using Turing: @model, arraydist, filldist, Normal, Exponential
+using Turing: @model, Exponential, Normal, arraydist, filldist
 using UnPack: @unpack
 
 include("automatic.jl")
