@@ -1,3 +1,7 @@
+# The InterventionMatrix struct for storing times that interventions are implemented
+
+## Structs and constructors ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 abstract type AbstractInterventionsArray{T, N} <: AbstractArray{T, N} end
 
 """
@@ -60,6 +64,8 @@ struct InterventionMatrix{T} <: AbstractInterventionsArray{T, 2}
     end
 end
 
+### Constructors
+
 InterventionMatrix(args...; kwargs...) = InterventionMatrix{Int}(args...; kwargs...)
 
 function InterventionMatrix{T}(duration, args...; kwargs...) where T
@@ -97,31 +103,8 @@ function _interventionstarttimes(rawstarttimes, duration)
     return starttimes
 end
 
-function _nointerventionwarning(::Nothing)
-    @warn "InterventionMatrix with no intervention in any group"
-    return nothing
-end
 
-function _nointerventionwarning(mutewarnings::Bool)
-    if mutewarnings 
-        return nothing 
-    else 
-        return _nointerventionwarning(nothing)
-    end
-end
-
-function _allinterventionwarning(::Nothing)
-    @warn "All groups in InterventionMatrix have intervention before end of duration"
-    return nothing
-end
-
-function _allinterventionwarning(mutewarnings::Bool)
-    if mutewarnings 
-        return nothing 
-    else 
-        return _allinterventionwarning(nothing)
-    end
-end
+## Functions ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 Base.size(M::InterventionMatrix) = (M.duration, length(M.starttimes))
 
@@ -203,4 +186,33 @@ function Base.show(io::IO, ::MIME"text/plain", M::InterventionMatrix)
         title=summary(M), 
         vlines=[1], 
     )
+end
+
+
+## Warnings ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+function _nointerventionwarning(::Nothing)
+    @warn "InterventionMatrix with no intervention in any group"
+    return nothing
+end
+
+function _nointerventionwarning(mutewarnings::Bool)
+    if mutewarnings 
+        return nothing 
+    else 
+        return _nointerventionwarning(nothing)
+    end
+end
+
+function _allinterventionwarning(::Nothing)
+    @warn "All groups in InterventionMatrix have intervention before end of duration"
+    return nothing
+end
+
+function _allinterventionwarning(mutewarnings::Bool)
+    if mutewarnings 
+        return nothing 
+    else 
+        return _allinterventionwarning(nothing)
+    end
 end
