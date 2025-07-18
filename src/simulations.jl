@@ -1,5 +1,7 @@
 # generates simulated datasets
 
+# `runsimulation` is the main function in this file. All parameters and compartments have
+#  the meanings described in this function's documentation.
 """
     runsimulation([rng], duration, u0; beta, gamma, delta, theta, sigma)
     runsimulation([rng], duration, u0, beta, gamma, delta, theta, sigma)
@@ -7,17 +9,17 @@
 Generate simulated data.
 
 Model uses Gillespie's stochastic continuous time method with 6 compartments:
-* s: susceptible 
-* e: exposed (infected but not yet infectious)
-* i_n: infectious and will never be diagnosed 
-* i_f: infectious and will be diagnosed before recovery 
-* i_d: infectious and diagnosed 
-* r: recovered
+* `s`: susceptible 
+* `e`: exposed (infected but not yet infectious)
+* `i_n`: infectious and will never be diagnosed 
+* `i_f`: infectious and will be diagnosed before recovery 
+* `i_d`: infectious and diagnosed 
+* `r`: recovered
 
 A 7th compartment in the model records the cumulative number of diagnoses.
 
-Parameters `beta`, `gamma`, `delta` `theta` and `sigma` may be numbers or may be functions 
-taking a single argument time, to give time-varying values. They can be entered as 
+Parameters `beta`, `gamma`, `delta` `theta` and `sigma` may be numbers, or may be functions 
+taking time as their only argument to give time-varying values. They can be entered as 
 positional arguments or keyword arguments. All parameters must be non-negative.
 
 # Arguments
@@ -28,7 +30,7 @@ positional arguments or keyword arguments. All parameters must be non-negative.
 - `beta`: transmission parameter
 - `gamma`: recovery rate
 - `delta`: diagnosis rate (i.e. for those who will be diagnosed, how quickly does it 
-    happen?); must satisfy delta < gamma (i.e. must be diagnosed before the end of the 
+    happen?); must satisfy `delta > gamma` (i.e. must be diagnosed before the end of the 
     infectious period)
 - `theta`: proportion diagnosed; must satisfy `0 ≤ theta ≤ 1`
 - `sigma`: rate of progression from exposed to infectious
@@ -36,6 +38,46 @@ positional arguments or keyword arguments. All parameters must be non-negative.
 # Returns
 Returns a matrix of height `duration + 1` giving numbers in each compartment at the end of 
 each day. The first row is the conditions supplied in `u0`.
+
+# Examples
+```jldoctest
+julia> using StableRNGs
+
+julia> rng = StableRNG(1);
+
+julia> u0 = simulationu0(; s=100, e=5, n=200);
+
+julia> runsimulation(rng, 10, u0; beta=0.6, gamma=0.25, delta=0.33, theta=0.5, sigma=0.4)
+11×7 Matrix{Int64}:
+ 100  5  0  0  0  95  0
+ 100  5  0  0  0  95  0
+ 100  4  0  1  0  95  0
+  99  4  0  2  0  95  0
+  99  3  0  3  0  95  0
+  99  2  0  3  0  96  1
+  98  1  1  3  0  97  1
+  97  1  1  4  0  97  1
+  95  2  2  3  1  97  2
+  93  2  4  3  1  97  2
+  92  0  5  4  0  99  3
+
+julia> mybetafunc(t) = t <= 5 ? 1 : 0.1;
+
+julia> runsimulation(rng, 10, u0;
+       beta=mybetafunc, gamma=0.25, delta=0.33, theta=0.5, sigma=0.4)
+11×7 Matrix{Int64}:
+ 100  5  0  0  0   95  0
+  98  5  0  2  0   95  0
+  97  3  1  1  1   97  2
+  96  3  1  2  1   97  2
+  92  5  1  2  3   97  4
+  92  3  1  3  1  100  5
+  92  2  2  3  0  101  5
+  92  2  1  3  0  102  5
+  92  1  1  3  1  102  6
+  92  0  1  4  1  102  6
+  92  0  1  3  1  103  7
+```
 """
 function runsimulation end
 
@@ -53,6 +95,91 @@ const _SEIREVENTSMATRIX = [  # matrix of movements between compartments
 
 
 ## Functions ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+### Simulation u0
+
+"""
+    simulationu0(; s, e, i_n, i_d, i_f, r, n)
+
+Produce vector of initial conditions for simulation.
+
+# Keyword arguments 
+The following represent the model compartments, 
+* `s::Integer=0`: susceptible 
+* `e::Integer=0`: exposed (infected but not yet infectious)
+* `i_n::Integer=0`: infectious and will never be diagnosed 
+* `i_f::Integer=0`: infectious and will be diagnosed before recovery 
+* `i_d::Integer=0`: infectious and diagnosed 
+* `r::Union{<:Integer, Automatic}=automatic`: recovered
+
+The argument `n::Union{<:Integer, Nothing}=nothing` is the population size. If `n` is 
+    provided and `r` is not then the remaining population not assigned to other compartments 
+    will be assigned to `r`. An error is thrown if a unique non-negative value of `r` cannot
+    be calculated.
+
+All arguments are optional.
+
+# Examples
+```jldoctest
+julia> simulationu0(; s=99, e=1)
+7-element Vector{Int64}:
+ 99
+  1
+  0
+  0
+  0
+  0
+  0
+
+julia> simulationu0(; s=99, e=1, n=200)
+7-element Vector{Int64}:
+  99
+   1
+   0
+   0
+   0
+ 100
+   0
+
+julia> simulationu0(; s=99, e=1, r=100, n=250)
+ERROR: ArgumentError: Inconsistent values of `n` and `r` supplied. Calculated n=200 but \
+keyword argument n=250.
+```
+"""
+function simulationu0( ; 
+    s::Integer=0, 
+    e::Integer=0, 
+    i_n::Integer=0, 
+    i_d::Integer=0, 
+    i_f::Integer=0, 
+    r::Union{<:Integer, Automatic}=automatic,
+    n::Union{<:Integer, Nothing}=nothing,
+)
+    return _simulationu0(s, e, i_n, i_f, i_d, r, n)
+end
+
+function _simulationu0(s, e, i_n, i_f, i_d, ::Automatic, ::Nothing)
+    return _simulationu0(s, e, i_n, i_f, i_d, 0, nothing)
+end
+
+function _simulationu0(s, e, i_n, i_f, i_d, ::Automatic, n::Integer)
+    r = n - (s + e + i_n + i_f + i_d)
+    r >= 0 || throw(_simulationu0_n_error(n, n - r))
+    return _simulationu0(s, e, i_n, i_f, i_d, r, nothing)
+end
+
+function _simulationu0(s, e, i_n, i_f, i_d, r::Integer, n::Integer)
+    s + e + i_n + i_f + i_d + r == n || throw(
+        _simulationu0_nr_error(n, s + e + i_n + i_f + i_d + r)
+    )
+    return _simulationu0(s, e, i_n, i_f, i_d, r, nothing)
+end
+
+function _simulationu0(s, e, i_n, i_f, i_d, r::Integer, ::Nothing)
+    u0 = [s, e, i_n, i_f, i_d, r, 0]
+    minimum(u0) >= 0 || throw(_simulationu0_negativeerror(minimum(u0)))
+    return u0
+end
 
 ### Parameters
 
@@ -79,7 +206,6 @@ _parameter(x, t; kwargs...) = _parameter(x, t, :parameter; kwargs...)
 
 # i_n, i_f and i_d are all assumed equally infectious
 _foi(beta, i_n, i_f, i_d, n, t) = _parameter(beta, t, :beta) * (i_n + i_f + i_d) / n
-
 
 ### Event rates
 
@@ -170,31 +296,83 @@ end
 runsimulation(args...; kwargs...) = runsimulation(default_rng(), args...; kwargs...) 
 
 function runsimulation(rng::AbstractRNG, duration, u0; beta, gamma, delta, theta, sigma)
-    return runsimulation(rng, duration, u0, beta, gamma, delta, theta, sigma)
+    return _runsimulation(rng, duration, u0, beta, gamma, delta, theta, sigma)
 end
 
 function runsimulation(rng::AbstractRNG, duration, u0, beta, gamma, delta, theta, sigma)
+    return _runsimulation(rng, duration, u0, beta, gamma, delta, theta, sigma) 
+end
+
+function _runsimulation(rng, duration, u0, beta, gamma, delta, theta, sigma)
     duration >= 1 || throw(_negativedurationerror(duration))
     output = zeros(Int, duration + 1, 7)
     u = deepcopy(u0)
     output[1, :] = u
+    _runsimulationdays!(rng, output, duration, u, beta, gamma, delta, theta, sigma)
+    return output 
+end
+
+function _runsimulationdays!(rng, output, duration, u, beta, gamma, delta, theta, sigma)
     for t in 1:duration 
         _simulateday!(rng, u, t, beta, gamma, delta, theta, sigma)
         output[t+1, :] = u
     end
-    return output 
+    return nothing
 end
 
 """
     simulationcases(M::Matrix)
     simulationcases([rng], duration, u0, beta, gamma, delta, theta, sigma)
+    simulationcases([rng], duration, u0; beta, gamma, delta, theta, sigma)
 
-Produces a vector of simulated diagnosed infections.
+Produce a vector of simulated diagnosed infections.
 
 Either takes a matrix that is the output of `runsimulation` or a set of arguments that gets 
 passed to `runsimulation`. 
 
 See `runsimulation` for more details.
+
+# Examples
+```jldoctest
+julia> using StableRNGs
+
+julia> rng1 = StableRNG(1);
+
+julia> rng2 = StableRNG(1);
+
+julia> u0 = simulationu0(; s=100, e=5, n=200);
+
+julia> runsimulation(rng1, 10, u0;
+       beta=0.6, gamma=0.25, delta=0.33, theta=0.5, sigma=0.4);
+
+julia> simulationcases(sim)
+11-element Vector{Int64}:
+ 0
+ 0
+ 0
+ 0
+ 0
+ 1
+ 0
+ 0
+ 1
+ 0
+ 1
+
+julia> simulationcases(rng2, 10, u0; beta=0.6, gamma=0.25, delta=0.33, theta=0.5, sigma=0.4)
+11-element Vector{Int64}:
+ 0
+ 0
+ 0
+ 0
+ 0
+ 1
+ 0
+ 0
+ 1
+ 0
+ 1
+```
 """
 function simulationcases(M::Matrix)
     size(M, 2) == 7 || throw(_simmatrixwidtherror(M))
@@ -202,10 +380,10 @@ function simulationcases(M::Matrix)
     return _simulationcases(M, duration)
 end
 
-simulationcases(args...) = simulationcases(default_rng(), args...)
+simulationcases(args...; kwargs...) = simulationcases(default_rng(), args...; kwargs...)
 
-function simulationcases(rng::AbstractRNG, duration, args...)
-    M = runsimulation(rng, duration, args...)
+function simulationcases(rng::AbstractRNG, duration, args...; kwargs...)
+    M = runsimulation(rng, duration, args...; kwargs...)
     return _simulationcases(M, duration)
 end
 
@@ -275,6 +453,10 @@ function __packsimulation!(
     return (interventiontimes, Ns, observedcases)
 end
 
+function packsimulationtuple(; u0, beta, gamma, delta, theta, sigma, intervention)
+    return (u0, beta, gamma, delta, theta, sigma, intervention)
+end
+
 
 # Error messages ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -290,11 +472,31 @@ function _parametermaximumerrorexception(x, t, symbol, upper)
 end
 
 function _recoveryerrorexception(timetodiagnosis, timetorecovery)
-    return ErrorException("""
-        expected time to diagnosis ($timetodiagnosis) must be less than expected time to 
-        recovery ($timetorecovery)
-    """)
+    return ErrorException(
+        "expected time to diagnosis ($timetodiagnosis) must be less than expected time to \
+        recovery ($timetorecovery)"
+    )
 end
 
 _simmatrixwidtherror(M) = ArgumentError("size $(size(M)): expecting a Matrix of width 7")
+
+function _simulationu0_n_error(n, sm)
+    return ArgumentError(
+        "$n: when keyword argument `n` is supplied it must be at least as large as the sum \
+        of the other compartment values provided ($sm)"
+    )
+end
+
+_simulationu0_negativeerror(x) = ArgumentError("$x: compartment sizes cannot be negative")
+
+function _simulationu0_nr_error(n, calcn)
+    return ArgumentError(
+        "Inconsistent values of `n` and `r` supplied. Calculated n=$calcn but keyword \
+        argument n=$n."
+    )
+end
+
 _ulengtherror(u) = ArgumentError("$u, u must be a vector of 7 integers")
+
+
+

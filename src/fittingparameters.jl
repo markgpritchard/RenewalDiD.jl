@@ -153,13 +153,13 @@ end
     ngroups = _ngroups(interventions)
     ntimes = _ntimes(interventions)
 
+    tau ~ tauprior
     alpha ~ alphaprior
     mu_gamma ~ mu_gammaprior
     sigma_gamma ~ sigma_gammaprior
     gammas_raw ~ filldist(Normal(0, 1), ngroups)
     thetas_raw ~ filldist(Normal(0, 1), ntimes - 1)
     sigma_theta ~ sigma_thetaprior
-    tau ~ tauprior
     M_x ~ filldist(Normal(0, 1), ntimes + n_seeds, ngroups)
 
     gammavec = _gammavec(mu_gamma, sigma_gamma, gammas_raw)

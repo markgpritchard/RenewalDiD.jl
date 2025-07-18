@@ -25,8 +25,8 @@ M1expectedcombinedstring = [
     "3"  "1"  "1"
 ]
 M1expectedheaderstring = ["time", "1", "2"]
-M1expectedshowoutput = 
-"3×2 InterventionMatrix{Int64}\n time │ 1  2\n──────┼──────\n    1 │ 0  0\n    2 │ 1  0\n    3 │ 1  1\n"
+M1expectedshowoutput = "3×2 InterventionMatrix{Int64}\n time │ 1  2\n──────┼──────\n    1 \
+    │ 0  0\n    2 │ 1  0\n    3 │ 1  1\n"
 M3expectedcontents = [
     0  0  0  0  0
     1  0  0  0  0
@@ -60,8 +60,9 @@ M4expectedcombinedstring = [
     "5"  "1.0"  "1.0"  "0.0"
 ]
 M4expectedheaderstring = ["time", "1", "2", "3"]
-M4expectedshowoutput =
-"5×3 InterventionMatrix{Float64}\n time │   1    2    3\n──────┼───────────────\n    1 │ 0.0  0.0  0.0\n    2 │ 1.0  0.0  0.0\n    3 │ 1.0  1.0  0.0\n    ⋮ │   ⋮    ⋮    ⋮\n    5 │ 1.0  1.0  0.0\n"
+M4expectedshowoutput ="5×3 InterventionMatrix{Float64}\n time │   1    2    3\n──────┼─────\
+    ──────────\n    1 │ 0.0  0.0  0.0\n    2 │ 1.0  0.0  0.0\n    3 │ 1.0  1.0  0.0\n    ⋮ \
+    │   ⋮    ⋮    ⋮\n    5 │ 1.0  1.0  0.0\n"
 tw1 = "InterventionMatrix with no intervention in any group"
 tw2 = "All groups in InterventionMatrix have intervention before end of duration"
 

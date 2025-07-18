@@ -9,44 +9,11 @@ abstract type AbstractInterventionsArray{T, N} <: AbstractArray{T, N} end
 
 Matrix of intervention times.
 
-It is expected that at least one group is treated and at least one group remains untreated 
-at the end of the analysis. Untreated groups can be represented by a "start time" that is 
-negative, greater than `duration`, or `nothing`. 
-
-`T` is optional and defaults to `Int`.
-
 # Fields
 - `duration::Int`: duration of the analysis
 - `rawstarttimes::Vector{<:Union{<:Integer, Nothing}}`: times of interventions for each 
-    group (these are the values provided by the user when constructing the matrix; they are 
-    retained for situations in which we wish to manipulate the start times)
-- `starttimes::Vector{Int}`: times of interventions for each group (these are cleaned to a 
-    vector of `Int` for efficiency)
-
-# Constructors
-Constructors accept only `duration` and `rawstarttimes`. `rawstarttimes` can be provided as 
-    a vector of values or as separate arguments. 
-
-
-# Examples
-```
-julia> M = InterventionMatrix(10, 2, 3, nothing)
-10×3 InterventionMatrix{Int64}
- time │ 1  2  3 
-──────┼─────────
-    1 │ 0  0  0
-    2 │ 1  0  0
-    3 │ 1  1  0
-    ⋮ │ ⋮  ⋮  ⋮
-   10 │ 1  1  0
-
-
-julia> M == InterventionMatrix(10, [2, 3, nothing]) == InterventionMatrix(10, [2, 3, 100])
-true
-
-julia> M[5, 1]  # rows without new interventions are hidden but are still accessible
-1
-```
+    group as entered by user
+- `starttimes::Vector{Int}`: cleaned version of `rawstarttimes` that is called when in use
 """
 struct InterventionMatrix{T} <: AbstractInterventionsArray{T, 2}
     duration::Int
@@ -66,6 +33,50 @@ end
 
 ### Constructors
 
+"""
+    InterventionMatrix[{T}](duration, rawstarttimes::Vector{<:Union{<:Integer, Nothing}}; \
+        mutewarnings=nothing)
+    InterventionMatrix[{T}](duration, starttime1, starttime2, starttimes...; \
+        mutewarnings=nothing)
+
+Construct an `InterventionMatrix`.
+
+`T` is optional. If not supplied, defaults to `Int`.
+
+Starttimes that are entered as `nothing`, that are `≤ 1` or are `> duration`, are treated 
+    equivalently as meaning that the intervention did not occur during the study period.
+
+Warnings are provided if no groups have an intervention or all groups have an intervention
+    before the end of duration, unless `mutewarnings==true`.
+
+# Examples
+```jldoctest
+julia> InterventionMatrix{Bool}(100, [25, 50, 200])
+100×3 InterventionMatrix{Bool}
+ time │     1      2      3 
+──────┼─────────────────────
+    1 │ false  false  false
+    ⋮ │     ⋮      ⋮      ⋮
+   25 │  true  false  false
+    ⋮ │     ⋮      ⋮      ⋮
+   50 │  true   true  false
+    ⋮ │     ⋮      ⋮      ⋮
+  100 │  true   true  false
+
+
+julia> InterventionMatrix(100, 50, 75, -1, nothing)
+100×4 InterventionMatrix{Int64}
+ time │ 1  2  3  4 
+──────┼────────────
+    1 │ 0  0  0  0
+    ⋮ │ ⋮  ⋮  ⋮  ⋮
+   50 │ 1  0  0  0
+    ⋮ │ ⋮  ⋮  ⋮  ⋮
+   75 │ 1  1  0  0
+    ⋮ │ ⋮  ⋮  ⋮  ⋮
+  100 │ 1  1  0  0
+```
+"""
 InterventionMatrix(args...; kwargs...) = InterventionMatrix{Int}(args...; kwargs...)
 
 function InterventionMatrix{T}(duration, args...; kwargs...) where T
