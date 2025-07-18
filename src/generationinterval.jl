@@ -185,9 +185,22 @@ function _testgenerationtime(v::AbstractVector; funclengthinfo="", muteinfo=fals
     mv = minimum(v) 
     mv >= 0 || throw(_negativegenerationtimerror(mv, funclengthinfo))
     sum(v) <= 1
+    v[1] == 0 || _g_0_warning(v[1])
     muteinfo || @info "Vector sum is $sv, with minimum value $mv"
     return nothing 
 end 
+
+
+# Warnings ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+_g_0_warning(g0) = @warn _g_0_warningtext(g0)
+
+function _g_0_warningtext(g0)
+    g0string = "g(0) == $g0"
+    remainingstring = ": g(0) is never called and is assumed to equal 0. If you intended \
+        this value for g(1) you should recheck the indexing"
+    return g0string * remainingstring
+end
 
 
 # Error messages ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

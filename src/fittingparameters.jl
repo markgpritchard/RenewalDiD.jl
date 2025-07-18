@@ -65,23 +65,30 @@ function _infections(
     g, M_x, logR_0::Matrix{T}, exptdseedcases, Ns, n_seeds; 
     kwargs...
 ) where T
-    _ngroups(M_x) == _ngroups(logR_0) || throw(_widthmismatch("M_x", "logR_0"))
-    _ngroups(M_x) == _ngroups(exptdseedcases) || throw(_widthmismatch("M_x", "exptdseedcases"))
-    _ngroups(M_x) == length(Ns) || throw(_MxNserror(Ns, M_x))
-    _ntimes(M_x) == _ntimes(logR_0) + _ntimes(exptdseedcases) || throw(_infectionsntimeserror())
-    _ntimes(exptdseedcases) == n_seeds || throw(_infectionsnseedserror())
-    
+    _infectionsassertions(M_x, logR_0, exptdseedcases, Ns, n_seeds)
     infn = zeros(T, _ntimes(logR_0) + n_seeds, _ngroups(logR_0))
+
     for j in 1:_ngroups(M_x), t in 1:n_seeds
         infn[t, j] = _approxcases(exptdseedcases[t, j], M_x[t, j])
     end
+    
     for j in 1:_ngroups(M_x), t in 1:_ntimes(logR_0)
         infn[t+n_seeds, j] = _approxcases(
             _expectedinfections(g, logR_0[t, j], @view infn[1:t+n_seeds-1, j]; kwargs...), 
             M_x[t+n_seeds, j]
         )
     end
+    
     return infn
+end
+
+function _infectionsassertions(M_x, logR_0, exptdseedcases, Ns, n_seeds)
+    _ngroups(M_x) == _ngroups(logR_0) || throw(_widthmismatch("M_x", "logR_0"))
+    _ngroups(M_x) == _ngroups(exptdseedcases) || throw(_widthmismatch("M_x", "exptdseedcases"))
+    _ngroups(M_x) == length(Ns) || throw(_MxNserror(Ns, M_x))
+    _ntimes(M_x) == _ntimes(logR_0) + _ntimes(exptdseedcases) || throw(_infectionsntimeserror())
+    _ntimes(exptdseedcases) == n_seeds || throw(_infectionsnseedserror())
+    return nothing
 end
 
 function packdata(; observedcases, interventions, Ns)
@@ -111,7 +118,7 @@ function packpriors( ;
 end
 
 function renewaldid(
-    data, g, priors=packpriors(); 
+    data, g, priors; 
     n_seeds=7, doubletime=n_seeds, sampletime=automatic, kwargs...
 )
     @unpack observedcases, interventions, Ns = data 
