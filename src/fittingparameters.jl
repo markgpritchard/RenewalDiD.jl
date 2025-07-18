@@ -9,23 +9,29 @@ _ngroups(M::AbstractMatrix) = size(M, 2)
 
 _gammavec(mu_gamma, sigma_gamma, gammas_raw) = mu_gamma .+ sigma_gamma .* gammas_raw
 
-# `theta_0` is the value of theta at time 0. `thetas_raw` is a vector representing how much 
+# The value of theta at time 0 is fixed to 0. `thetas_raw` is a vector representing how much 
 # each subsequent theta differs from the previous one as a multiple of the standard 
 # deviation. `sigma_theta` is the standard deviation. The output of this function is the 
 # time-varying `theta` at each time as a cumulative random walk. 
-_thetavec(theta_0, thetas_raw, sigma_theta) = cumsum([theta_0; thetas_raw .* sigma_theta])
+function _thetavec(thetas_raw, sigma_theta)
+    theta_0 = zero(thetas_raw[1] * sigma_theta)
+    return cumsum([theta_0; thetas_raw .* sigma_theta])
+end
 
 function _predictedlogR_0(alpha, gammavec, thetavec, tau, interventions)
-    length(gammavec) == _ngroups(interventions) || throw(_ngroupsmmerror(gammavec, interventions))
-    length(thetavec) == _ntimes(interventions) || throw(_ntimesmmerror(thetavec, interventions))
-    R_0 = alpha .* ones(size(interventions)...) 
-    for (g, gamma) in enumerate(gammavec)
+    _predictedlogR_0assertions(gammavec, thetavec, interventions)
+
+    R_0 = alpha .* ones(size(interventions)...)  # intercept
+    
+    for (g, gamma) in enumerate(gammavec)  # group-dependent values 
         R_0[:, g] .+=  gamma
     end 
-    for (t, theta) in enumerate(thetavec)
+    
+    for (t, theta) in enumerate(thetavec)  # time-dependent values 
         R_0[t, :] .+=  theta
     end
-    R_0 .+= tau .* interventions
+    
+    R_0 .+= tau .* interventions  # effect of the intervention
     return R_0
 end
 
@@ -82,15 +88,6 @@ function _infections(
     return infn
 end
 
-function _infectionsassertions(M_x, logR_0, exptdseedcases, Ns, n_seeds)
-    _ngroups(M_x) == _ngroups(logR_0) || throw(_widthmismatch("M_x", "logR_0"))
-    _ngroups(M_x) == _ngroups(exptdseedcases) || throw(_widthmismatch("M_x", "exptdseedcases"))
-    _ngroups(M_x) == length(Ns) || throw(_MxNserror(Ns, M_x))
-    _ntimes(M_x) == _ntimes(logR_0) + _ntimes(exptdseedcases) || throw(_infectionsntimeserror())
-    _ntimes(exptdseedcases) == n_seeds || throw(_infectionsnseedserror())
-    return nothing
-end
-
 function packdata(; observedcases, interventions, Ns)
     return Dict(
         :observedcases => observedcases,
@@ -103,7 +100,6 @@ function packpriors( ;
     alphaprior=Normal(0, 1),
     mu_gammaprior=Normal(0, 1),
     sigma_gammaprior=Exponential(1),
-    theta_0prior=Normal(0, 1),
     sigma_thetaprior=Exponential(1),
     tauprior=Normal(0, 1),
 )
@@ -111,7 +107,6 @@ function packpriors( ;
         :alphaprior => alphaprior,
         :mu_gammaprior => mu_gammaprior,
         :sigma_gammaprior => sigma_gammaprior,
-        :theta_0prior => theta_0prior,
         :sigma_thetaprior => sigma_thetaprior,
         :tauprior => tauprior,
     )
@@ -122,8 +117,7 @@ function renewaldid(
     n_seeds=7, doubletime=n_seeds, sampletime=automatic, kwargs...
 )
     @unpack observedcases, interventions, Ns = data 
-    @unpack alphaprior, mu_gammaprior, sigma_gammaprior, theta_0prior = priors
-    @unpack sigma_thetaprior, tauprior = priors
+    @unpack alphaprior, mu_gammaprior, sigma_gammaprior, sigma_thetaprior, tauprior = priors
     return _renewaldid(
         observedcases,
         interventions,
@@ -132,7 +126,6 @@ function renewaldid(
         alphaprior,
         mu_gammaprior,
         sigma_gammaprior,
-        theta_0prior,
         sigma_thetaprior,
         tauprior,
         n_seeds,
@@ -150,7 +143,6 @@ end
     alphaprior,
     mu_gammaprior,
     sigma_gammaprior,
-    theta_0prior,
     sigma_thetaprior,
     tauprior,
     n_seeds,
@@ -165,14 +157,13 @@ end
     mu_gamma ~ mu_gammaprior
     sigma_gamma ~ sigma_gammaprior
     gammas_raw ~ filldist(Normal(0, 1), ngroups)
-    theta_0 ~ theta_0prior
     thetas_raw ~ filldist(Normal(0, 1), ntimes - 1)
     sigma_theta ~ sigma_thetaprior
     tau ~ tauprior
     M_x ~ filldist(Normal(0, 1), ntimes + n_seeds, ngroups)
 
     gammavec = _gammavec(mu_gamma, sigma_gamma, gammas_raw)
-    thetavec = _thetavec(theta_0, thetas_raw, sigma_theta)
+    thetavec = _thetavec(thetas_raw, sigma_theta)
 
     predictedlogR_0 = _predictedlogR_0(alpha, gammavec, thetavec, tau, interventions)
 
@@ -186,6 +177,24 @@ end
     observedcases ~ arraydist(Normal.(predictedinfections[n_seeds:n_seeds+ntimes, :], 1))
 end
 
+
+
+# Assertions ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+function _infectionsassertions(M_x, logR_0, exptdseedcases, Ns, n_seeds)
+    _ngroups(M_x) == _ngroups(logR_0) || throw(_widthmismatch("M_x", "logR_0"))
+    _ngroups(M_x) == _ngroups(exptdseedcases) || throw(_widthmismatch("M_x", "exptdseedcases"))
+    _ngroups(M_x) == length(Ns) || throw(_MxNserror(Ns, M_x))
+    _ntimes(M_x) == _ntimes(logR_0) + _ntimes(exptdseedcases) || throw(_infectionsntimeserror())
+    _ntimes(exptdseedcases) == n_seeds || throw(_infectionsnseedserror())
+    return nothing
+end
+
+function _predictedlogR_0assertions(gammas, thetas, interventions)
+    length(gammas) == _ngroups(interventions) || throw(_ngroupsmmerror(gammas, interventions))
+    length(thetas) == _ntimes(interventions) || throw(_ntimesmmerror(thetas, interventions))
+    return nothing
+end
 
 
 # Error messages ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

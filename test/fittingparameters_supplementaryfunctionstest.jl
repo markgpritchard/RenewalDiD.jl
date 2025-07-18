@@ -99,12 +99,11 @@ end
 end
 
 @testset "generate vector of theta values" begin
-    @test RenewalDiD._thetavec(0, zeros(3), 1) == zeros(4)
-    @test RenewalDiD._thetavec(0, zeros(4), 1) == zeros(5)
-    @test RenewalDiD._thetavec(1, zeros(3), 1) == ones(4)
-    @test RenewalDiD._thetavec(1, ones(3), 1) == [1, 2, 3, 4]
-    @test RenewalDiD._thetavec(1, ones(3), 0.5) == [1, 1.5, 2, 2.5]
-    @test RenewalDiD._thetavec(1, [-2.5, 0.5, 0.5], 0.5) == [1, -0.25, 0, 0.25]
+    @test RenewalDiD._thetavec(zeros(3), 1) == zeros(4)
+    @test RenewalDiD._thetavec(zeros(4), 1) == zeros(5)
+    @test RenewalDiD._thetavec(ones(3), 1) == [0, 1, 2, 3]
+    @test RenewalDiD._thetavec(ones(3), 0.5) == [0, 0.5, 1, 1.5]
+    @test RenewalDiD._thetavec([-2.5, 0.5, 0.5], 0.5) == [0, -1.25, -1, -0.75]
 end
 
 @testset "generate matrix of log R_0 values" begin
