@@ -45,7 +45,9 @@ end
 @testset "function `g_seir`" begin
     @testset "`g(0) == 0" begin
         @test g_seir(0; gamma=0.5) == 0
+        @test g_seir(0; gamma=rand()) == 0
         @test g_seir(0; gamma=0.4, sigma=0.5) == 0
+        @test g_seir(0; gamma=rand(), sigma=rand()) == 0
     end
     @testset "check specific values" begin
         @test g_seir(1; gamma=0.4, sigma=0.5) == 0.12757877264601186
