@@ -15,7 +15,13 @@ using Test
     @testset "simulations" begin
         include("simulations_test.jl")
     end 
-    @testset "fitting parameters" begin
+    @testset "fitting parameters (supplementary functions)" begin
         include("fittingparameters_supplementaryfunctionstest.jl")
     end  
+    @testset "fitting parameters" begin
+        include("fittingparameters_test.jl")
+    end    
+    @testset "process parameters" begin
+        include("processparameters_test.jl")
+    end
 end 

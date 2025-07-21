@@ -91,11 +91,15 @@ end
 end
 
 @testset "generate vector of gamma values" begin
-    @test RenewalDiD._gammavec(0, 1, zeros(3)) == zeros(3)
-    @test RenewalDiD._gammavec(0, 1, zeros(4)) == zeros(4)
-    @test RenewalDiD._gammavec(1, 1, zeros(3)) == ones(3)
-    @test RenewalDiD._gammavec(1, 1, [1, -1, 0]) == [2, 0, 1]
-    @test RenewalDiD._gammavec(1, 0.5, [1, -1, 0]) == [1.5, 0.5, 1]
+    @test RenewalDiD._gammavec(zeros(3), 1) == zeros(4)
+    @test RenewalDiD._gammavec(zeros(4), 1) == zeros(5)
+    @test RenewalDiD._gammavec([1, -1, 0], 1) == [1, -1, 0, 0]
+    @test RenewalDiD._gammavec([1, -1, 0], 0.5) == [0.5, -0.5, 0, 0]
+    @test RenewalDiD._gammavec([1, -2, 0.5], 0.5) == [0.5, -1, 0.25, 0.25]
+    @test RenewalDiD._gammavec([3, -2, 0.5], 0.5) == [1.5, -1, 0.25, -0.75]
+    g = RenewalDiD._gammavec(rand(3), rand())
+    @test length(g) == 4
+    @test sum(g) ≈ 0 atol=1e-10
 end
 
 @testset "generate vector of theta values" begin

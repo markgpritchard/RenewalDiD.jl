@@ -7,7 +7,9 @@
 _ntimes(M::AbstractMatrix) = size(M, 1)
 _ngroups(M::AbstractMatrix) = size(M, 2)
 
-_gammavec(mu_gamma, sigma_gamma, gammas_raw) = mu_gamma .+ sigma_gamma .* gammas_raw
+# the mean of all gamma values is zero, ensured by setting the final value in the vector as 
+# `-sum` of other values
+_gammavec(gammas_raw, sigma_gamma) = [gammas_raw; -sum(gammas_raw)] .* sigma_gamma
 
 # The value of theta at time 0 is fixed to 0. `thetas_raw` is a vector representing how much 
 # each subsequent theta differs from the previous one as a multiple of the standard 
@@ -157,12 +159,12 @@ end
     alpha ~ alphaprior
     mu_gamma ~ mu_gammaprior
     sigma_gamma ~ sigma_gammaprior
-    gammas_raw ~ filldist(Normal(0, 1), ngroups)
+    gammas_raw ~ filldist(Normal(0, 1), ngroups - 1)
     thetas_raw ~ filldist(Normal(0, 1), ntimes - 1)
     sigma_theta ~ sigma_thetaprior
     M_x ~ filldist(Normal(0, 1), ntimes + n_seeds, ngroups)
 
-    gammavec = _gammavec(mu_gamma, sigma_gamma, gammas_raw)
+    gammavec = _gammavec(gammas_raw, sigma_gamma)
     thetavec = _thetavec(thetas_raw, sigma_theta)
 
     predictedlogR_0 = _predictedlogR_0(alpha, gammavec, thetavec, tau, interventions)
