@@ -91,9 +91,9 @@ julia> g_seir(10; gamma=0.3, sigma=0.5)
 0.03228684102658386
 ``` 
 """
-function g_seir(t; gamma, sigma=automatic)
+function g_seir(t::T; gamma, sigma=automatic) where T
     if t < 0 
-        return zero(g_seir(0; gamma, sigma))
+        return zero(_g_seir(zero(T), gamma, sigma))
     else
         return _g_seir(t, gamma, sigma)
     end

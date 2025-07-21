@@ -9,7 +9,9 @@ using UnPack: @unpack
 
 @reexport using DataFrames: DataFrame
 
-include("automatic.jl")
+struct Automatic end  # not exported
+const automatic = Automatic()  # not exported
+
 include("interventionmatrix.jl")
 include("generationinterval.jl")
 include("simulations.jl")

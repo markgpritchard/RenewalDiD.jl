@@ -13,8 +13,8 @@ _gammavec(mu_gamma, sigma_gamma, gammas_raw) = mu_gamma .+ sigma_gamma .* gammas
 # each subsequent theta differs from the previous one as a multiple of the standard 
 # deviation. `sigma_theta` is the standard deviation. The output of this function is the 
 # time-varying `theta` at each time as a cumulative random walk. 
-function _thetavec(thetas_raw, sigma_theta)
-    theta_0 = zero(thetas_raw[1] * sigma_theta)
+function _thetavec(thetas_raw::AbstractVector{S}, sigma_theta::T) where {S, T}
+    theta_0 = zero(S) * zero(T)
     return cumsum([theta_0; thetas_raw .* sigma_theta])
 end
 
