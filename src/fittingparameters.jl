@@ -193,9 +193,7 @@ function renewaldid(
         sigma_gammaprior,
         sigma_thetaprior,
         tauprior,
-        n_seeds,
-        doubletime, 
-        sampletime;
+        n_seeds;
         kwargs...
     )
 end
@@ -218,8 +216,6 @@ function renewaldid_tracksusceptibles(
         sigma_thetaprior,
         tauprior,
         n_seeds,
-        doubletime, 
-        sampletime,
         omega;
         kwargs...
     )
@@ -235,9 +231,7 @@ end
     sigma_gammaprior,
     sigma_thetaprior,
     tauprior,
-    n_seeds,
-    doubletime, 
-    sampletime;
+    n_seeds;
     kwargs...
 )
     ngroups = _ngroups(interventions)
@@ -277,8 +271,6 @@ end
     sigma_thetaprior,
     tauprior,
     n_seeds,
-    doubletime, 
-    sampletime,
     omega;
     kwargs...
 )
