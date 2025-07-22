@@ -10,6 +10,7 @@ _ngroups(M::AbstractMatrix) = size(M, 2)
 # the mean of all gamma values is zero, ensured by setting the final value in the vector as 
 # `-sum` of other values
 _gammavec(gammas_raw, sigma_gamma) = [gammas_raw; -sum(gammas_raw)] .* sigma_gamma
+# a second version of this function is given in `processparameters.jl`
 
 # The value of theta at time 0 is fixed to 0. `thetas_raw` is a vector representing how much 
 # each subsequent theta differs from the previous one as a multiple of the standard 
@@ -18,7 +19,7 @@ _gammavec(gammas_raw, sigma_gamma) = [gammas_raw; -sum(gammas_raw)] .* sigma_gam
 function _thetavec(thetas_raw::AbstractVector{S}, sigma_theta::T) where {S, T}
     theta_0 = zero(S) * zero(T)
     return cumsum([theta_0; thetas_raw .* sigma_theta])
-end
+end  # a second version of this function is given in `processparameters.jl`
 
 function _predictedlogR_0(alpha, gammavec, thetavec, tau, interventions)
     _predictedlogR_0assertions(gammavec, thetavec, interventions)
@@ -37,7 +38,22 @@ function _predictedlogR_0(alpha, gammavec, thetavec, tau, interventions)
     return R_0
 end
 
-function _expectedseedcases(observedcases, n_seeds; doubletime=n_seeds, sampletime=automatic)
+function _expectedseedcases(observedcases, n_seeds; doubletime=n_seeds, sampletime=automatic, minvalue=nothing,)
+    return __expectedseedcases(observedcases, n_seeds, doubletime, sampletime, minvalue)
+end
+
+function __expectedseedcases(observedcases, n_seeds, doubletime, sampletime, minvalue)
+    exptdseedcases = __expectedseedcases(observedcases, n_seeds, doubletime, sampletime)
+
+    for g in 1:_ngroups(observedcases)
+        sum(exptdseedcases[:, g]) >= minvalue && continue 
+        exptdseedcases[1, g] += minvalue - sum(exptdseedcases[:, g])
+    end
+
+    return exptdseedcases
+end
+
+function __expectedseedcases(observedcases, n_seeds, doubletime, sampletime, ::Nothing)
     return __expectedseedcases(observedcases, n_seeds, doubletime, sampletime)
 end
 
@@ -63,31 +79,79 @@ function __expectedseedcases(observedcases, n_seeds, doubletime, sampletime)
 end
 
 function _expectedinfections(g, logR_0, hx; kwargs...)
+    return _expectedinfections(g, 1, logR_0, hx; kwargs...)
+end
+
+function _expectedinfections(g, propsus, logR_0, hx; kwargs...)
     t = length(hx) + 1
-    return sum(exp(logR_0) .* [hx[x] * g(t - x; kwargs...) for x in eachindex(hx)])
+    return sum(exp(logR_0) .* propsus .* [hx[x] * g(t - x; kwargs...) for x in eachindex(hx)])
 end
 
 _approxcases(x, sigma) = max(0, x * (1 + sigma))
 
-function _infections(
-    g, M_x, logR_0::Matrix{T}, exptdseedcases, Ns, n_seeds; 
-    kwargs...
-) where T
+function _infections(T::DataType, g, M_x, logR_0, exptdseedcases, Ns, n_seeds; kwargs...) 
     _infectionsassertions(M_x, logR_0, exptdseedcases, Ns, n_seeds)
     infn = zeros(T, _ntimes(logR_0) + n_seeds, _ngroups(logR_0))
+    _infections_seed!(infn, M_x, exptdseedcases, Ns, n_seeds; kwargs...) 
+    _infections_transmitted!(infn, g, M_x, logR_0, Ns, n_seeds; kwargs...)
+    return infn
+end
 
+function _infections_seed!(infn, M_x, exptdseedcases, Ns, n_seeds; kwargs...) 
     for j in 1:_ngroups(M_x), t in 1:n_seeds
         infn[t, j] = _approxcases(exptdseedcases[t, j], M_x[t, j])
-    end
-    
+    end 
+    return nothing
+end
+
+function _infections_seed!(
+    infn::Matrix{<:Complex}, M_x, exptdseedcases, Ns, n_seeds; 
+    kwargs...
+) 
+    for j in 1:_ngroups(M_x)
+        sus = Ns[j]
+        _infn = min(sus, _approxcases(exptdseedcases[1, j], M_x[1, j]))
+        infn[1, j] = _infn + (sus - _infn) * im
+
+        for t in 2:n_seeds
+            sus = imag(infn[t-1, j])
+            _infn = min(sus, _approxcases(exptdseedcases[t, j], M_x[t, j]))
+            infn[t, j] = _infn + (sus - _infn) * im
+        end 
+    end 
+    return nothing
+end
+
+function _infections_transmitted!(infn, g, M_x, logR_0, Ns, n_seeds; kwargs...) 
     for j in 1:_ngroups(M_x), t in 1:_ntimes(logR_0)
         infn[t+n_seeds, j] = _approxcases(
             _expectedinfections(g, logR_0[t, j], @view infn[1:t+n_seeds-1, j]; kwargs...), 
             M_x[t+n_seeds, j]
         )
     end
-    
-    return infn
+    return nothing
+end
+
+function _infections_transmitted!(
+    infn::Matrix{<:Complex}, g, M_x, logR_0, Ns, n_seeds; 
+    kwargs...
+) 
+    for j in 1:_ngroups(M_x), t in 1:_ntimes(logR_0)
+        sus = imag(infn[t+n_seeds-1, j])
+        propsus = sus / Ns[j]
+        _infn = _approxcases(
+            _expectedinfections(
+                g, 
+                propsus, 
+                logR_0[t, j], 
+                real.(@view infn[1:t+n_seeds-1, j]); 
+                kwargs...
+            ), 
+            M_x[t+n_seeds, j]
+        )
+        infn[t+n_seeds, j] = _infn + (sus - _infn) * im
+    end
+    return nothing
 end
 
 function packdata(; observedcases, interventions, Ns)
@@ -100,14 +164,12 @@ end
 
 function packpriors( ;
     alphaprior=Normal(0, 1),
-    mu_gammaprior=Normal(0, 1),
     sigma_gammaprior=Exponential(1),
     sigma_thetaprior=Exponential(1),
     tauprior=Normal(0, 1),
 )
     return Dict(
         :alphaprior => alphaprior,
-        :mu_gammaprior => mu_gammaprior,
         :sigma_gammaprior => sigma_gammaprior,
         :sigma_thetaprior => sigma_thetaprior,
         :tauprior => tauprior,
@@ -119,14 +181,15 @@ function renewaldid(
     n_seeds=7, doubletime=n_seeds, sampletime=automatic, kwargs...
 )
     @unpack observedcases, interventions, Ns = data 
-    @unpack alphaprior, mu_gammaprior, sigma_gammaprior, sigma_thetaprior, tauprior = priors
+    @unpack alphaprior, sigma_gammaprior, sigma_thetaprior, tauprior = priors
+    expectedseedcases = _expectedseedcases(observedcases, n_seeds; doubletime, sampletime)
     return _renewaldid(
         observedcases,
         interventions,
+        expectedseedcases,
         Ns,
         g,    
         alphaprior,
-        mu_gammaprior,
         sigma_gammaprior,
         sigma_thetaprior,
         tauprior,
@@ -137,13 +200,38 @@ function renewaldid(
     )
 end
 
+function renewaldid_tracksusceptibles(
+    data, g, priors; 
+    n_seeds=7, doubletime=n_seeds, sampletime=automatic, omega=0, kwargs...
+)
+    @unpack observedcases, interventions, Ns = data 
+    @unpack alphaprior, sigma_gammaprior, sigma_thetaprior, tauprior = priors
+    expectedseedcases = _expectedseedcases(observedcases, n_seeds; doubletime, sampletime)
+    return __renewaldid_tracksusceptibles(
+        observedcases,
+        interventions,
+        expectedseedcases,
+        Ns,
+        g,    
+        alphaprior,
+        sigma_gammaprior,
+        sigma_thetaprior,
+        tauprior,
+        n_seeds,
+        doubletime, 
+        sampletime,
+        omega;
+        kwargs...
+    )
+end
+
 @model function _renewaldid(
     observedcases,
     interventions,
+    expectedseedcases,
     Ns,
     g,    
     alphaprior,
-    mu_gammaprior,
     sigma_gammaprior,
     sigma_thetaprior,
     tauprior,
@@ -157,7 +245,6 @@ end
 
     tau ~ tauprior
     alpha ~ alphaprior
-    mu_gamma ~ mu_gammaprior
     sigma_gamma ~ sigma_gammaprior
     gammas_raw ~ filldist(Normal(0, 1), ngroups - 1)
     thetas_raw ~ filldist(Normal(0, 1), ntimes - 1)
@@ -169,14 +256,56 @@ end
 
     predictedlogR_0 = _predictedlogR_0(alpha, gammavec, thetavec, tau, interventions)
 
-    expectedseedcases = _expectedseedcases(observedcases, n_seeds; doubletime, sampletime)
+    T = typeof(predictedlogR_0[1, 1])
     predictedinfections = _infections(
-        g, M_x, predictedlogR_0, expectedseedcases, Ns, n_seeds; 
+        T, g, M_x, predictedlogR_0, expectedseedcases, Ns, n_seeds; 
         kwargs...
     )
 
     # to add delay later 
     observedcases ~ arraydist(Normal.(predictedinfections[n_seeds:n_seeds+ntimes, :], 1))
+end
+
+@model function __renewaldid_tracksusceptibles(
+    observedcases,
+    interventions,
+    expectedseedcases,
+    Ns,
+    g,    
+    alphaprior,
+    sigma_gammaprior,
+    sigma_thetaprior,
+    tauprior,
+    n_seeds,
+    doubletime, 
+    sampletime,
+    omega;
+    kwargs...
+)
+    ngroups = _ngroups(interventions)
+    ntimes = _ntimes(interventions)
+
+    tau ~ tauprior
+    alpha ~ alphaprior
+    sigma_gamma ~ sigma_gammaprior
+    gammas_raw ~ filldist(Normal(0, 1), ngroups - 1)
+    thetas_raw ~ filldist(Normal(0, 1), ntimes - 1)
+    sigma_theta ~ sigma_thetaprior
+    M_x ~ filldist(Normal(0, 1), ntimes + n_seeds, ngroups)
+
+    gammavec = _gammavec(gammas_raw, sigma_gamma)
+    thetavec = _thetavec(thetas_raw, sigma_theta)
+
+    predictedlogR_0 = _predictedlogR_0(alpha, gammavec, thetavec, tau, interventions)
+
+    T = Complex{typeof(predictedlogR_0[1, 1])}
+    predictedinfections = _infections(
+        T, g, M_x, predictedlogR_0, expectedseedcases, Ns, n_seeds; 
+        kwargs...
+    )
+
+    # to add delay later 
+    observedcases ~ arraydist(Normal.(real.(predictedinfections[n_seeds:n_seeds+ntimes, :]), 1))
 end
 
 

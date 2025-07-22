@@ -6,6 +6,9 @@ using RenewalDiD
 using Test
 
 @testset "RenewalDiD.jl" begin
+    @testset "test functions for tests" begin
+        include("functionsfortests_test.jl")
+    end
     @testset "intervention matrix" begin
         include("interventionmatrix_test.jl")
     end 

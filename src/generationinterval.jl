@@ -311,6 +311,12 @@ function _testgenerationtime(v::AbstractVector; funclengthinfo="", muteinfo=fals
     return nothing 
 end 
 
+const _Useablegenerationfunctions = Union{
+    typeof(g_covid),
+    typeof(g_seir),
+    typeof(generationtime)
+}
+
 
 # Warnings ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 

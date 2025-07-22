@@ -17,6 +17,7 @@ include("generationinterval.jl")
 include("simulations.jl")
 include("fittingparameters.jl")
 include("processparameters.jl")
+include("functionsfortests.jl")
 
 ## interventionmatrix.jl
 export InterventionMatrix
@@ -25,6 +26,8 @@ export g_covid, g_seir, generationtime, testgenerationtime, vectorg_seir
 ## simulations.jl
 export packsimulations, packsimulationtuple, runsimulation, simulationcases, simulationu0
 ## fittingparameters.jl
-export packdata, packpriors, renewaldid
+export packdata, packpriors, renewaldid, renewaldid_tracksusceptibles
+## processparameters.jl
+export samplerenewaldidinfections
 
-end
+end  # module RenewalDiD

@@ -12,21 +12,33 @@ obs2 = (_obs = zeros(Int, 20, 2); _obs[1, 1] += 1; _obs[1:5, :] .+= 1; _obs)
 seedinfections1 = [1  0; 2  1]
 M_x1 = [2  0; -0.5  1; 1  0.5; -2  1; 0  1]
 calcinfections1 = RenewalDiD._infections(
-    g_covid, zeros(5, 2), log.(zeros(3, 2)), zeros(2, 2), zeros(2), 2
+    Float64, g_covid, zeros(5, 2), log.(zeros(3, 2)), zeros(2, 2), zeros(2), 2
 )
 calcinfections2 = RenewalDiD._infections(
-    g_covid, zeros(6, 2), log.(zeros(4, 2)), zeros(2, 2), zeros(2), 2
+    Float64, g_covid, zeros(6, 2), log.(zeros(4, 2)), zeros(2, 2), zeros(2), 2
 )
 calcinfections3 = RenewalDiD._infections(
-    generationtime, zeros(5, 2), log.(zeros(3, 2)), seedinfections1, 1000 .* ones(2), 2;
+    Float64, 
+    generationtime, 
+    zeros(5, 2), 
+    log.(zeros(3, 2)), 
+    seedinfections1, 
+    1000 .* ones(2), 
+    2;
     vec=[0, 1],
 )
 calcinfections4 = RenewalDiD._infections(
-    generationtime, zeros(5, 2), log.(1.5 .* ones(3, 2)), seedinfections1, 1000 .* ones(2), 2;
+    Float64, 
+    generationtime, 
+    zeros(5, 2), 
+    log.(1.5 .* ones(3, 2)), 
+    seedinfections1, 
+    1000 .* ones(2), 
+    2;
     vec=[0, 1],
 )
 calcinfections5 = RenewalDiD._infections(
-    generationtime, M_x1, log.(ones(3, 2)), seedinfections1, 1000 .* ones(2), 2;
+    Float64, generationtime, M_x1, log.(ones(3, 2)), seedinfections1, 1000 .* ones(2), 2;
     vec=[0, 1]
 )
 
@@ -72,6 +84,42 @@ seedexpectation5 = [
     (log(4 / 3) - log(2) / 5)  (log(4 / 3) - log(2) / 5)
 ]
 seedexpectation6 = [0  0; 0  0; 0  0; 0  0; (log(6 / 5) - log(2) / 5)  0]
+mseedexpectation01 = (m = zeros(7, 2); m[1, :] .+= 1; m)
+mseedexpectation02 = (m = zeros(5, 2); m[1, :] .+= 2; m)
+mseedexpectation03 = (m = zeros(5, 3); m[1, :] .+= 0.5; m)
+mseedexpectation1 = [
+    (0.5 - (log(6 / 5) - log(2) / 5))  (0.5 - (log(6 / 5) - log(2) / 5));
+    0  0; 
+    0  0; 
+    0  0; 
+    (log(6 / 5) - log(2) / 5)  (log(6 / 5) - log(2) / 5)
+]
+mseedexpectation2 = [
+    (0.5 - (log(6 / 5) - log(2) / 5))  (0.5 - (log(6 / 5) - log(2) / 5));
+    0  0; 
+    0  0; 
+    0  0; 
+    (log(6 / 5) - log(2) / 5)  (log(6 / 5) - log(2) / 5)
+]
+mseedexpectation3 = seedexpectation3
+mseedexpectation4 = [
+    (1 - (log(6 / 5) - log(2) / 5))  (1 - (log(6 / 5) - log(2) / 5));
+    0  0; 
+    0  0; 
+    0  0; 
+    (log(6 / 5) - log(2) / 5)  (log(6 / 5) - log(2) / 5)
+]
+mseedexpectation5 = (
+    r4 = log(4 / 3) - 2 * log(2) / 5;
+    r5 = log(4 / 3) - log(2) / 5; 
+    r1 = 0.5 - r4 - r5;
+    [r1  r1; 0  0; 0  0; r4  r4; r5  r5]
+) 
+mseedexpectation6 = (
+    r1a = 0.75 - (log(6 / 5) - log(2) / 5);
+    r5a = log(6 / 5) - log(2) / 5;
+    [r1a  0.75; 0  0; 0  0; 0  0; r5a  0]
+) 
 predictedinfections3 = [1  0; 2  1; 0  0; 0  0; 0  0]
 predictedinfections4 = [1  0; 2  1; 3  1.5; 4.5  2.25; 6.75  3.375]
 predictedinfections5 = [3  0; 1  2; 2  3; 0  6; 0  12]
@@ -133,6 +181,42 @@ end
     @test RenewalDiD._expectedseedcases(obs2, 5) == seedexpectation6
     @test RenewalDiD._expectedseedcases(zeros(2, 3), 5) == zeros(5, 3)
     @test_throws BoundsError RenewalDiD._expectedseedcases(zeros(2, 3), 5; sampletime=5)
+    mm01 = RenewalDiD._expectedseedcases(zeros(20, 2), 7; minvalue=1)
+    @testset for i in eachindex(mm01)
+        @test mm01[i] ≈ mseedexpectation01[i] atol=1e-10
+    end
+    mm02 = RenewalDiD._expectedseedcases(zeros(20, 2), 5; minvalue=2)
+    @testset for i in eachindex(mm02)
+        @test mm02[i] ≈ mseedexpectation02[i] atol=1e-10
+    end
+    mm03 = RenewalDiD._expectedseedcases(zeros(20, 3), 5; minvalue=0.5) 
+    @testset for i in eachindex(mm03)
+        @test mm03[i] ≈ mseedexpectation03[i] atol=1e-10
+    end
+    mm1 = RenewalDiD._expectedseedcases(obs1, 5; minvalue=0.5) 
+    @testset for i in eachindex(mm1)
+        @test mm1[i] ≈ mseedexpectation1[i] atol=1e-10
+    end
+    mm2 = RenewalDiD._expectedseedcases(obs1, 5; doubletime=5, minvalue=0.5) 
+    @testset for i in eachindex(mm2)
+        @test mm2[i] ≈ mseedexpectation2[i] atol=1e-10
+    end
+    mm3 = RenewalDiD._expectedseedcases(obs1, 5; doubletime=10, minvalue=0.1) 
+    @testset for i in eachindex(mm3)
+        @test mm3[i] ≈ mseedexpectation3[i] atol=1e-10
+    end
+    mm4 = RenewalDiD._expectedseedcases(obs1, 5; sampletime=5, minvalue=1) 
+    @testset for i in eachindex(mm4)
+        @test mm4[i] ≈ mseedexpectation4[i] atol=1e-10
+    end
+    mm5 = RenewalDiD._expectedseedcases(obs1, 5; sampletime=3, minvalue=0.5) 
+    @testset for i in eachindex(mm5)
+        @test mm5[i] ≈ mseedexpectation5[i] atol=1e-10
+    end
+    mm6 = RenewalDiD._expectedseedcases(obs2, 5; minvalue=0.75)
+    @testset for i in eachindex(mm6)
+        @test mm6[i] ≈ mseedexpectation6[i] atol=1e-10
+    end
 end
         
 @testset "expected number of infections" begin
@@ -201,19 +285,19 @@ end
     @test calcinfections1 == zeros(5, 2)
     @test calcinfections2 == zeros(6, 2)
     @test_throws DimensionMismatch RenewalDiD._infections(
-        g_covid, zeros(5, 2), log.(zeros(3, 3)), zeros(2, 2), zeros(2), 2
+        Float64, g_covid, zeros(5, 2), log.(zeros(3, 3)), zeros(2, 2), zeros(2), 2
     ) 
     @test_throws DimensionMismatch RenewalDiD._infections(
-        g_covid, zeros(5, 2), log.(zeros(3, 2)), zeros(2, 3), zeros(2), 2
+        Float64, g_covid, zeros(5, 2), log.(zeros(3, 2)), zeros(2, 3), zeros(2), 2
     ) 
     @test_throws DimensionMismatch RenewalDiD._infections(
-        g_covid, zeros(5, 2), log.(zeros(3, 2)), zeros(2, 2), zeros(3), 2
+        Float64, g_covid, zeros(5, 2), log.(zeros(3, 2)), zeros(2, 2), zeros(3), 2
     ) 
     @test_throws DimensionMismatch RenewalDiD._infections(
-        g_covid, zeros(5, 2), log.(zeros(4, 2)), zeros(2, 2), zeros(2), 2
+        Float64, g_covid, zeros(5, 2), log.(zeros(4, 2)), zeros(2, 2), zeros(2), 2
     ) 
     @test_throws DimensionMismatch RenewalDiD._infections(
-        g_covid, zeros(5, 2), log.(zeros(3, 2)), zeros(2, 2), zeros(2), 3
+        Float64, g_covid, zeros(5, 2), log.(zeros(3, 2)), zeros(2, 2), zeros(2), 3
     ) 
     @test calcinfections3 == predictedinfections3
     @test calcinfections4 == predictedinfections4

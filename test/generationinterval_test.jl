@@ -159,3 +159,15 @@ end
         @test_nowarn testgenerationtime(x -> x == 5 ? 0.1 : 0; muteinfo=true)
     end
 end
+
+@testset "correct functions for each generation function" begin
+    let 
+        _f(::RenewalDiD._Useablegenerationfunctions) = 1
+        _f(x) = 2
+        @test _f(zeros(Int, 2)) == 2
+        @test _f(x -> 2 * x) == 2 
+        @test _f(g_covid) == 1 
+        @test _f(g_seir) == 1 
+        @test _f(generationtime) == 1
+    end    
+end
