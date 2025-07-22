@@ -472,31 +472,25 @@ function _parametermaximumerrorexception(x, t, symbol, upper)
 end
 
 function _recoveryerrorexception(timetodiagnosis, timetorecovery)
-    return ErrorException(
-        "expected time to diagnosis ($timetodiagnosis) must be less than expected time to \
+    m = "expected time to diagnosis ($timetodiagnosis) must be less than expected time to \
         recovery ($timetorecovery)"
-    )
+    return ErrorException(m)
 end
 
 _simmatrixwidtherror(M) = ArgumentError("size $(size(M)): expecting a Matrix of width 7")
 
 function _simulationu0_n_error(n, sm)
-    return ArgumentError(
-        "$n: when keyword argument `n` is supplied it must be at least as large as the sum \
+    m = "$n: when keyword argument `n` is supplied it must be at least as large as the sum \
         of the other compartment values provided ($sm)"
-    )
+    return ArgumentError(m)
 end
 
 _simulationu0_negativeerror(x) = ArgumentError("$x: compartment sizes cannot be negative")
 
 function _simulationu0_nr_error(n, calcn)
-    return ArgumentError(
-        "Inconsistent values of `n` and `r` supplied. Calculated n=$calcn but keyword \
+    m = "Inconsistent values of `n` and `r` supplied. Calculated n=$calcn but keyword \
         argument n=$n."
-    )
+    return ArgumentError(m)
 end
 
 _ulengtherror(u) = ArgumentError("$u, u must be a vector of 7 integers")
-
-
-

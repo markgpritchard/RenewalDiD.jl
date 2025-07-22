@@ -335,9 +335,8 @@ function _infectionsnseedserror()
 end
 
 function _infectionsntimeserror()
-    return DimensionMismatch(
-        "height of `Mx` must equal sum of heights of `logR_0` and `exptdseedcases`"
-    )
+    m = "height of `Mx` must equal sum of heights of `logR_0` and `exptdseedcases`"
+    return DimensionMismatch(m)
 end
 
 _MxNserror(Ns, M_x) = _vm_dimensionmismatch(length(Ns), "Ns", "width", "M_x", _ngroups(M_x))
@@ -359,7 +358,8 @@ function _R_0_dimensionmismatch(len, vec, dim, size)
 end
 
 function _vm_dimensionmismatch(len, vec, dim, mat, size)
-    return DimensionMismatch("length of `$vec`, $len, should equal $dim of `$mat`, $size")
+    m = "length of `$vec`, $len, should equal $dim of `$mat`, $size"
+    return DimensionMismatch(m)
 end
 
 _widthmismatch(a, b) = DimensionMismatch("`$a` and `$b` must have the same width")

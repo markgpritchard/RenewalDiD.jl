@@ -333,9 +333,8 @@ end
 # Error messages ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 function _g_seirequalgammasigmaerror(gamma, sigma)
-    return ArgumentError(
-        "$gamma, $sigma: if gamma==sigma only the gamma keyword argument should be provided"
-    )
+    m = "$gamma, $sigma: if gamma==sigma only the gamma keyword argument should be provided"
+    return ArgumentError(m)
 end
 
 function _generationtimebothfunctionvectorerror()
@@ -343,9 +342,8 @@ function _generationtimebothfunctionvectorerror()
 end
 
 function _generationtimenofunctionvectorerror()
-    return ArgumentError(
-        "a function or vector must be passed as either a positional or keyword argument"
-    )
+    m = "a function or vector must be passed as either a positional or keyword argument"
+    return ArgumentError(m)
 end
 
 function _negativegenerationtimerror(mv, funclengthinfo)

@@ -1,14 +1,20 @@
 # functions called by tests 
 
+"""
+    RenewalDiD.FittedParameterTestFunctions
+
+Functions that are used when testing the package `RenewalDiD`.
+
+Nothing from this module is exported by the package. The module exports the function 
+    `testdataframe`.
+"""
 module FittedParameterTestFunctions
 
 using DataFrames: DataFrame, insertcols!
 using Random: AbstractRNG, default_rng
+using RenewalDiD: Automatic, automatic 
 
 export testdataframe
-
-struct Automatic end  # not exported
-const automatic = Automatic()  # not exported
 
 function testdataframe(
     rng::AbstractRNG=default_rng(); 

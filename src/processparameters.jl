@@ -69,7 +69,7 @@ end
 # Assertions ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 function _samplerenewaldidinfectionsassertions(df, seedmatrix, i, ngroups, ntimes)
-    _ngroups(seedmatrix) == ngroups || throw(_seedwidthdimensionerror)
+    _ngroups(seedmatrix) == ngroups || throw(_seedwidthdimensionerror())
     M_xmaxt = _ntimes(seedmatrix) + ntimes
     "M_x[$M_xmaxt, 1]" in names(df) || throw(_dfMxdimensiontoosmallerror())
     "M_x[$(M_xmaxt + 1), 1]" ∉ names(df) || throw(_dfMxdimensiontoolargererror())
@@ -81,15 +81,13 @@ end
 # Error messages ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 function _dfMxdimensiontoosmallerror()
-    return DimensionMismatch(
-        "`df` must contain values of M_x for all times up to `_ntimes(seedmatrix) + ntimes`"
-    )
+    m = "`df` must contain values of M_x for all times up to `_ntimes(seedmatrix) + ntimes`"
+    return DimensionMismatch(m)
 end
 
 function _dfMxdimensiontoolargererror()
-    return DimensionMismatch(
-        "`df` must not contain values M_x for times beyond `_ntimes(seedmatrix) + ntimes`"
-    )
+    m = "`df` must not contain values M_x for times beyond `_ntimes(seedmatrix) + ntimes`"
+    return DimensionMismatch(m)
 end
 
 _seedwidthdimensionerror() = DimensionMismatch("width of `seedmatrix` must equal `ngroups`")

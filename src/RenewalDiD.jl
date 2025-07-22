@@ -17,7 +17,7 @@ include("generationinterval.jl")
 include("simulations.jl")
 include("fittingparameters.jl")
 include("processparameters.jl")
-include("functionsfortests.jl")
+include("functionsfortests.jl")  # contents not exported
 
 ## interventionmatrix.jl
 export InterventionMatrix
