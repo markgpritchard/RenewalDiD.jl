@@ -12,9 +12,9 @@ module FittedParameterTestFunctions
 
 using DataFrames: DataFrame, insertcols!
 using Random: AbstractRNG, default_rng
-using RenewalDiD: Automatic, automatic 
+using RenewalDiD: Automatic, automatic, packsimulations, packsimulationtuple, simulationu0
 
-export testdataframe
+export testdataframe, testsimulation
 
 function testdataframe(
     rng::AbstractRNG=default_rng(); 
@@ -107,5 +107,29 @@ function _addmxtotestdataframe!(::Any, df, ngroups, ntimes, nseeds, ::Any, kwarg
     end
     return nothing
 end
+
+function testsimulation(rng::AbstractRNG=default_rng())
+    u0_1 = simulationu0(; s=98, e=2)
+    u0_2 = simulationu0(; s=198, e=2)
+    u0_3 = simulationu0(; s=48, e=2)
+    gamma = 0.2
+    delta = 0.3
+    theta = 0.6
+    sigma = 0.5
+    s1 = packsimulationtuple( ; 
+        u0=u0_1, beta=_beta1, gamma, delta, theta, sigma, intervention=nothing,
+    )
+    s2 = packsimulationtuple( ; 
+        u0=u0_2, beta=_beta2, gamma, delta, theta, sigma, intervention=4,
+    )
+    s3 = packsimulationtuple( ; 
+        u0=u0_3, beta=_beta3, gamma, delta, theta, sigma, intervention=6,
+    )
+    return packsimulations(rng, 10, s1, s2, s3)
+end
+
+_beta1(t) = 0.3 + 0.1 * cos((t - 20) * 2pi / 365)
+_beta2(t) = _beta1(t) * t < 4 ? 1.1 : 0.88
+_beta3(t) = _beta1(t) * t < 6 ? 0.9 : 0.72
 
 end  # module FittedParameterTestFunctions

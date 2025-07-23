@@ -26,43 +26,40 @@ function _predictedlogR_0(alpha, gammavec, thetavec, tau, interventions)
 
     R_0 = alpha .* ones(size(interventions)...)  # intercept
     
-    for (g, gamma) in enumerate(gammavec)  # group-dependent values 
-        R_0[:, g] .+=  gamma
+    for (g, gamma) in enumerate(gammavec)
+        R_0[:, g] .+= gamma  # group-dependent values 
     end 
     
-    for (t, theta) in enumerate(thetavec)  # time-dependent values 
-        R_0[t, :] .+=  theta
+    for (t, theta) in enumerate(thetavec)
+        R_0[t, :] .+= theta  # time-dependent values 
     end
     
     R_0 .+= tau .* interventions  # effect of the intervention
     return R_0
 end
 
-function _expectedseedcases(observedcases, n_seeds; doubletime=n_seeds, sampletime=automatic, minvalue=nothing,)
+function _expectedseedcases(
+    observedcases, n_seeds; 
+    doubletime=automatic, sampletime=automatic, minvalue=nothing,
+)
     return __expectedseedcases(observedcases, n_seeds, doubletime, sampletime, minvalue)
 end
 
-function __expectedseedcases(observedcases, n_seeds, doubletime, sampletime, minvalue)
-    exptdseedcases = __expectedseedcases(observedcases, n_seeds, doubletime, sampletime)
-
-    for g in 1:_ngroups(observedcases)
-        sum(exptdseedcases[:, g]) >= minvalue && continue 
-        exptdseedcases[1, g] += minvalue - sum(exptdseedcases[:, g])
-    end
-
-    return exptdseedcases
+function __expectedseedcases(observedcases, n_seeds, ::Automatic, sampletime, minvalue)
+    doubletime = n_seeds
+    return __expectedseedcases(observedcases, n_seeds, doubletime, sampletime, minvalue)
 end
 
-function __expectedseedcases(observedcases, n_seeds, doubletime, sampletime, ::Nothing)
-    return __expectedseedcases(observedcases, n_seeds, doubletime, sampletime)
-end
-
-function __expectedseedcases(observedcases, n_seeds, doubletime, ::Automatic)
+function __expectedseedcases(
+    observedcases, n_seeds, doubletime::Number, ::Automatic, minvalue
+)
     sampletime = min(n_seeds, _ntimes(observedcases))
-    return __expectedseedcases(observedcases, n_seeds, doubletime, sampletime)
+    return __expectedseedcases(observedcases, n_seeds, doubletime, sampletime, minvalue)
 end
 
-function __expectedseedcases(observedcases, n_seeds, doubletime, sampletime)
+function __expectedseedcases(
+    observedcases, n_seeds, doubletime::Number, sampletime::Integer, minvalue
+)
     exptdseedcases = zeros(n_seeds, _ngroups(observedcases))
 
     for g in 1:_ngroups(observedcases)
@@ -75,8 +72,19 @@ function __expectedseedcases(observedcases, n_seeds, doubletime, sampletime)
         end
     end
 
+    _expectedseedcasesminimum!(exptdseedcases, observedcases, minvalue)
     return exptdseedcases
 end
+
+function _expectedseedcasesminimum!(exptdseedcases, observedcases, minvalue)
+    for g in 1:_ngroups(observedcases)
+        sum(exptdseedcases[:, g]) >= minvalue && continue 
+        exptdseedcases[1, g] += minvalue - sum(exptdseedcases[:, g])
+    end
+    return nothing
+end
+
+_expectedseedcasesminimum!(::Any, ::Any, ::Nothing) = nothing
 
 function _expectedinfections(g, logR_0, hx; kwargs...)
     return _expectedinfections(g, 1, logR_0, hx; kwargs...)
@@ -178,11 +186,15 @@ end
 
 function renewaldid(
     data, g, priors; 
-    n_seeds=7, doubletime=n_seeds, sampletime=automatic, kwargs...
+    doubletime=automatic, n_seeds=7, sampletime=automatic, seedcasesminvalue=0.5, 
+    kwargs...
 )
     @unpack observedcases, interventions, Ns = data 
     @unpack alphaprior, sigma_gammaprior, sigma_thetaprior, tauprior = priors
-    expectedseedcases = _expectedseedcases(observedcases, n_seeds; doubletime, sampletime)
+    expectedseedcases = _expectedseedcases(
+        observedcases, n_seeds; 
+        doubletime, minvalue=seedcasesminvalue, sampletime
+    )
     return _renewaldid(
         observedcases,
         interventions,
@@ -200,12 +212,16 @@ end
 
 function renewaldid_tracksusceptibles(
     data, g, priors; 
-    n_seeds=7, doubletime=n_seeds, sampletime=automatic, omega=0, kwargs...
+    doubletime=automatic, n_seeds=7, omega=0, sampletime=automatic, seedcasesminvalue=0.5, 
+    kwargs...
 )
     @unpack observedcases, interventions, Ns = data 
     @unpack alphaprior, sigma_gammaprior, sigma_thetaprior, tauprior = priors
-    expectedseedcases = _expectedseedcases(observedcases, n_seeds; doubletime, sampletime)
-    return __renewaldid_tracksusceptibles(
+    expectedseedcases = _expectedseedcases(
+        observedcases, n_seeds; 
+        doubletime, minvalue=seedcasesminvalue, sampletime
+    )
+    return _renewaldid_tracksusceptibles(
         observedcases,
         interventions,
         expectedseedcases,
@@ -260,7 +276,7 @@ end
     observedcases ~ arraydist(Normal.(predictedinfections[n_seeds:n_seeds+ntimes, :], 1))
 end
 
-@model function __renewaldid_tracksusceptibles(
+@model function _renewaldid_tracksusceptibles(
     observedcases,
     interventions,
     expectedseedcases,
