@@ -240,10 +240,8 @@ model1 =  renewaldid(
     sim1, g_seir, packpriors(; sigma_thetaprior=Exponential(0.05)); 
     gamma=0.2, sigma=0.5
 )
-#=
 chain1 = sample(rng1, model1, NUTS(), MCMCThreads(), 20, 4; verbose=false, progress=false)
 df7 = DataFrame(chain1)
-=#
 
 @testset "number of unique elements" begin
     @test nunique([1, 2, 3]) == 3
@@ -264,7 +262,7 @@ end
     @test rankvalues(df16, :tau; binsize=7) == rv16b
 
 end
-#=
+
 @testset "samples with no infections" begin
     @test s1 == zeros(11, 3)
     @test s2 == zeros(13, 4)
@@ -353,11 +351,4 @@ end
 
 
 end
-
-
-
-
-
-
-=#
 
