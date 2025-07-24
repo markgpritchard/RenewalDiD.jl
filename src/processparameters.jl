@@ -76,7 +76,7 @@ function __rankvaluebininds(start, binsize, iterationend)
     return start:stop
 end
 
-### versions of gamma and theta vector functions 
+### versions of gamma and theta vector functions taking a `DataFrame` of fitted parameters
 
 function _gammavec(df::DataFrame, i, ngroups)
     return _gammavec(  # call version in `fittingparameters.jl`
@@ -92,10 +92,82 @@ function _thetavec(df::DataFrame, i, ntimes)
     )
 end  
 
-### take samples from DataFrame of fitted parameters
+function _mxmatrix(df, i, ngroups, ntimes, n_seeds)
+    totaltimes = ntimes + n_seeds
+    return [getproperty(df, Symbol("M_x[$t, $j]"))[i] for t in 1:totaltimes, j in 1:ngroups]
+end
 
-function samplerenewaldidinfections(
-    g, df, i; 
+### take samples from DataFrame of fitted parameters and generate expected outcomes
+
+function samplerenewaldidinfections(g, df, i; kwargs...)
+    interventions, Ns, seedmatrix, ngroups, ntimes, n_seeds, kws = 
+        _samplerenewaldidinfectionarguments(; kwargs...)
+    infn = zeros(Float64, ntimes + n_seeds, ngroups)
+    _samplerenewaldidinfectionsassertions(df, seedmatrix, i, ngroups, ntimes)
+    _samplerenewaldidinfections!(
+        g, infn, df, interventions, Ns, seedmatrix, i, ngroups, ntimes, n_seeds;
+        kws...
+    )
+    return infn[n_seeds:n_seeds+ntimes, :]
+end
+
+function samplerenewaldidinfections!(g, infn, df, i; kwargs...)
+    interventions, Ns, seedmatrix, ngroups, ntimes, n_seeds, kws = 
+        _samplerenewaldidinfectionarguments(; kwargs...)
+    _samplerenewaldidinfectionsassertions(df, seedmatrix, i, ngroups, ntimes)
+    _samplerenewaldidinfections!(
+        g, infn, df, interventions, Ns, seedmatrix, i, ngroups, ntimes, n_seeds;
+        kws...
+    )
+    return nothing
+end
+
+function _samplerenewaldidinfections!(
+    g::Vector, infn, df, interventions, Ns, seedmatrix, i, ngroups, ntimes, n_seeds;
+    kwargs...
+)
+    _samplerenewaldidinfections!(
+        generationtime, infn, df, interventions, Ns, seedmatrix, i, ngroups, ntimes, n_seeds; 
+        vec=g, kwargs...
+    )
+    return nothing
+end
+
+function _samplerenewaldidinfections!(
+    g::_Useablegenerationfunctions, 
+    infn, 
+    df, 
+    interventions, 
+    Ns, 
+    seedmatrix, 
+    i, 
+    ngroups, 
+    ntimes, 
+    n_seeds; 
+    kwargs...
+)
+    alpha = df.alpha[i]
+    gammavec = _gammavec(df, i, ngroups)
+    thetavec = _thetavec(df, i, ntimes)
+    tau = df.tau[i]
+    logR_0 = _predictedlogR_0(alpha, gammavec, thetavec, tau, interventions)
+    M_x = _mxmatrix(df, i, ngroups, ntimes, n_seeds)
+    _infections!(
+        g, 
+        infn,
+        M_x, 
+        logR_0, 
+        seedmatrix, 
+        Ns, 
+        n_seeds; 
+        kwargs...
+    )
+    return nothing
+end
+
+#### select parameters from keyword arguments
+
+function _samplerenewaldidinfectionarguments( ;
     data=nothing,
     doubletime=automatic,
     interventions=nothing, 
@@ -109,87 +181,48 @@ function samplerenewaldidinfections(
     seedmatrix=automatic, 
     kwargs...
 )
-    return _samplerenewaldidinfections(
-        g, 
-        df, 
-        i, 
-        data, 
+    return __samplerenewaldidinfectionarguments( 
+        data,
+        doubletime,
         interventions, 
+        n_seeds,
         ngroups, 
-        ntimes, 
+        ntimes,
         Ns, 
-        observedcases, 
-        seedmatrix, 
-        n_seeds; 
-        doubletime, sampletime, seedcasesminvalue,
+        observedcases,
+        sampletime,
+        seedcasesminvalue,
+        seedmatrix;
         kwargs...
     )
 end
 
-function _samplerenewaldidinfections(
-    g, 
-    df, 
-    i, 
-    inputdata, 
+function __samplerenewaldidinfectionarguments( 
+    inputdata,
+    doubletime,
     inputinterventions, 
+    inputn_seeds,
     inputngroups, 
-    inputntimes, 
+    inputntimes,
     inputNs, 
-    inputobservedcases, 
-    inputseedmatrix, 
-    n_seeds; 
-    doubletime, sampletime, seedcasesminvalue,
+    inputobservedcases,
+    sampletime,
+    seedcasesminvalue,
+    inputseedmatrix;
     kwargs...
 )
     interventions = _samplerenewaldidinfectionsinterventions(inputdata, inputinterventions)
     Ns = _samplerenewaldidinfectionsNs(inputdata, inputNs)
     seedmatrix = _samplerenewaldidinfectionsseedmatrix(
-        inputdata, inputseedmatrix, inputobservedcases, n_seeds; 
+        inputdata, inputseedmatrix, inputobservedcases, inputn_seeds; 
         minvalue=seedcasesminvalue, doubletime, sampletime
     )
     ngroups = _samplerenewaldidinfectionsngroups(inputngroups, interventions)
     ntimes = _samplerenewaldidinfectionsntimes(inputntimes, interventions)
-    _samplerenewaldidinfectionsassertions(df, seedmatrix, i, ngroups, ntimes)
-    return _samplerenewaldidinfections(
-        g, df, interventions, Ns, seedmatrix, i, ngroups, ntimes;
-        kwargs...
-    )
+    n_seeds = _samplerenewaldidinfectionsnseeds(inputn_seeds, seedmatrix)
+    kws = kwargs
+    return (interventions, Ns, seedmatrix, ngroups, ntimes, n_seeds, kws)
 end
-
-function _samplerenewaldidinfections(
-    g::Vector, df, interventions, Ns, seedmatrix, i, ngroups, ntimes;
-    kwargs...
-)
-    return _samplerenewaldidinfections(
-        generationtime, df, interventions, Ns, seedmatrix, i, ngroups, ntimes; 
-        vec=g, kwargs...
-        )
-end
-
-function _samplerenewaldidinfections(
-    g::_Useablegenerationfunctions, df, interventions, Ns, seedmatrix, i, ngroups, ntimes; 
-    kwargs...
-)
-    n_seeds = _ntimes(seedmatrix)
-    alpha = df.alpha[i]
-    gammavec = _gammavec(df, i, ngroups)
-    thetavec = _thetavec(df, i, ntimes)
-    tau = df.tau[i]
-    logR_0 = _predictedlogR_0(alpha, gammavec, thetavec, tau, interventions)
-    infn = _infections(
-        Float64, 
-        g, 
-        zeros(ntimes + n_seeds, ngroups), 
-        logR_0, 
-        seedmatrix, 
-        Ns, 
-        n_seeds; 
-        kwargs...
-    )
-    return infn[n_seeds:n_seeds+ntimes, :]
-end
-
-#### select parameters from keyword arguments
 
 function _samplerenewaldidinfectionsinterventions(::Any, inputinterventions::AbstractMatrix)
     return inputinterventions
@@ -256,6 +289,10 @@ _samplerenewaldidinfectionsngroups(inputngroups::Integer, ::Any) = inputngroups
 _samplerenewaldidinfectionsngroups(::Automatic, interventions) = _ngroups(interventions)
 _samplerenewaldidinfectionsntimes(inputntimes::Integer, ::Any) = inputntimes
 _samplerenewaldidinfectionsntimes(::Automatic, interventions) = _ntimes(interventions)
+_samplerenewaldidinfectionsnseeds(inputn_seeds::Integer, ::Any) = inputn_seeds
+_samplerenewaldidinfectionsnseeds(::Nothing, seedmatrix) = _ntimes(seedmatrix)
+
+## Expected outcomes from a complete `DataFrame` of fitted parameters
 
 
 # Assertions ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

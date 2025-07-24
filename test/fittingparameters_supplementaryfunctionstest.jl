@@ -12,14 +12,14 @@ obs2 = (_obs = zeros(Int, 20, 2); _obs[1, 1] += 1; _obs[1:5, :] .+= 1; _obs)
 seedinfections1 = [1  0; 2  1]
 M_x1 = [2  0; -0.5  1; 1  0.5; -2  1; 0  1]
 calcinfections1 = RenewalDiD._infections(
-    Float64, g_covid, zeros(5, 2), log.(zeros(3, 2)), zeros(2, 2), zeros(2), 2
+    g_covid, Float64, zeros(5, 2), log.(zeros(3, 2)), zeros(2, 2), zeros(2), 2
 )
 calcinfections2 = RenewalDiD._infections(
-    Float64, g_covid, zeros(6, 2), log.(zeros(4, 2)), zeros(2, 2), zeros(2), 2
+    g_covid, Float64, zeros(6, 2), log.(zeros(4, 2)), zeros(2, 2), zeros(2), 2
 )
 calcinfections3 = RenewalDiD._infections(
-    Float64, 
     generationtime, 
+    Float64, 
     zeros(5, 2), 
     log.(zeros(3, 2)), 
     seedinfections1, 
@@ -28,8 +28,8 @@ calcinfections3 = RenewalDiD._infections(
     vec=[0, 1],
 )
 calcinfections4 = RenewalDiD._infections(
-    Float64, 
     generationtime, 
+    Float64, 
     zeros(5, 2), 
     log.(1.5 .* ones(3, 2)), 
     seedinfections1, 
@@ -38,7 +38,7 @@ calcinfections4 = RenewalDiD._infections(
     vec=[0, 1],
 )
 calcinfections5 = RenewalDiD._infections(
-    Float64, generationtime, M_x1, log.(ones(3, 2)), seedinfections1, 1000 .* ones(2), 2;
+    generationtime, Float64, M_x1, log.(ones(3, 2)), seedinfections1, 1000 .* ones(2), 2;
     vec=[0, 1]
 )
 
@@ -285,19 +285,19 @@ end
     @test calcinfections1 == zeros(5, 2)
     @test calcinfections2 == zeros(6, 2)
     @test_throws DimensionMismatch RenewalDiD._infections(
-        Float64, g_covid, zeros(5, 2), log.(zeros(3, 3)), zeros(2, 2), zeros(2), 2
+        g_covid, Float64, zeros(5, 2), log.(zeros(3, 3)), zeros(2, 2), zeros(2), 2
     ) 
     @test_throws DimensionMismatch RenewalDiD._infections(
-        Float64, g_covid, zeros(5, 2), log.(zeros(3, 2)), zeros(2, 3), zeros(2), 2
+        g_covid, Float64, zeros(5, 2), log.(zeros(3, 2)), zeros(2, 3), zeros(2), 2
     ) 
     @test_throws DimensionMismatch RenewalDiD._infections(
-        Float64, g_covid, zeros(5, 2), log.(zeros(3, 2)), zeros(2, 2), zeros(3), 2
+        g_covid, Float64, zeros(5, 2), log.(zeros(3, 2)), zeros(2, 2), zeros(3), 2
     ) 
     @test_throws DimensionMismatch RenewalDiD._infections(
-        Float64, g_covid, zeros(5, 2), log.(zeros(4, 2)), zeros(2, 2), zeros(2), 2
+        g_covid, Float64, zeros(5, 2), log.(zeros(4, 2)), zeros(2, 2), zeros(2), 2
     ) 
     @test_throws DimensionMismatch RenewalDiD._infections(
-        Float64, g_covid, zeros(5, 2), log.(zeros(3, 2)), zeros(2, 2), zeros(2), 3
+        g_covid, Float64, zeros(5, 2), log.(zeros(3, 2)), zeros(2, 2), zeros(2), 3
     ) 
     @test calcinfections3 == predictedinfections3
     @test calcinfections4 == predictedinfections4

@@ -97,12 +97,29 @@ end
 
 _approxcases(x, sigma) = max(0, x * (1 + sigma))
 
-function _infections(T::DataType, g, M_x, logR_0, exptdseedcases, Ns, n_seeds; kwargs...) 
-    _infectionsassertions(M_x, logR_0, exptdseedcases, Ns, n_seeds)
-    infn = zeros(T, _ntimes(logR_0) + n_seeds, _ngroups(logR_0))
-    _infections_seed!(infn, M_x, exptdseedcases, Ns, n_seeds; kwargs...) 
-    _infections_transmitted!(infn, g, M_x, logR_0, Ns, n_seeds; kwargs...)
+function _infections(g, M_x, logR_0::Matrix{T}, exptdseedcases, Ns, n_seeds; kwargs...) where T
+    return _infections(g, T, M_x, logR_0, exptdseedcases, Ns, n_seeds; kwargs...)
+end
+
+function _infections(g, T::DataType, M_x, logR_0, exptdseedcases, Ns, n_seeds; kwargs...) 
+    infn = _infectionsmatrix(T, logR_0, n_seeds)
+    _infections!(g, infn, M_x, logR_0, exptdseedcases, Ns, n_seeds; kwargs...) 
     return infn
+end
+
+function _infectionsmatrix(logR_0::Matrix{T}, n_seeds) where T
+    return _infectionsmatrix(T, logR_0, n_seeds)
+end
+
+function _infectionsmatrix(T::DataType, logR_0, n_seeds)
+    return zeros(T, _ntimes(logR_0) + n_seeds, _ngroups(logR_0))
+end
+
+function _infections!(g, infn, M_x, logR_0, exptdseedcases, Ns, n_seeds; kwargs...) 
+    _infectionsassertions(infn, M_x, logR_0, exptdseedcases, Ns, n_seeds)
+    _infections_seed!(infn, M_x, exptdseedcases, Ns, n_seeds; kwargs...) 
+    _infections_transmitted!(g, infn, M_x, logR_0, Ns, n_seeds; kwargs...)
+    return nothing
 end
 
 function _infections_seed!(infn, M_x, exptdseedcases, Ns, n_seeds; kwargs...) 
@@ -130,7 +147,7 @@ function _infections_seed!(
     return nothing
 end
 
-function _infections_transmitted!(infn, g, M_x, logR_0, Ns, n_seeds; kwargs...) 
+function _infections_transmitted!(g, infn, M_x, logR_0, Ns, n_seeds; kwargs...) 
     for j in 1:_ngroups(M_x), t in 1:_ntimes(logR_0)
         infn[t+n_seeds, j] = _approxcases(
             _expectedinfections(g, logR_0[t, j], @view infn[1:t+n_seeds-1, j]; kwargs...), 
@@ -266,9 +283,9 @@ end
 
     predictedlogR_0 = _predictedlogR_0(alpha, gammavec, thetavec, tau, interventions)
 
-    T = typeof(predictedlogR_0[1, 1])
-    predictedinfections = _infections(
-        T, g, M_x, predictedlogR_0, expectedseedcases, Ns, n_seeds; 
+    predictedinfections = _infectionsmatrix(predictedlogR_0, n_seeds)
+    _infections!(
+        g, predictedinfections, M_x, predictedlogR_0, expectedseedcases, Ns, n_seeds; 
         kwargs...
     )
 
@@ -307,8 +324,9 @@ end
     predictedlogR_0 = _predictedlogR_0(alpha, gammavec, thetavec, tau, interventions)
 
     T = Complex{typeof(predictedlogR_0[1, 1])}
-    predictedinfections = _infections(
-        T, g, M_x, predictedlogR_0, expectedseedcases, Ns, n_seeds; 
+    predictedinfections = _infectionsmatrix(T, predictedlogR_0, n_seeds)
+    _infections!(
+        g, predictedinfections, M_x, predictedlogR_0, expectedseedcases, Ns, n_seeds; 
         kwargs...
     )
 
@@ -320,11 +338,14 @@ end
 
 # Assertions ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-function _infectionsassertions(M_x, logR_0, exptdseedcases, Ns, n_seeds)
+function _infectionsassertions(infn, M_x, logR_0, exptdseedcases, Ns, n_seeds)
+    _expctdtotaltimes = _ntimes(logR_0) + _ntimes(exptdseedcases)
+    _ngroups(infn) == _ngroups(logR_0) || throw(_widthmismatch("infn", "logR_0"))
+    _ntimes(infn) == _expctdtotaltimes || throw(_infectionsntimeserror("infn"))
     _ngroups(M_x) == _ngroups(logR_0) || throw(_widthmismatch("M_x", "logR_0"))
     _ngroups(M_x) == _ngroups(exptdseedcases) || throw(_widthmismatch("M_x", "exptdseedcases"))
     _ngroups(M_x) == length(Ns) || throw(_MxNserror(Ns, M_x))
-    _ntimes(M_x) == _ntimes(logR_0) + _ntimes(exptdseedcases) || throw(_infectionsntimeserror())
+    _ntimes(M_x) == _expctdtotaltimes || throw(_infectionsntimeserror("M_x"))
     _ntimes(exptdseedcases) == n_seeds || throw(_infectionsnseedserror())
     return nothing
 end
@@ -342,8 +363,8 @@ function _infectionsnseedserror()
     return DimensionMismatch("height of `exptdseedcases` must equal `n_seeds`")
 end
 
-function _infectionsntimeserror()
-    m = "height of `Mx` must equal sum of heights of `logR_0` and `exptdseedcases`"
+function _infectionsntimeserror(M)
+    m = "height of `$M` must equal sum of heights of `logR_0` and `exptdseedcases`"
     return DimensionMismatch(m)
 end
 

@@ -8,6 +8,85 @@ using Turing
 
 rng1 = StableRNG(1)
 
+rankvaluedf8 = DataFrame(
+    :iteration => repeat(1:1000; outer=4),
+    :chain => repeat(1:4; inner=1000),
+    :tau => [
+        [rand() for _ in 1:1000]; 
+        [1 + rand() for _ in 1:1000];
+        [2 + rand() for _ in 1:1000];
+        [3 + rand() for _ in 1:1000]
+    ]
+)
+rankvaluedf9 = DataFrame(
+    :iteration => repeat(1:1000; outer=4),
+    :chain => repeat(1:4; inner=1000),
+    :tau => [
+        [rand() for _ in 1:1000]; 
+        [2 + rand() for _ in 1:1000];
+        [1 + rand() for _ in 1:1000];
+        [3 + rand() for _ in 1:1000]
+    ]
+)
+rankvaluedf10 = DataFrame(
+    :iteration => repeat(1:100; outer=4),
+    :chain => repeat(1:4; inner=100),
+    :tau => [
+        [rand() for _ in 1:100]; 
+        [1 + rand() for _ in 1:100];
+        [2 + rand() for _ in 1:100];
+        [3 + rand() for _ in 1:100]
+    ]
+)
+rankvaluedf11 = DataFrame(
+    :iteration => repeat(1:100; outer=3),
+    :chain => repeat(1:3; inner=100),
+    :tau => [
+        [rand() for _ in 1:100]; 
+        [1 + rand() for _ in 1:100];
+        [2 + rand() for _ in 1:100]
+    ]
+)
+rankvaluedf12 = DataFrame(
+    :iteration => repeat(1:100; outer=3),
+    :chain => repeat([1, 2, 4]; inner=100),
+    :tau => [
+        [rand() for _ in 1:100]; 
+        [1 + rand() for _ in 1:100];
+        [2 + rand() for _ in 1:100]
+    ]
+)
+rankvaluedf13 = DataFrame(
+    :iteration => repeat(1:1000; outer=4),
+    :chain => repeat([1, 2, 2, 3]; inner=1000),
+    :tau => rand(4000)
+)
+rankvaluedf14 = DataFrame(
+    :iteration => repeat(51:150; outer=3),
+    :chain => repeat([1, 2, 4]; inner=100),
+    :tau => [
+        [rand() for _ in 1:100]; 
+        [1 + rand() for _ in 1:100];
+        [2 + rand() for _ in 1:100]
+    ]
+)
+rankvaluedf15 = DataFrame(
+    :iteration => [1:9; 1:10; 1:10],
+    :chain => [[1 for _ in 1:9]; [2 for _ in 1:10]; [3 for _ in 1:10]],
+    :tau => rand(29)
+)
+rankvaluedf16 = DataFrame(
+    :iteration => repeat(1:10; outer=3),
+    :chain => repeat(1:3; inner=10),
+    :tau => [
+        [rand() for _ in 1:5]; 
+        [1 + rand() for _ in 1:5];
+        [1 + rand() for _ in 1:5]; 
+        [2 + rand() for _ in 1:5];
+        [2 + rand() for _ in 1:5]; 
+        [rand() for _ in 1:5];
+    ]
+)
 df1 = testdataframe( ; 
     nchains=1, 
     niterations=2, 
@@ -80,90 +159,27 @@ df6 = let
         kw...
     )
 end
-df8 = DataFrame(
-    :iteration => repeat(1:1000; outer=4),
-    :chain => repeat(1:4; inner=1000),
-    :tau => [
-        [rand() for _ in 1:1000]; 
-        [1 + rand() for _ in 1:1000];
-        [2 + rand() for _ in 1:1000];
-        [3 + rand() for _ in 1:1000]
-    ]
-)
-df9 = DataFrame(
-    :iteration => repeat(1:1000; outer=4),
-    :chain => repeat(1:4; inner=1000),
-    :tau => [
-        [rand() for _ in 1:1000]; 
-        [2 + rand() for _ in 1:1000];
-        [1 + rand() for _ in 1:1000];
-        [3 + rand() for _ in 1:1000]
-    ]
-)
-df10 = DataFrame(
-    :iteration => repeat(1:100; outer=4),
-    :chain => repeat(1:4; inner=100),
-    :tau => [
-        [rand() for _ in 1:100]; 
-        [1 + rand() for _ in 1:100];
-        [2 + rand() for _ in 1:100];
-        [3 + rand() for _ in 1:100]
-    ]
-)
-df11 = DataFrame(
-    :iteration => repeat(1:100; outer=3),
-    :chain => repeat(1:3; inner=100),
-    :tau => [
-        [rand() for _ in 1:100]; 
-        [1 + rand() for _ in 1:100];
-        [2 + rand() for _ in 1:100]
-    ]
-)
-df12 = DataFrame(
-    :iteration => repeat(1:100; outer=3),
-    :chain => repeat([1, 2, 4]; inner=100),
-    :tau => [
-        [rand() for _ in 1:100]; 
-        [1 + rand() for _ in 1:100];
-        [2 + rand() for _ in 1:100]
-    ]
-)
-df13 = DataFrame(
-    :iteration => repeat(1:1000; outer=4),
-    :chain => repeat([1, 2, 2, 3]; inner=1000),
-    :tau => rand(4000)
-)
-df14 = DataFrame(
-    :iteration => repeat(51:150; outer=3),
-    :chain => repeat([1, 2, 4]; inner=100),
-    :tau => [
-        [rand() for _ in 1:100]; 
-        [1 + rand() for _ in 1:100];
-        [2 + rand() for _ in 1:100]
-    ]
-)
-df15 = DataFrame(
-    :iteration => [1:9; 1:10; 1:10],
-    :chain => [[1 for _ in 1:9]; [2 for _ in 1:10]; [3 for _ in 1:10]],
-    :tau => rand(29)
-)
-df16 = DataFrame(
-    :iteration => repeat(1:10; outer=3),
-    :chain => repeat(1:3; inner=10),
-    :tau => [
-        [rand() for _ in 1:5]; 
-        [1 + rand() for _ in 1:5];
-        [1 + rand() for _ in 1:5]; 
-        [2 + rand() for _ in 1:5];
-        [2 + rand() for _ in 1:5]; 
-        [rand() for _ in 1:5];
-    ]
-)
+df7 = let 
+    kw = (Symbol("gammas_raw[1]") => [2 * log(2)], )
+    testdataframe( ;
+        nchains=1,
+        niterations=1,
+        ngroups=2,
+        ntimes=2,
+        nseeds=2,
+        alpha=zeros(1),
+        sigma_gamma=[0.5],
+        gammadefault=zeros(1), 
+        thetadefault=zeros(1), 
+        mxdefault=(-1.5 .* ones(1)),
+        kw...
+    )
+end
 
 s1 = samplerenewaldidinfections(
     zeros(2), df1, 2;
     interventions=zeros(10, 3), 
-    Ns=100 .* ones(3), 
+    Ns=(100 .* ones(3)), 
     seedmatrix=zeros(7, 3), 
     ngroups=3, 
     ntimes=10,
@@ -171,7 +187,7 @@ s1 = samplerenewaldidinfections(
 s2 = samplerenewaldidinfections(
     zeros(2), df2, 2;
     interventions=zeros(12, 4), 
-    Ns=100 .* ones(4), 
+    Ns=(100 .* ones(4)), 
     seedmatrix=zeros(7, 4), 
     ngroups=4, 
     ntimes=12,
@@ -179,7 +195,7 @@ s2 = samplerenewaldidinfections(
 s3 = samplerenewaldidinfections(
     [0, 1], df3, 1;
     interventions=zeros(2, 2), 
-    Ns=100 .* ones(2), 
+    Ns=(100 .* ones(2)), 
     seedmatrix=[0  0; 1  1], 
     ngroups=2, 
     ntimes=2,
@@ -187,7 +203,7 @@ s3 = samplerenewaldidinfections(
 s4 = samplerenewaldidinfections(
     [0, 1], df4, 1;
     interventions=zeros(2, 2), 
-    Ns=100 .* ones(2), 
+    Ns=(100 .* ones(2)), 
     seedmatrix=[0  0; 1  1], 
     ngroups=2, 
     ntimes=2,
@@ -195,7 +211,7 @@ s4 = samplerenewaldidinfections(
 s5 = samplerenewaldidinfections(
     [0, 1], df5, 1;
     interventions=zeros(2, 2), 
-    Ns=100 .* ones(2), 
+    Ns=(100 .* ones(2)), 
     seedmatrix=[0  0; 1  1], 
     ngroups=2, 
     ntimes=2,
@@ -203,14 +219,22 @@ s5 = samplerenewaldidinfections(
 s6 = samplerenewaldidinfections(
     [0, 1], df6, 1;
     interventions=zeros(2, 2), 
-    Ns=100 .* ones(2), 
+    Ns=(100 .* ones(2)), 
+    seedmatrix=[0  0; 1  1], 
+    ngroups=2, 
+    ntimes=2,
+)
+s7 = samplerenewaldidinfections(
+    [0, 1], df7, 1;
+    interventions=zeros(2, 2), 
+    Ns=(100 .* ones(2)), 
     seedmatrix=[0  0; 1  1], 
     ngroups=2, 
     ntimes=2,
 )
 
 rv16a = let
-    _rvs = rankvalues(df16, :tau)
+    _rvs = rankvalues(rankvaluedf16, :tau)
     _a = _rvs[1]
     _b = _rvs[11]
     _c = _rvs[21]
@@ -218,7 +242,7 @@ rv16a = let
 end
 
 rv16b = let
-    _rvs = rankvalues(df16, :tau; binsize=7)
+    _rvs = rankvalues(rankvaluedf16, :tau; binsize=7)
     _a1 = _rvs[1]
     _a2 = _rvs[8]
     _b1 = _rvs[11]
@@ -249,23 +273,34 @@ df7 = DataFrame(chain1)
 end
 
 @testset "rank values for trace plots" begin
-    @test rankvalues(df8, :tau) == repeat(1:4; inner=1000) 
-    @test rankvalues(df9, :tau) == repeat([1, 3, 2, 4]; inner=1000) 
-    @test rankvalues(df10, :tau) == repeat(1:4; inner=100) 
-    @test rankvalues(df11, :tau) == repeat(1:3; inner=100) 
-    @test rankvalues(df12, :tau) == repeat(1:3; inner=100)
-    @test_throws ErrorException rankvalues(df13, :tau)
-    @test rankvalues(df14, :tau) == repeat(1:3; inner=100)
-    @test_throws ErrorException rankvalues(df15, :tau)
-    @test rankvalues(df16, :tau; binsize=5) == repeat([1, 2, 2, 3, 3, 1]; inner=5)
-    @test rankvalues(df16, :tau) == rv16a
-    @test rankvalues(df16, :tau; binsize=7) == rv16b
-
+    @test rankvalues(rankvaluedf8, :tau) == repeat(1:4; inner=1000) 
+    @test rankvalues(rankvaluedf9, :tau) == repeat([1, 3, 2, 4]; inner=1000) 
+    @test rankvalues(rankvaluedf10, :tau) == repeat(1:4; inner=100) 
+    @test rankvalues(rankvaluedf11, :tau) == repeat(1:3; inner=100) 
+    @test rankvalues(rankvaluedf12, :tau) == repeat(1:3; inner=100)
+    @test_throws ErrorException rankvalues(rankvaluedf13, :tau)
+    @test rankvalues(rankvaluedf14, :tau) == repeat(1:3; inner=100)
+    @test_throws ErrorException rankvalues(rankvaluedf15, :tau)
+    @test rankvalues(rankvaluedf16, :tau; binsize=5) == repeat([1, 2, 2, 3, 3, 1]; inner=5)
+    @test rankvalues(rankvaluedf16, :tau) == rv16a
+    @test rankvalues(rankvaluedf16, :tau; binsize=7) == rv16b
 end
 
 @testset "samples with no infections" begin
     @test s1 == zeros(11, 3)
     @test s2 == zeros(13, 4)
+end
+
+@testset "samples with infections, M_x all 0" begin
+    @test s3 == [1  1; 1  1; 1  1]
+    @test s4 == [1  1; 2  2; 4  4]
+    @test s5 == [1  1; 2  0.5; 4  0.25]
+    @test s6 == [1  1; 2  0.5; 4  0.25]
+end
+
+@testset "samples with Mx < -1" begin
+    @test s7 == zeros(3, 2)
+
 end
 
 @testset "keyword errors" begin
@@ -342,13 +377,3 @@ end
         ntimes=10,
     ) 
 end
-
-@testset "samples with infections" begin
-    @test s3 == [1  1; 1  1; 1  1]
-    @test s4 == [1  1; 2  2; 4  4]
-    @test s5 == [1  1; 2  0.5; 4  0.25]
-    @test s6 == [1  1; 2  0.5; 4  0.25]
-
-
-end
-
