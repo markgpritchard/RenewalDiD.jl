@@ -4,6 +4,20 @@
 
 ### number unique
 
+"""
+    nunique(vec)
+
+Number of unique elements in a vector.
+
+# Examples
+```jldoctest
+julia> nunique([1, 3, 2, 3])
+3
+
+julia> nunique(["a", "d", "d", "d"])
+2
+```
+"""
 nunique(vec) = length(unique(vec))
 
 ### data for tracerankplot 
@@ -61,8 +75,6 @@ function __rankvaluebininds(start, binsize, iterationend)
     stop = min(start + binsize - 1, iterationend)
     return start:stop
 end
-
-
 
 ### versions of gamma and theta vector functions 
 

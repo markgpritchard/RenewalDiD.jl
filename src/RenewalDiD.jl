@@ -17,8 +17,6 @@ include("generationinterval.jl")
 include("simulations.jl")
 include("fittingparameters.jl")
 include("processparameters.jl")
-include("plotting.jl")
-include("functionsfortests.jl")  # contents not exported
 
 ## interventionmatrix.jl
 export InterventionMatrix
@@ -30,7 +28,9 @@ export packsimulations, packsimulationtuple, runsimulation, simulationcases, sim
 export packdata, packpriors, renewaldid, renewaldid_tracksusceptibles
 ## processparameters.jl
 export nunique, rankvalues, samplerenewaldidinfections
-## plotting
-export traceplot, traceplot!, tracerankplot, tracerankplot!
+
+## submodules
+include("Plotting.jl")
+include("FittedParameterTestFunctions.jl")
 
 end  # module RenewalDiD

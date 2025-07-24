@@ -214,7 +214,7 @@ rv16a = let
     _a = _rvs[1]
     _b = _rvs[11]
     _c = _rvs[21]
-    repeat([_a, _b, _c]; inner = 10)
+    repeat([_a, _b, _c]; inner=10)
 end
 
 rv16b = let
@@ -249,15 +249,15 @@ df7 = DataFrame(chain1)
 end
 
 @testset "rank values for trace plots" begin
-    @test rankvalues(df8, :tau) == repeat(1:4; inner = 1000) 
-    @test rankvalues(df9, :tau) == repeat([1, 3, 2, 4]; inner = 1000) 
-    @test rankvalues(df10, :tau) == repeat(1:4; inner = 100) 
-    @test rankvalues(df11, :tau) == repeat(1:3; inner = 100) 
-    @test rankvalues(df12, :tau) == repeat(1:3; inner = 100)
+    @test rankvalues(df8, :tau) == repeat(1:4; inner=1000) 
+    @test rankvalues(df9, :tau) == repeat([1, 3, 2, 4]; inner=1000) 
+    @test rankvalues(df10, :tau) == repeat(1:4; inner=100) 
+    @test rankvalues(df11, :tau) == repeat(1:3; inner=100) 
+    @test rankvalues(df12, :tau) == repeat(1:3; inner=100)
     @test_throws ErrorException rankvalues(df13, :tau)
-    @test rankvalues(df14, :tau) == repeat(1:3; inner = 100)
+    @test rankvalues(df14, :tau) == repeat(1:3; inner=100)
     @test_throws ErrorException rankvalues(df15, :tau)
-    @test rankvalues(df16, :tau; binsize=5) == repeat([1, 2, 2, 3, 3, 1]; inner = 5)
+    @test rankvalues(df16, :tau; binsize=5) == repeat([1, 2, 2, 3, 3, 1]; inner=5)
     @test rankvalues(df16, :tau) == rv16a
     @test rankvalues(df16, :tau; binsize=7) == rv16b
 

@@ -22,7 +22,7 @@ using Test
         include("fittingparameters_supplementaryfunctionstest.jl")
     end  
     @testset "fitting parameters" begin
-        include("fittingparameters_test.jl")  # 2 tests skipped must be fixed
+        include("fittingparameters_test.jl") 
     end    
     @testset "process parameters" begin
         include("processparameters_test.jl")

@@ -1,13 +1,13 @@
 # plot trace rank plot
 
-function RenewalDiD.traceplot(df, variable)
+function RenewalDiD.Plotting.traceplot(df, variable)
     fig = Figure()
     ax = Axis(fig[1, 1])
     traceplot!(ax, df, variable)
     return fig
 end
 
-function RenewalDiD.traceplot!(ax, df, variable)
+function RenewalDiD.Plotting.traceplot!(ax, df, variable)
     for (i, chain) in enumerate(unique(df.chain))
         inds = findall(x -> x == chain, df.chain)
         lines!(ax, df.iteration[inds], getproperty(df, variable)[inds])
