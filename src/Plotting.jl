@@ -19,7 +19,8 @@ function __init__()
                 available after `using CairoMakie`"
             plottingfunctionslist = [
                 traceplot, traceplot!, 
-                tracerankplot, tracerankplot!
+                tracerankplot, tracerankplot!,
+                plotmodeloutput, plotmodeloutput!,
             ]
 
             if exc.f in plottingfunctionslist && 
