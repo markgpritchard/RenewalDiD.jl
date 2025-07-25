@@ -3,7 +3,7 @@ module RenewalDiD
 using PrettyTables: pretty_table
 using Random: AbstractRNG, default_rng
 using Reexport: @reexport
-using StatsBase: Weights, mean, ordinalrank, sample
+using StatsBase: Weights, mean, ordinalrank, quantile, sample
 using Turing: @model, Exponential, Normal, arraydist, filldist
 using UnPack: @unpack
 
@@ -27,7 +27,7 @@ export packsimulations, packsimulationtuple, runsimulation, simulationcases, sim
 ## fittingparameters.jl
 export packdata, packpriors, renewaldid, renewaldid_tracksusceptibles
 ## processparameters.jl
-export nunique, rankvalues, samplerenewaldidinfections
+export nunique, quantilerenewaldidinfections, rankvalues, samplerenewaldidinfections
 
 ## submodules
 include("Plotting.jl")

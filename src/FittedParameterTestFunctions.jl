@@ -1,13 +1,7 @@
-# functions called by tests 
+# functions that are used when testing the package `RenewalDiD`.
 
-"""
-    RenewalDiD.FittedParameterTestFunctions
+# Nothing from this module is exported by the package.
 
-Functions that are used when testing the package `RenewalDiD`.
-
-Nothing from this module is exported by the package. The module exports the function 
-    `testdataframe`.
-"""
 module FittedParameterTestFunctions
 
 using DataFrames: DataFrame, insertcols!

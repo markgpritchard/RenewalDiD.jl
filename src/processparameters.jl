@@ -1,8 +1,8 @@
 # run simulation with fitted parameters 
 
-## Functions ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# Functions ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-### number unique
+## number unique
 
 """
     nunique(vec)
@@ -20,7 +20,7 @@ julia> nunique(["a", "d", "d", "d"])
 """
 nunique(vec) = length(unique(vec))
 
-### data for tracerankplot 
+## data for tracerankplot 
 
 function rankvalues(df::DataFrame, variable; binsize=10)
     vals = getproperty(df, variable)
@@ -76,7 +76,7 @@ function __rankvaluebininds(start, binsize, iterationend)
     return start:stop
 end
 
-### versions of gamma and theta vector functions taking a `DataFrame` of fitted parameters
+## versions of gamma and theta vector functions taking a `DataFrame` of fitted parameters
 
 function _gammavec(df::DataFrame, i, ngroups)
     return _gammavec(  # call version in `fittingparameters.jl`
@@ -97,11 +97,35 @@ function _mxmatrix(df, i, ngroups, ntimes, n_seeds)
     return [getproperty(df, Symbol("M_x[$t, $j]"))[i] for t in 1:totaltimes, j in 1:ngroups]
 end
 
-### take samples from DataFrame of fitted parameters and generate expected outcomes
+## take samples from DataFrame of fitted parameters and generate expected outcomes
 
-function samplerenewaldidinfections(g, df, i; kwargs...)
-    interventions, Ns, seedmatrix, ngroups, ntimes, n_seeds, kws = 
-        _samplerenewaldidinfectionarguments(; kwargs...)
+function samplerenewaldidinfections(
+    g, df::DataFrame, indexes::AbstractVector{<:Integer}=axes(df, 1); 
+    kwargs...
+)
+    interventions, Ns, seedmatrix, ngroups, ntimes, n_seeds, kws = __sra(; kwargs...)
+    infn = zeros(Float64, ntimes + n_seeds, ngroups, length(indexes))
+    _samplerenewaldidinfectionsassertions(df, seedmatrix, indexes, ngroups, ntimes)
+    for (r, j) in enumerate(indexes)
+        _samplerenewaldidinfections!(
+            g, 
+            (@view infn[:, :, r]), 
+            df, 
+            interventions, 
+            Ns, 
+            seedmatrix, 
+            j, 
+            ngroups, 
+            ntimes, 
+            n_seeds;
+            kws...
+        )
+    end
+    return infn[n_seeds:n_seeds+ntimes, :, :]
+end
+
+function samplerenewaldidinfections(g, df::DataFrame, i::Integer; kwargs...)
+    interventions, Ns, seedmatrix, ngroups, ntimes, n_seeds, kws = __sra(; kwargs...)
     infn = zeros(Float64, ntimes + n_seeds, ngroups)
     _samplerenewaldidinfectionsassertions(df, seedmatrix, i, ngroups, ntimes)
     _samplerenewaldidinfections!(
@@ -111,9 +135,8 @@ function samplerenewaldidinfections(g, df, i; kwargs...)
     return infn[n_seeds:n_seeds+ntimes, :]
 end
 
-function samplerenewaldidinfections!(g, infn, df, i; kwargs...)
-    interventions, Ns, seedmatrix, ngroups, ntimes, n_seeds, kws = 
-        _samplerenewaldidinfectionarguments(; kwargs...)
+function samplerenewaldidinfections!(g, infn, df::DataFrame, i; kwargs...)
+    interventions, Ns, seedmatrix, ngroups, ntimes, n_seeds, kws = __sra(; kwargs...)
     _samplerenewaldidinfectionsassertions(df, seedmatrix, i, ngroups, ntimes)
     _samplerenewaldidinfections!(
         g, infn, df, interventions, Ns, seedmatrix, i, ngroups, ntimes, n_seeds;
@@ -165,7 +188,39 @@ function _samplerenewaldidinfections!(
     return nothing
 end
 
-#### select parameters from keyword arguments
+## quantiles of sampled outputs
+
+function quantilerenewaldidinfections(M::AbstractMatrix, ::Any; mutewarnings=nothing)
+    _singlesamplequantilewarning(mutewarnings)
+    return M
+end
+
+function quantilerenewaldidinfections(A::Array{T, 3}, q; mutewarnings=nothing) where T
+    size(A, 3) > 1 || _singlesamplequantilewarning(mutewarnings)
+    outputnumbertype = typeof(zero(T) / 1)
+    return _quantilerenewaldidinfections(outputnumbertype, A, q)
+end
+
+function _quantilerenewaldidinfections(outputnumbertype, A, q::Real)
+    output = zeros(outputnumbertype, size(A, 1), size(A, 2))
+    for t in axes(A, 1), j in axes(A, 2)
+        output[t, j] = quantile((@view A[t, j, :]), q)
+    end
+    return output
+end
+
+function _quantilerenewaldidinfections(outputnumbertype, A, q::AbstractVector{<:Real}) 
+    output = zeros(outputnumbertype, size(A, 1), size(A, 2), length(q))
+    for (i, qi) in enumerate(q), t in axes(A, 1), j in axes(A, 2)
+        output[t, j, i] = quantile((@view A[t, j, :]), qi)
+    end
+    return output
+end
+
+
+# select parameters from keyword arguments ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+__sra(; kwargs...) = _samplerenewaldidinfectionarguments(; kwargs...)
 
 function _samplerenewaldidinfectionarguments( ;
     data=nothing,
@@ -292,7 +347,23 @@ _samplerenewaldidinfectionsntimes(::Automatic, interventions) = _ntimes(interven
 _samplerenewaldidinfectionsnseeds(inputn_seeds::Integer, ::Any) = inputn_seeds
 _samplerenewaldidinfectionsnseeds(::Nothing, seedmatrix) = _ntimes(seedmatrix)
 
-## Expected outcomes from a complete `DataFrame` of fitted parameters
+
+# Warnings ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+function _singlesamplequantilewarning(::Nothing)
+    wm = "only a single sample provided to `quantilerenewaldidinfections`; input returned \
+        unchanged for any value of `q`"
+    @warn wm
+    return nothing
+end
+
+function _singlesamplequantilewarning(mutewarnings::Bool)
+    if mutewarnings 
+        return nothing 
+    else 
+        return _singlesamplequantilewarning(nothing)
+    end
+end
 
 
 # Assertions ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
@@ -308,7 +379,19 @@ function _samplerenewaldidinfectionsassertions(df, seedmatrix, i, ngroups, ntime
     M_xmaxt = _ntimes(seedmatrix) + ntimes
     "M_x[$M_xmaxt, 1]" in names(df) || throw(_dfMxdimensiontoosmallerror())
     "M_x[$(M_xmaxt + 1), 1]" ∉ names(df) || throw(_dfMxdimensiontoolargererror())
+    _samplerenewaldidinfectionsindexassertions(df, i)
+    return nothing
+end
+
+function _samplerenewaldidinfectionsindexassertions(df, i::Integer)
+    i >= 1 || throw(BoundsError(df, [i, 1]))
     i <= size(df, 1) || throw(BoundsError(df, [i, 1]))
+    return nothing
+end
+
+function _samplerenewaldidinfectionsindexassertions(df, indexes::AbstractVector{<:Integer})
+    minimum(indexes) >= 1 || throw(BoundsError(df, [indexes, 1]))
+    maximum(indexes) <= size(df, 1) || throw(BoundsError(df, [indexes, 1]))
     return nothing
 end
 

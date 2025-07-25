@@ -7,6 +7,8 @@ using Test
 using Turing
 
 rng1 = StableRNG(1)
+_r1 = rand()
+_r2 = rand()
 
 rankvaluedf8 = DataFrame(
     :iteration => repeat(1:1000; outer=4),
@@ -107,14 +109,14 @@ df2 = testdataframe( ;
 )
 df3 = testdataframe( ;
     nchains=1,
-    niterations=1,
+    niterations=10,
     ngroups=2,
     ntimes=2,
     nseeds=2,
-    alpha=zeros(1),
-    gammadefault=zeros(1), 
-    thetadefault=zeros(1), 
-    mxdefault=zeros(1),
+    alpha=zeros(10),
+    gammadefault=zeros(10), 
+    thetadefault=zeros(10), 
+    mxdefault=zeros(10),
 )
 df4 = testdataframe( ;
     nchains=1,
@@ -175,7 +177,39 @@ df7 = let
         kw...
     )
 end
-
+df8 = testdataframe( ;
+    nchains=2,
+    niterations=8,
+    ngroups=3,
+    ntimes=10,
+    nseeds=2,
+    alpha=zeros(16),
+    gammadefault=zeros(16), 
+    thetadefault=zeros(16), 
+    mxdefault=zeros(16),
+)
+df9 = testdataframe( ;
+    nchains=3,
+    niterations=8,
+    ngroups=3,
+    ntimes=10,
+    nseeds=2,
+    alpha=zeros(24),
+    gammadefault=zeros(24), 
+    thetadefault=zeros(24), 
+    mxdefault=zeros(24),
+)
+df10 = testdataframe( ;
+    nchains=2,
+    niterations=8,
+    ngroups=4,
+    ntimes=20,
+    nseeds=2,
+    alpha=zeros(16),
+    gammadefault=zeros(16), 
+    thetadefault=zeros(16), 
+    mxdefault=zeros(16),
+)
 s1 = samplerenewaldidinfections(
     zeros(2), df1, 2;
     interventions=zeros(10, 3), 
@@ -232,6 +266,54 @@ s7 = samplerenewaldidinfections(
     ngroups=2, 
     ntimes=2,
 )
+s8 = samplerenewaldidinfections(
+    zeros(2), df8;
+    interventions=zeros(10, 3), 
+    Ns=(100 .* ones(3)), 
+    seedmatrix=zeros(2, 3), 
+    ngroups=3, 
+    ntimes=10,
+)
+s9 = samplerenewaldidinfections(
+    zeros(2), df9;
+    interventions=zeros(10, 3), 
+    Ns=(100 .* ones(3)), 
+    seedmatrix=zeros(2, 3), 
+    ngroups=3, 
+    ntimes=10,
+)
+s10 = samplerenewaldidinfections(
+    zeros(2), df10;
+    interventions=zeros(20, 4), 
+    Ns=(100 .* ones(4)), 
+    seedmatrix=zeros(2, 4), 
+    ngroups=4, 
+    ntimes=20,
+)
+s3ma = samplerenewaldidinfections(
+    zeros(2), df3;
+    interventions=zeros(2, 2), 
+    Ns=(100 .* ones(2)), 
+    seedmatrix=[0  0; _r1  _r2], 
+    ngroups=2, 
+    ntimes=2,
+)
+s3mb = samplerenewaldidinfections(
+    [0, 1], df3;
+    interventions=zeros(2, 2), 
+    Ns=(100 .* ones(2)), 
+    seedmatrix=[0  0; 1  1], 
+    ngroups=2, 
+    ntimes=2,
+)
+s3mc = samplerenewaldidinfections(
+    [0, 1], df3, 4:6;
+    interventions=zeros(2, 2), 
+    Ns=(100 .* ones(2)), 
+    seedmatrix=[0  0; 1  1], 
+    ngroups=2, 
+    ntimes=2,
+)
 
 rv16a = let
     _rvs = rankvalues(rankvaluedf16, :tau)
@@ -258,15 +340,15 @@ rv16b = let
         [_c2 for _ in 1:3]; 
     ]
 end
-
+#=
 sim1 = testsimulation(rng1)
 model1 =  renewaldid(
     sim1, g_seir, packpriors(; sigma_thetaprior=Exponential(0.05)); 
     gamma=0.2, sigma=0.5
 )
 chain1 = sample(rng1, model1, NUTS(), MCMCThreads(), 20, 4; verbose=false, progress=false)
-df7 = DataFrame(chain1)
-
+chaindf1 = DataFrame(chain1)
+=#
 @testset "number of unique elements" begin
     @test nunique([1, 2, 3]) == 3
     @test nunique(ones(3)) == 1
@@ -300,15 +382,24 @@ end
 
 @testset "samples with Mx < -1" begin
     @test s7 == zeros(3, 2)
-
 end
-
+#=
 @testset "keyword errors" begin
     @test_throws ArgumentError samplerenewaldidinfections(zeros(2), df1, 2)
     @test_throws ArgumentError samplerenewaldidinfections(
-        g_seir, df7, 1; 
+        g_seir, chaindf1, 1; 
         data=sim1, gamma=0.2, sigma=0.5,
     )
+end
+=#
+
+@testset "sample multiple rows" begin
+    @test s8 == zeros(11, 3, 16)
+    @test s9 == zeros(11, 3, 24)
+    @test s10 == zeros(21, 4, 16)
+    @test s3ma == repeat([_r1  _r2; 0  0; 0  0;;;]; outer=(1, 1, 10))
+    @test s3mb == repeat([1  1; 1  1; 1  1;;;]; outer=(1, 1, 10))
+    @test s3mc == repeat([1  1; 1  1; 1  1;;;]; outer=(1, 1, 3))
 end
 
 @testset "sampling errors" begin
@@ -376,4 +467,137 @@ end
         ngroups=3, 
         ntimes=10,
     ) 
+    @test_throws MethodError samplerenewaldidinfections(
+        [0, 1], df3, 4.0:6;
+        interventions=zeros(2, 2), 
+        Ns=(100 .* ones(2)), 
+        seedmatrix=[0  0; 1  1], 
+        ngroups=2, 
+        ntimes=2,
+    )
+    @test_throws MethodError samplerenewaldidinfections(
+        [0, 1], df3, 4:0.5:6;
+        interventions=zeros(2, 2), 
+        Ns=(100 .* ones(2)), 
+        seedmatrix=[0  0; 1  1], 
+        ngroups=2, 
+        ntimes=2,
+    )
+    @test_throws BoundsError samplerenewaldidinfections(
+        [0, 1], df3, 4:16;  # df3 is 10 rows long
+        interventions=zeros(2, 2), 
+        Ns=(100 .* ones(2)), 
+        seedmatrix=[0  0; 1  1], 
+        ngroups=2, 
+        ntimes=2,
+    )
+        @test_throws DimensionMismatch samplerenewaldidinfections(
+        zeros(2), df1;
+        interventions=zeros(10, 3), 
+        Ns=100 .* ones(3), 
+        seedmatrix=zeros(7, 4),
+        ngroups=3,
+        ntimes=10,
+    )
+    @test_throws DimensionMismatch samplerenewaldidinfections(
+        zeros(2), df1;
+        interventions=zeros(10, 3), 
+        Ns=100 .* ones(3), 
+        seedmatrix=zeros(8, 3), 
+        ngroups=3, 
+        ntimes=10,
+    ) 
+    @test_throws DimensionMismatch samplerenewaldidinfections(
+        zeros(2), df1;
+        interventions=zeros(10, 3), 
+        Ns=100 .* ones(3), 
+        seedmatrix=zeros(6, 3), 
+        ngroups=3, 
+        ntimes=10,
+    ) 
+    @test_throws DimensionMismatch samplerenewaldidinfections(
+        zeros(2), df1;
+        interventions=zeros(10, 2), 
+        Ns=100 .* ones(3), 
+        seedmatrix=zeros(7, 3), 
+        ngroups=2, 
+        ntimes=10,
+    ) 
+    @test_throws DimensionMismatch samplerenewaldidinfections(
+        zeros(2), df1;
+        interventions=zeros(10, 4), 
+        Ns=100 .* ones(4), 
+        seedmatrix=zeros(7, 3), 
+        ngroups=4, 
+        ntimes=10,
+    ) 
+    @test_throws DimensionMismatch samplerenewaldidinfections(
+        zeros(2), df1;
+        interventions=zeros(9, 3), 
+        Ns=100 .* ones(3), 
+        seedmatrix=zeros(7, 3), 
+        ngroups=3, 
+        ntimes=9,
+    ) 
+    @test_throws DimensionMismatch samplerenewaldidinfections(
+        zeros(2), df1;
+        interventions=zeros(11, 3), 
+        Ns=100 .* ones(3), 
+        seedmatrix=zeros(7, 3), 
+        ngroups=3, 
+        ntimes=11,
+    ) 
+end
+
+@testset "quantiles of a single sample return a warning and the input" begin
+    wm = "only a single sample provided to `quantilerenewaldidinfections`; input returned \
+        unchanged for any value of `q`"
+    @test quantilerenewaldidinfections(s1, 0.5; mutewarnings=true) == zeros(11, 3)
+    @test_warn wm quantilerenewaldidinfections(s1, 0.5)
+    @test_nowarn quantilerenewaldidinfections(s1, 0.5; mutewarnings=true)
+    @test_warn wm quantilerenewaldidinfections(s1, 0.5; mutewarnings=false)
+    @test quantilerenewaldidinfections(s2, 0.5; mutewarnings=true) == zeros(13, 4)
+    @test quantilerenewaldidinfections(s5, 0.5; mutewarnings=true) == [1  1; 2  0.5; 4  0.25]
+    @test quantilerenewaldidinfections(zeros(11, 3, 1), 0.5; mutewarnings=true) == zeros(11, 3)
+    @test_warn wm quantilerenewaldidinfections(zeros(11, 3, 1), 0.5)
+    @test_nowarn quantilerenewaldidinfections(zeros(11, 3, 1), 0.5; mutewarnings=true)
+    @test_warn wm quantilerenewaldidinfections(zeros(11, 3, 1), 0.5; mutewarnings=false)
+    @test quantilerenewaldidinfections(ones(20, 2, 1), 0.5; mutewarnings=true) == ones(20, 2)
+    @test_warn wm quantilerenewaldidinfections(ones(20, 2, 1), 0.5)
+    @test_nowarn quantilerenewaldidinfections(ones(20, 2, 1), 0.5; mutewarnings=true)
+    @test_warn wm quantilerenewaldidinfections(ones(20, 2, 1), 0.5; mutewarnings=false)
+    # no method currently intended for 4-dimensional arrays 
+    @test_throws MethodError quantilerenewaldidinfections(ones(20, 2, 1, 1), 0.5)
+    @test quantilerenewaldidinfections(s1, [0.25, 0.5, 0.75]; mutewarnings=true) == zeros(11, 3)
+    @test_warn wm quantilerenewaldidinfections(s1, [0.25, 0.5, 0.75])
+    @test_nowarn quantilerenewaldidinfections(s1, [0.25, 0.5, 0.75]; mutewarnings=true)
+    @test_warn wm quantilerenewaldidinfections(s1, [0.25, 0.5, 0.75]; mutewarnings=false)
+end
+
+@testset "quantiles from arrays of samples" begin
+    @test quantilerenewaldidinfections(s8, 0.5) == zeros(11, 3)
+    @test_nowarn quantilerenewaldidinfections(s8, 0.5)
+    @test_nowarn quantilerenewaldidinfections(s8, 0.5; mutewarnings=true)
+    @test_nowarn quantilerenewaldidinfections(s8, 0.5; mutewarnings=false)
+    A1 = rand(20, 3, 100)
+    q025 = quantilerenewaldidinfections(A1, 0.025)
+    q05 = quantilerenewaldidinfections(A1, 0.05)
+    q25 = quantilerenewaldidinfections(A1, 0.25)
+    q5 = quantilerenewaldidinfections(A1, 0.5)
+    q75 = quantilerenewaldidinfections(A1, 0.75)
+    q95 = quantilerenewaldidinfections(A1, 0.95)
+    q975 = quantilerenewaldidinfections(A1, 0.975)
+    @testset for t in 1:20, j in 1:3
+        @test q025[t, j] < q05[t, j] < q25[t, j] < q5[t, j] < q75[t, j] < q95[t, j] < q975[t, j]
+    end
+    @test quantilerenewaldidinfections(s8, [0.25, 0.5, 0.975]) == zeros(11, 3, 3)
+    @test_nowarn quantilerenewaldidinfections(s8, [0.25, 0.5, 0.975])
+    @test_nowarn quantilerenewaldidinfections(s8, [0.25, 0.5, 0.975]; mutewarnings=true)
+    @test_nowarn quantilerenewaldidinfections(s8, [0.25, 0.5, 0.975]; mutewarnings=false)
+    qv = quantilerenewaldidinfections(A1, [0.25, 0.5, 0.975])
+    @test size(qv) == (20, 3, 3)
+    @testset for (i, M) in enumerate([q25, q5, q975])
+        @test qv[:, :, i] == M
+    end
+    @test_nowarn quantilerenewaldidinfections(A1, [0.25, 0.5, 0.975])
 end

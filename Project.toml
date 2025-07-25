@@ -14,23 +14,24 @@ Turing = "fce5fe82-541a-59a6-adf8-730c64b5f9a0"
 UnPack = "3a884ed6-31ef-47d7-9d2a-63182c4928ed"
 
 [weakdeps]
-CairoMakie = "13f3f980-e62b-5c42-98c6-ff1f3baf88f0"
+Makie = "ee78f7c6-11fb-53f2-987a-cfe4a2b5a57a"
 
 [extensions]
-RenewalDiDCairoMakieExt = "CairoMakie"
+RenewalDiDMakieExt = "Makie"
 
 [compat]
-CairoMakie = "0.12, 0.13, 0.14, 0.15"
 DataFrames = "1"
+Makie = "0.20, 0.21, 0.22, 0.23, 0.24"
 PrettyTables = "2"
 Reexport = "1"
 StableRNGs = "1"
-StatsBase = "0.33, 0.34"
+StatsBase = "0.34"
 Turing = "0.39"
 UnPack = "1"
 julia = "1.10"
 
 [extras]
+CairoMakie = "13f3f980-e62b-5c42-98c6-ff1f3baf88f0"
 StableRNGs = "860ef19b-820b-49d6-a774-d7a799459cd3"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 

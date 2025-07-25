@@ -27,4 +27,7 @@ using Test
     @testset "process parameters" begin
         include("processparameters_test.jl")
     end
+    @testset "plotting without Makie" begin
+        include("plotting_testwithoutMakie.jl")
+    end
 end 

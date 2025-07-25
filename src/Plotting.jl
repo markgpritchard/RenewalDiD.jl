@@ -1,12 +1,16 @@
 # functions for plotting 
 
+# to avoid loading the `CairoMakie` package for users who are not planning to use it, this 
+# module simply exports the names of the plotting functions. Their signatures are added in
+# `RenewalDiDCairoMakieExt` after `using CairoMakie`
+
 module Plotting 
 
 using RenewalDiD
 
-# to avoid loading the `CairoMakie` package for users who are not planning to use it, this 
-# module simply exports the names of the plotting functions. Their signatures are added in
-# `RenewalDiDCairoMakieExt` after `using CairoMakie`
+export traceplot, traceplot!
+export tracerankplot, tracerankplot!
+export plotmodeloutput, plotmodeloutput!
 
 function __init__()
     if isdefined(Base.Experimental, :register_error_hint)
@@ -28,12 +32,11 @@ function __init__()
     return nothing
 end
 
-export traceplot, traceplot!
-export tracerankplot, tracerankplot!
-
 function traceplot end
 function traceplot! end
 function tracerankplot end
 function tracerankplot! end
+function plotmodeloutput end 
+function plotmodeloutput! end
 
 end  # module Plotting
