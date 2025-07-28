@@ -8,9 +8,12 @@ module Plotting
 
 using RenewalDiD
 
+export plotmodel, plotmodel!
+export plotmodeldata, plotmodeldata!
+export plotmodelintervention, plotmodelintervention!
+export plotmodeloutput, plotmodeloutput!
 export traceplot, traceplot!
 export tracerankplot, tracerankplot!
-export plotmodeloutput, plotmodeloutput!
 
 function __init__()
     if isdefined(Base.Experimental, :register_error_hint)
@@ -18,9 +21,12 @@ function __init__()
             plottinghint = "\nHINT: Plotting functions from `RenewalDiD.Plotting` are only \
                 available after `using CairoMakie`"
             plottingfunctionslist = [
+                plotmodel, plotmodel!,
+                plotmodeldata, plotmodeldata!,
+                plotmodelintervention, plotmodelintervention!,
+                plotmodeloutput, plotmodeloutput!,
                 traceplot, traceplot!, 
                 tracerankplot, tracerankplot!,
-                plotmodeloutput, plotmodeloutput!,
             ]
 
             if exc.f in plottingfunctionslist && 
@@ -33,11 +39,17 @@ function __init__()
     return nothing
 end
 
+function plotmodel end
+function plotmodel! end
+function plotmodeldata end 
+function plotmodeldata! end
+function plotmodelintervention end
+function plotmodelintervention! end
+function plotmodeloutput end 
+function plotmodeloutput! end
 function traceplot end
 function traceplot! end
 function tracerankplot end
 function tracerankplot! end
-function plotmodeloutput end 
-function plotmodeloutput! end
 
 end  # module Plotting

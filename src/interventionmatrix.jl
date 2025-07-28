@@ -24,7 +24,7 @@ struct InterventionMatrix{T} <: AbstractInterventionsArray{T, 2}
         duration::Int, rawstarttimes::Vector{<:Union{<:Integer, Nothing}};
         mutewarnings=nothing,
     ) where T
-        starttimes = _interventionstarttimes(rawstarttimes, duration)
+        starttimes = _generateinterventionstarttimes(rawstarttimes, duration)
         minimum(starttimes) > duration && _nointerventionwarning(mutewarnings)
         maximum(starttimes) <= duration && _allinterventionwarning(mutewarnings)
         return new{T}(duration, rawstarttimes, starttimes)
@@ -102,7 +102,7 @@ function __interventionmatrix(
     return InterventionMatrix{T}(duration, rawstarttimes; kwargs...)
 end
 
-function _interventionstarttimes(rawstarttimes, duration)
+function _generateinterventionstarttimes(rawstarttimes, duration)
     starttimes = zeros(Int, length(rawstarttimes))
     for (i, t) in enumerate(rawstarttimes)
         if isnothing(t) || t <= 1 || t > duration
@@ -117,6 +117,8 @@ end
 
 ## Functions ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+## Properties
+
 Base.size(M::InterventionMatrix) = (M.duration, length(M.starttimes))
 
 function Base.getindex(M::InterventionMatrix{T}, t, x) where T
@@ -126,6 +128,18 @@ function Base.getindex(M::InterventionMatrix{T}, t, x) where T
 end
 
 _duration(M::InterventionMatrix) = M.duration
+
+## Intervention times for plot 
+
+function _interventionstarttimes(M::InterventionMatrix)
+    return [_interventionstarttimes(M, i) for i in axes(M, 2)]
+end
+
+function _interventionstarttimes(M::InterventionMatrix, i)
+    return M.starttimes[i] > _duration(M) ? nothing : M.starttimes[i]
+end
+
+## Show
 
 function _showtimes(M::InterventionMatrix)
     uniquestarttimes = unique(M.starttimes)

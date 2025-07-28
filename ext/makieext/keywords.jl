@@ -214,9 +214,82 @@ const LINEKWS = [
     :visible
 ]
 
+const SCATTERKWS = [
+    :alpha
+    :clip_planes        
+    :color
+    :colormap
+    :colorrange
+    :colorscale
+    :cycle
+    :depth_shift        
+    :depthsorting       
+    :distancefield      
+    :font
+    :fxaa
+    :glowcolor
+    :glowwidth
+    :highclip
+    :inspectable        
+    :inspector_clear    
+    :inspector_hover    
+    :inspector_label    
+    :lowclip
+    :marker
+    :marker_offset      
+    :markersize
+    :markerspace        
+    :model
+    :nan_color
+    :overdraw
+    :rotation
+    :space
+    :ssao
+    :strokecolor        
+    :strokewidth        
+    :transform_marker   
+    :transformation     
+    :transparency       
+    :uv_offset_width    
+    :visible
+]
+
+const VLINESKWS = [
+    :alpha
+    :clip_planes
+    :color
+    :colormap
+    :colorrange
+    :colorscale
+    :cycle
+    :depth_shift
+    :fxaa
+    :highclip
+    :inspectable
+    :inspector_clear     
+    :inspector_hover     
+    :inspector_label     
+    :linecap
+    :linestyle
+    :linewidth
+    :lowclip
+    :model
+    :nan_color
+    :overdraw
+    :space
+    :ssao
+    :transformation      
+    :transparency        
+    :visible
+    :ymax
+    :ymin
+]
+
 axiskws(; kwargs...) = _selectkws(AXISKWS; kwargs...)
 bandkws(; kwargs...) = _selectkws(BANDKWS; kwargs...)
 lineskws(; kwargs...) = _selectkws(LINEKWS; kwargs...)
+scatterkws(; kwargs...) = _selectkws(SCATTERKWS; kwargs...)
+vlineskws(; kwargs...) = _selectkws(VLINESKWS; kwargs...)
 
 function _selectkws(expectedarguments; skip=[], kwargs...)
     kwkeys = Symbol[]

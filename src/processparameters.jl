@@ -311,7 +311,7 @@ function _samplerenewaldidinfectionsseedmatrix(
     ::Any, ::Automatic, inputobservedcases::AbstractMatrix, n_seeds::Integer; 
     kwargs...
 )
-    _expectedseedcases(observedcases, n_seeds; kwargs...)
+    _expectedseedcases(inputobservedcases, n_seeds; kwargs...)
 end 
 
 function _samplerenewaldidinfectionsseedmatrix( 
@@ -333,11 +333,14 @@ function _samplerenewaldidinfectionsseedmatrix(
 end
 
 function _samplerenewaldidinfectionsseedmatrix( 
-    ::Any, ::Automatic, ::AbstractMatrix, ::Nothing; 
+    inputdata::Any, ::Automatic, inputobservedcases::AbstractMatrix, ::Nothing; 
     kwargs...
 )
-    throw(_samplerenewaldidinfectionsseedmatrixnseedserror())
-    return nothing
+    # if n_seeds is not supplied, use the default from `renewaldid`
+    return _samplerenewaldidinfectionsseedmatrix(
+        inputdata, automatic, inputobservedcases, 7; 
+        kwargs...
+    )
 end
 
 _samplerenewaldidinfectionsngroups(inputngroups::Integer, ::Any) = inputngroups
@@ -423,11 +426,6 @@ end
 function _samplerenewaldidinfectionsseedmatrixargumenterror()
     m = "at least one of the keyword arguments `seedmatrix`, `data` and `observedcases` \
         must be supplied"
-    return ArgumentError(m)
-end
-
-function _samplerenewaldidinfectionsseedmatrixnseedserror()
-    m = "if the keyword argument `seedmatrix` is not supplied then `n_seeds` must be"
     return ArgumentError(m)
 end
 
