@@ -11,6 +11,56 @@ obs2 = (_obs = zeros(Int, 20, 2); _obs[1, 1] += 1; _obs[1:5, :] .+= 1; _obs)
 
 seedinfections1 = [1  0; 2  1]
 M_x1 = [2  0; -0.5  1; 1  0.5; -2  1; 0  1]
+calcseedinfections1 = let  # note, Ns not yet used  
+    infectionsmatrix = zeros(2, 2)
+    RenewalDiD._infections_seed!(infectionsmatrix, zeros(5, 2), zeros(2, 2), 0, 2)
+    infectionsmatrix
+end
+calcseedinfections2 = let  # note, Ns not yet used  
+    infectionsmatrix = zeros(3, 2)
+    RenewalDiD._infections_seed!(infectionsmatrix, zeros(6, 2), zeros(3, 2), 0, 3)
+    infectionsmatrix
+end
+calcseedinfections3 = let  # note, Ns not yet used  
+    infectionsmatrix = zeros(2, 2)
+    RenewalDiD._infections_seed!(infectionsmatrix, zeros(5, 2), seedinfections1, 0, 2)
+    infectionsmatrix
+end
+calcseedinfections4 = let  # note, Ns not yet used  
+    infectionsmatrix = zeros(2, 2)
+    RenewalDiD._infections_seed!(infectionsmatrix, M_x1, seedinfections1, 0, 2)
+    infectionsmatrix
+end
+calcseedinfections5 = let 
+    infectionsmatrix = zeros(Complex{Float64}, 2, 2)
+    RenewalDiD._infections_seed!(infectionsmatrix, zeros(5, 2), zeros(2, 2), ones(2), 2)
+    infectionsmatrix
+end
+calcseedinfections6 = let 
+    infectionsmatrix = zeros(Complex{Float64}, 2, 2)
+    RenewalDiD._infections_seed!(infectionsmatrix, zeros(5, 2), zeros(2, 2), [1000, 2000], 2)
+    infectionsmatrix
+end
+calcseedinfections7 = let 
+    infectionsmatrix = zeros(Complex{Float64}, 3, 2)
+    RenewalDiD._infections_seed!(infectionsmatrix, zeros(6, 2), zeros(3, 2), ones(2), 3)
+    infectionsmatrix
+end
+calcseedinfections8 = let 
+    infectionsmatrix = zeros(Complex{Float64}, 2, 2)
+    RenewalDiD._infections_seed!(infectionsmatrix, zeros(5, 2), seedinfections1, [10, 10], 2)
+    infectionsmatrix
+end
+calcseedinfections9 = let 
+    infectionsmatrix = zeros(Complex{Float64}, 2, 2)
+    RenewalDiD._infections_seed!(infectionsmatrix, zeros(5, 2), seedinfections1, [50, 100], 2)
+    infectionsmatrix
+end
+calcseedinfections10 = let  
+    infectionsmatrix = zeros(Complex{Float64}, 2, 2)
+    RenewalDiD._infections_seed!(infectionsmatrix, M_x1, seedinfections1, [50, 100], 2)
+    infectionsmatrix
+end
 calcinfections1 = RenewalDiD._infections(
     g_covid, Float64, zeros(5, 2), log.(zeros(3, 2)), zeros(2, 2), zeros(2), 2
 )
@@ -40,6 +90,32 @@ calcinfections4 = RenewalDiD._infections(
 calcinfections5 = RenewalDiD._infections(
     generationtime, Float64, M_x1, log.(ones(3, 2)), seedinfections1, 1000 .* ones(2), 2;
     vec=[0, 1]
+)
+calcinfections6 = RenewalDiD._infections(
+    g_covid, Complex{Float64}, zeros(5, 2), log.(zeros(3, 2)), zeros(2, 2), [10, 10], 2
+)
+calcinfections7 = RenewalDiD._infections(
+    g_covid, Complex{Float64}, zeros(6, 2), log.(zeros(4, 2)), zeros(2, 2), [10, 10], 2
+)
+calcinfections8 = RenewalDiD._infections(
+    generationtime, 
+    Complex{Float64}, 
+    zeros(5, 2), 
+    log.(zeros(3, 2)), 
+    seedinfections1, 
+    [10, 10], 
+    2;
+    vec=[0, 1],
+)
+calcinfections9 = RenewalDiD._infections(
+    generationtime, 
+    Complex{Float64}, 
+    zeros(5, 2), 
+    log.(1.5 * ones(3, 2)), 
+    seedinfections1, 
+    [10, 10], 
+    2;
+    vec=[0, 1],
 )
 
 R0prediction1 = [
@@ -123,6 +199,41 @@ mseedexpectation6 = (
 predictedinfections3 = [1  0; 2  1; 0  0; 0  0; 0  0]
 predictedinfections4 = [1  0; 2  1; 3  1.5; 4.5  2.25; 6.75  3.375]
 predictedinfections5 = [3  0; 1  2; 2  3; 0  6; 0  12]
+predictedinfections8 = ComplexF64[
+    1+0.9im  0+1im; 
+    2+0.7im  1+0.9im; 
+    0+0.7im  0+0.9im; 
+    0+0.7im  0+0.9im; 
+    0+0.7im  0+0.9im
+]
+predictedinfections9 = let 
+    inf3_1 = 3 * 0.7 
+    sus3_1 = 0.7 - inf3_1 / 10 
+    inf4_1 = 1.5 * inf3_1 * sus3_1 
+    sus4_1 = sus3_1 - inf4_1 / 10 
+    inf5_1 = 1.5 * inf4_1 * sus4_1 
+    sus5_1 = sus4_1 - inf5_1 / 10 
+    inf3_2 = 1.5 * 0.9 
+    sus3_2 = 0.9 - inf3_2 / 10 
+    inf4_2 = 1.5 * inf3_2 * sus3_2 
+    sus4_2 = sus3_2 - inf4_2 / 10 
+    inf5_2 = 1.5 * inf4_2 * sus4_2 
+    sus5_2 = sus4_2 - inf5_2 / 10 
+    ComplexF64[
+        1+0.9im  0+1im; 
+        2+0.7im  1+0.9im; 
+        inf3_1+sus3_1*im  inf3_2+sus3_2*im; 
+        inf4_1+sus4_1*im  inf4_2+sus4_2*im; 
+        inf5_1+sus5_1*im  inf5_2+sus5_2*im
+    ]
+end
+
+
+
+predictedcalcseedinfections4 = [3  0; 1  2]
+predictedcalcseedinfections8 = ComplexF64[1+0.9im  0+1im; 2+0.7im  1+0.9im]
+predictedcalcseedinfections9 = ComplexF64[1+0.98im  0+1im; 2+0.94im  1+0.99im]
+predictedcalcseedinfections10 = ComplexF64[3+0.94im  0+1im; 1+0.92im  2+0.98im]
 
 @testset "calculate ntimes" begin
     @test RenewalDiD._ntimes(zeros(2, 3)) == 2
@@ -280,8 +391,15 @@ end
         @test RenewalDiD._approxcases(2, -1.5) == 0
     end
 end
+
+@testset "calculate numbers of infections in seed period" begin
+    @test calcseedinfections1 == zeros(2, 2)
+    @test calcseedinfections2 == zeros(3, 2)
+    @test calcseedinfections3 == seedinfections1
+    @test calcseedinfections4 == predictedcalcseedinfections4
+end 
         
-@testset "calculate numbers of infections" begin
+@testset "calculate numbers of infections in study period" begin
     @test calcinfections1 == zeros(5, 2)
     @test calcinfections2 == zeros(6, 2)
     @test_throws DimensionMismatch RenewalDiD._infections(
@@ -302,4 +420,52 @@ end
     @test calcinfections3 == predictedinfections3
     @test calcinfections4 == predictedinfections4
     @test calcinfections5 == predictedinfections5
+end     
+
+@testset "expected number of infections with proportion susceptible" begin
+    # using `log(0)` and `log(1)` to emphasize that these parameters are natural logarithms
+    @test RenewalDiD._expectedinfections(g_covid, 1, log(0), zeros(10)) == 0
+    @test RenewalDiD._expectedinfections(g_covid, 1, log(1), ones(10)) == 
+        sum(RenewalDiD.COVIDSERIALINTERVAL[2:11])
+    @test RenewalDiD._expectedinfections(g_covid, 0, log(1), ones(10)) == 0
+    @test RenewalDiD._expectedinfections(g_covid, 0.5, log(1), ones(10)) == 
+        sum(RenewalDiD.COVIDSERIALINTERVAL[2:11]) / 2
+    
+    @test_throws ArgumentError RenewalDiD._expectedinfections(g_covid, 2, log(0), zeros(10)) 
+    @test_throws ArgumentError RenewalDiD._expectedinfections(g_covid, -0.5, log(0), zeros(10))     
+end   
+
+@testset "calculate numbers of infections in seed period with proportion susceptible" begin
+    @test calcseedinfections5 == ones(2, 2) * (0 + 1im)
+    @test calcseedinfections6 == ones(2, 2) * (0 + 1im)
+    @test calcseedinfections7 == ones(3, 2) * (0 + 1im)
+    @test calcseedinfections8 == predictedcalcseedinfections8
+    @test calcseedinfections9 == predictedcalcseedinfections9
+    @test calcseedinfections10 == predictedcalcseedinfections10
+end 
+
+@testset "calculate numbers of infections in study period with proportion susceptible" begin
+    @test calcinfections6 == ones(5, 2) * (0 + 1im)
+    @test calcinfections7 == ones(6, 2) * (0 + 1im)
+        @test_throws DimensionMismatch RenewalDiD._infections(
+        g_covid, Complex{Float64}, zeros(5, 2), log.(zeros(3, 3)), zeros(2, 2), ones(2), 2
+    ) 
+    @test_throws DimensionMismatch RenewalDiD._infections(
+        g_covid, Complex{Float64}, zeros(5, 2), log.(zeros(3, 2)), zeros(2, 3), ones(2), 2
+    ) 
+    @test_throws DimensionMismatch RenewalDiD._infections(
+        g_covid, Complex{Float64}, zeros(5, 2), log.(zeros(3, 2)), zeros(2, 2), ones(3), 2
+    ) 
+    @test_throws DimensionMismatch RenewalDiD._infections(
+        g_covid, Complex{Float64}, zeros(5, 2), log.(zeros(4, 2)), zeros(2, 2), ones(2), 2
+    ) 
+    @test_throws DimensionMismatch RenewalDiD._infections(
+        g_covid, Complex{Float64}, zeros(5, 2), log.(zeros(3, 2)), zeros(2, 2), ones(2), 3
+    ) 
+    @test calcinfections8 == predictedinfections8
+    @testset for j in 1:2 
+        @testset for t in 1:5 
+            @test calcinfections9[t, j] ≈ predictedinfections9[t, j] atol=1e-9
+        end
+    end
 end     

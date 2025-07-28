@@ -42,24 +42,18 @@ function _expectedseedcases(
     observedcases, n_seeds; 
     doubletime=automatic, sampletime=automatic, minvalue=nothing,
 )
-    return __expectedseedcases(observedcases, n_seeds, doubletime, sampletime, minvalue)
+    return _expectedseedcases(observedcases, n_seeds, doubletime, sampletime, minvalue)
 end
 
-function __expectedseedcases(observedcases, n_seeds, ::Automatic, sampletime, minvalue)
-    doubletime = n_seeds
-    return __expectedseedcases(observedcases, n_seeds, doubletime, sampletime, minvalue)
-end
-
-function __expectedseedcases(
-    observedcases, n_seeds, doubletime::Number, ::Automatic, minvalue
+function _expectedseedcases(
+    observedcases, n_seeds, inputdoubletime, inputsampletime, minvalue
 )
-    sampletime = min(n_seeds, _ntimes(observedcases))
+    doubletime = _expectedseedcasesdoubletime(inputdoubletime, n_seeds)
+    sampletime = _expectedseedcasessampletime(inputsampletime, observedcases, n_seeds)
     return __expectedseedcases(observedcases, n_seeds, doubletime, sampletime, minvalue)
 end
 
-function __expectedseedcases(
-    observedcases, n_seeds, doubletime::Number, sampletime::Integer, minvalue
-)
+function __expectedseedcases(observedcases, n_seeds, doubletime, sampletime, minvalue)
     exptdseedcases = zeros(n_seeds, _ngroups(observedcases))
 
     for g in 1:_ngroups(observedcases)
@@ -74,6 +68,14 @@ function __expectedseedcases(
 
     _expectedseedcasesminimum!(exptdseedcases, observedcases, minvalue)
     return exptdseedcases
+end
+
+_expectedseedcasesdoubletime(inputdoubletime, ::Any) = inputdoubletime
+_expectedseedcasesdoubletime(::Automatic, n_seeds) = n_seeds
+_expectedseedcasessampletime(inputsampletime, ::Any, ::Any) = inputsampletime
+
+function _expectedseedcasessampletime(::Automatic, observedcases, n_seeds)
+    return min(n_seeds, _ntimes(observedcases))
 end
 
 function _expectedseedcasesminimum!(exptdseedcases, observedcases, minvalue)
@@ -91,13 +93,17 @@ function _expectedinfections(g, logR_0, hx; kwargs...)
 end
 
 function _expectedinfections(g, propsus, logR_0, hx; kwargs...)
+    0 <= propsus <= 1 || throw(_propsusargumenterror(propsus))
     t = length(hx) + 1
     return sum(exp(logR_0) .* propsus .* [hx[x] * g(t - x; kwargs...) for x in eachindex(hx)])
 end
 
 _approxcases(x, sigma) = max(0, x * (1 + sigma))
 
-function _infections(g, M_x, logR_0::Matrix{T}, exptdseedcases, Ns, n_seeds; kwargs...) where T
+function _infections(
+    g, M_x, logR_0::Matrix{T}, exptdseedcases, Ns, n_seeds; 
+    kwargs...
+) where T
     return _infections(g, T, M_x, logR_0, exptdseedcases, Ns, n_seeds; kwargs...)
 end
 
@@ -122,32 +128,35 @@ function _infections!(g, infn, M_x, logR_0, exptdseedcases, Ns, n_seeds; kwargs.
     return nothing
 end
 
-function _infections_seed!(infn, M_x, exptdseedcases, Ns, n_seeds; kwargs...) 
+function _infections_seed!(
+    infn::AbstractArray{<:Real, 2}, M_x, exptdseedcases, ::Any, n_seeds; 
+    kwargs...
+) 
+    return __infections_seed!(infn, M_x, exptdseedcases, n_seeds; kwargs...) 
+end
+
+function _infections_seed!(  # version that tracks proportion susceptible
+    infn::AbstractArray{<:Complex, 2}, M_x, exptdseedcases, Ns, n_seeds; 
+    kwargs...
+) 
+    __infections_seed!(infn, M_x, exptdseedcases, n_seeds; kwargs...) 
+    for j in 1:_ngroups(M_x), t in 1:n_seeds
+        # previous proportion susceptible
+        prevsus = (t == 1 ? one(imag(infn[1, j])) : imag(infn[t-1, j])) * Ns[j]  
+        # add new proportion susceptible
+        infn[t, j] += ((prevsus - real(infn[t, j])) / Ns[j])im
+    end
+    return nothing
+end
+
+function __infections_seed!(infn, M_x, exptdseedcases, n_seeds; kwargs...)
     for j in 1:_ngroups(M_x), t in 1:n_seeds
         infn[t, j] = _approxcases(exptdseedcases[t, j], M_x[t, j])
     end 
     return nothing
 end
 
-function _infections_seed!(
-    infn::Matrix{<:Complex}, M_x, exptdseedcases, Ns, n_seeds; 
-    kwargs...
-) 
-    for j in 1:_ngroups(M_x)
-        sus = Ns[j]
-        _infn = min(sus, _approxcases(exptdseedcases[1, j], M_x[1, j]))
-        infn[1, j] = _infn + (sus - _infn) * im
-
-        for t in 2:n_seeds
-            sus = imag(infn[t-1, j])
-            _infn = min(sus, _approxcases(exptdseedcases[t, j], M_x[t, j]))
-            infn[t, j] = _infn + (sus - _infn) * im
-        end 
-    end 
-    return nothing
-end
-
-function _infections_transmitted!(g, infn, M_x, logR_0, Ns, n_seeds; kwargs...) 
+function _infections_transmitted!(g, infn, M_x, logR_0, ::Any, n_seeds; kwargs...) 
     for j in 1:_ngroups(M_x), t in 1:_ntimes(logR_0)
         infn[t+n_seeds, j] = _approxcases(
             _expectedinfections(g, logR_0[t, j], @view infn[1:t+n_seeds-1, j]; kwargs...), 
@@ -157,24 +166,21 @@ function _infections_transmitted!(g, infn, M_x, logR_0, Ns, n_seeds; kwargs...)
     return nothing
 end
 
-function _infections_transmitted!(
-    infn::Matrix{<:Complex}, g, M_x, logR_0, Ns, n_seeds; 
-    kwargs...
-) 
+function _infections_transmitted!(g, infn::Matrix{<:Complex}, M_x, logR_0, Ns, n_seeds; kwargs...) 
     for j in 1:_ngroups(M_x), t in 1:_ntimes(logR_0)
-        sus = imag(infn[t+n_seeds-1, j])
-        propsus = sus / Ns[j]
-        _infn = _approxcases(
+        prevsus = imag(infn[t+n_seeds-1, j]) * Ns[j] 
+        expectednewcases = _approxcases(
             _expectedinfections(
                 g, 
-                propsus, 
+                prevsus / Ns[j], 
                 logR_0[t, j], 
                 real.(@view infn[1:t+n_seeds-1, j]); 
                 kwargs...
             ), 
             M_x[t+n_seeds, j]
         )
-        infn[t+n_seeds, j] = _infn + (sus - _infn) * im
+        newcases = min(expectednewcases, prevsus)
+        infn[t+n_seeds, j] = newcases + ((prevsus - newcases) / Ns[j])im
     end
     return nothing
 end
@@ -381,6 +387,8 @@ function _ntimesmmerror(thetavec, interventions)
         length(thetavec), "thetavec", "height", _ntimes(interventions)
     )
 end
+
+_propsusargumenterror(propsus) = ArgumentError("$propsus: must satisfy 0 ≤ propsus ≤ 1")
 
 function _R_0_dimensionmismatch(len, vec, dim, size)
     return _vm_dimensionmismatch(len, vec, dim, "interventions", size)

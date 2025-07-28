@@ -291,7 +291,7 @@ lineskws(; kwargs...) = _selectkws(LINEKWS; kwargs...)
 scatterkws(; kwargs...) = _selectkws(SCATTERKWS; kwargs...)
 vlineskws(; kwargs...) = _selectkws(VLINESKWS; kwargs...)
 
-function _selectkws(expectedarguments; skip=[], kwargs...)
+function _selectkws(expectedarguments; skip=Symbol[], kwargs...)
     kwkeys = Symbol[]
     kwvals = Any[]
     for (k, v) in kwargs

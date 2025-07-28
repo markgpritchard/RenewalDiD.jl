@@ -149,11 +149,10 @@ function _samplerenewaldidinfections!(
     g::Vector, infn, df, interventions, Ns, seedmatrix, i, ngroups, ntimes, n_seeds;
     kwargs...
 )
-    _samplerenewaldidinfections!(
+    return _samplerenewaldidinfections!(
         generationtime, infn, df, interventions, Ns, seedmatrix, i, ngroups, ntimes, n_seeds; 
         vec=g, kwargs...
     )
-    return nothing
 end
 
 function _samplerenewaldidinfections!(
@@ -311,14 +310,14 @@ function _samplerenewaldidinfectionsseedmatrix(
     ::Any, ::Automatic, inputobservedcases::AbstractMatrix, n_seeds::Integer; 
     kwargs...
 )
-    _expectedseedcases(inputobservedcases, n_seeds; kwargs...)
+    return _expectedseedcases(inputobservedcases, n_seeds; kwargs...)
 end 
 
 function _samplerenewaldidinfectionsseedmatrix( 
     inputdata::Dict, ::Automatic, ::Any, n_seeds::Any; 
     kwargs...
 )
-    _samplerenewaldidinfectionsseedmatrix(
+    return _samplerenewaldidinfectionsseedmatrix(
         nothing, automatic, inputdata[:observedcases], n_seeds; 
         kwargs...
     )
@@ -382,8 +381,7 @@ function _samplerenewaldidinfectionsassertions(df, seedmatrix, i, ngroups, ntime
     M_xmaxt = _ntimes(seedmatrix) + ntimes
     "M_x[$M_xmaxt, 1]" in names(df) || throw(_dfMxdimensiontoosmallerror())
     "M_x[$(M_xmaxt + 1), 1]" ∉ names(df) || throw(_dfMxdimensiontoolargererror())
-    _samplerenewaldidinfectionsindexassertions(df, i)
-    return nothing
+    return _samplerenewaldidinfectionsindexassertions(df, i)
 end
 
 function _samplerenewaldidinfectionsindexassertions(df, i::Integer)

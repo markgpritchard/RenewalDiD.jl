@@ -340,7 +340,7 @@ rv16b = let
         [_c2 for _ in 1:3]; 
     ]
 end
-#=
+
 sim1 = testsimulation(rng1)
 model1 =  renewaldid(
     sim1, g_seir, packpriors(; sigma_thetaprior=Exponential(0.05)); 
@@ -348,7 +348,7 @@ model1 =  renewaldid(
 )
 chain1 = sample(rng1, model1, NUTS(), MCMCThreads(), 20, 4; verbose=false, progress=false)
 chaindf1 = DataFrame(chain1)
-=#
+
 @testset "number of unique elements" begin
     @test nunique([1, 2, 3]) == 3
     @test nunique(ones(3)) == 1
@@ -383,15 +383,13 @@ end
 @testset "samples with Mx < -1" begin
     @test s7 == zeros(3, 2)
 end
-#=
+
 @testset "keyword errors" begin
     @test_throws ArgumentError samplerenewaldidinfections(zeros(2), df1, 2)
-    @test_throws ArgumentError samplerenewaldidinfections(
-        g_seir, chaindf1, 1; 
-        data=sim1, gamma=0.2, sigma=0.5,
-    )
+    # test removed as not providing `n_seeds` to `samplerenewaldidinfections` no longer 
+    # intended to throw an error
 end
-=#
+
 
 @testset "sample multiple rows" begin
     @test s8 == zeros(11, 3, 16)
