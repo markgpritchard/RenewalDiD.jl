@@ -342,13 +342,14 @@ rv16b = let
 end
 
 sim1 = testsimulation(rng1)
+#=
 model1 =  renewaldid(
     sim1, g_seir, packpriors(; sigma_thetaprior=Exponential(0.05)); 
     gamma=0.2, sigma=0.5
 )
 chain1 = sample(rng1, model1, NUTS(), MCMCThreads(), 20, 4; verbose=false, progress=false)
 chaindf1 = DataFrame(chain1)
-
+=#
 @testset "number of unique elements" begin
     @test nunique([1, 2, 3]) == 3
     @test nunique(ones(3)) == 1
@@ -598,4 +599,35 @@ end
         @test qv[:, :, i] == M
     end
     @test_nowarn quantilerenewaldidinfections(A1, [0.25, 0.5, 0.975])
+end
+
+@testset "intervention starttimes" begin
+    _im1 = InterventionMatrix(100, [40, 80, nothing, -1, 101])
+    _im2 = InterventionMatrix{Bool}(100, [40, 80, nothing, -1, 101])
+    _am1 = let 
+        m = zeros(100, 5)
+        for t in 40:100 
+            m[t, 1] = 1
+            t < 80 && continue 
+            m[t, 2] = 1
+        end 
+        m
+    end
+    _am2 = let 
+        m = zeros(Bool, 100, 5)
+        for t in 40:100 
+            m[t, 1] = true
+            t < 80 && continue 
+            m[t, 2] = true
+        end 
+        m
+    end
+    @testset for M in [_im1, _im2, _am1, _am2]
+        @test RenewalDiD._interventionstarttimes(M, 1) == 40 
+        @test RenewalDiD._interventionstarttimes(M, 2) == 80
+        @testset for i in 3:5 
+            @test isnothing(RenewalDiD._interventionstarttimes(M, i))
+        end
+        @test RenewalDiD._interventionstarttimes(M) == [40, 80, nothing, nothing, nothing]
+    end
 end

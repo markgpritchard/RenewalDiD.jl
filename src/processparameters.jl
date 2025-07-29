@@ -216,6 +216,11 @@ function _quantilerenewaldidinfections(outputnumbertype, A, q::AbstractVector{<:
     return output
 end
 
+## list the intervention times
+
+# other versions of this function are in `interventionmatrix.jl`
+_interventionstarttimes(M::AbstractMatrix, i) = findfirst(x -> x == 1, M[:, i])
+
 
 # select parameters from keyword arguments ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 

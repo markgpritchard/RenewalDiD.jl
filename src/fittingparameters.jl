@@ -142,7 +142,7 @@ function _infections_seed!(  # version that tracks proportion susceptible
     __infections_seed!(infn, M_x, exptdseedcases, n_seeds; kwargs...) 
     for j in 1:_ngroups(M_x), t in 1:n_seeds
         # previous proportion susceptible
-        prevsus = (t == 1 ? one(imag(infn[1, j])) : imag(infn[t-1, j])) * Ns[j]  
+        prevsus = _prevpropsus(infn, t, j; kwargs...) * Ns[j]  
         # add new proportion susceptible
         infn[t, j] += ((prevsus - real(infn[t, j])) / Ns[j])im
     end
@@ -168,7 +168,7 @@ end
 
 function _infections_transmitted!(g, infn::Matrix{<:Complex}, M_x, logR_0, Ns, n_seeds; kwargs...) 
     for j in 1:_ngroups(M_x), t in 1:_ntimes(logR_0)
-        prevsus = imag(infn[t+n_seeds-1, j]) * Ns[j] 
+        prevsus = _prevpropsus(infn, t + n_seeds, j; kwargs...) * Ns[j] 
         expectednewcases = _approxcases(
             _expectedinfections(
                 g, 
@@ -183,6 +183,14 @@ function _infections_transmitted!(g, infn::Matrix{<:Complex}, M_x, logR_0, Ns, n
         infn[t+n_seeds, j] = newcases + ((prevsus - newcases) / Ns[j])im
     end
     return nothing
+end
+
+function _prevpropsus(infn, t, j; kwargs...)
+    if t == 1 
+        return one(_prevpropsus(infn, 2, j))
+    end
+    propsus = imag(infn[t-1, j])
+    return propsus
 end
 
 function packdata(; observedcases, interventions, Ns)

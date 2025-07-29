@@ -422,6 +422,19 @@ end
     @test calcinfections5 == predictedinfections5
 end     
 
+@testset "proportion susceptible" begin
+    infn = [0+1im  20+0.98im; 0+1im  40+0.96im; 20+0.8im  100+0.86im]
+    expectedoutput = [1  1; 1  0.98; 1  0.96; 0.8  0.86]
+    @testset for j in 1:2, t in 1:4
+        @test RenewalDiD._prevpropsus(infn, t, j) == expectedoutput[t, j]
+        @test (@inferred RenewalDiD._prevpropsus(infn, t, j)) == 
+            RenewalDiD._prevpropsus(infn, t, j)    
+    end
+    @test_throws BoundsError RenewalDiD._prevpropsus(infn, 0, 1)
+    @test_throws BoundsError RenewalDiD._prevpropsus(infn, 5, 2)
+    @test_throws BoundsError RenewalDiD._prevpropsus(infn, 2, 3)
+end
+
 @testset "expected number of infections with proportion susceptible" begin
     # using `log(0)` and `log(1)` to emphasize that these parameters are natural logarithms
     @test RenewalDiD._expectedinfections(g_covid, 1, log(0), zeros(10)) == 0

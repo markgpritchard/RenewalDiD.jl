@@ -131,13 +131,13 @@ _duration(M::InterventionMatrix) = M.duration
 
 ## Intervention times for plot 
 
-function _interventionstarttimes(M::InterventionMatrix)
+function _interventionstarttimes(M::AbstractMatrix)
     return [_interventionstarttimes(M, i) for i in axes(M, 2)]
 end
 
 function _interventionstarttimes(M::InterventionMatrix, i)
     return M.starttimes[i] > _duration(M) ? nothing : M.starttimes[i]
-end
+end  # another version of this function is in `processparameters.jl`
 
 ## Show
 
