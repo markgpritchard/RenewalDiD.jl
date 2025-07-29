@@ -189,18 +189,19 @@ end
 
 ## quantiles of sampled outputs
 
-function quantilerenewaldidinfections(M::AbstractMatrix, ::Any; mutewarnings=nothing)
-    _singlesamplequantilewarning(mutewarnings)
-    return M
+function quantilerenewaldidinfections(A, q; mutewarnings=nothing)
+    _quantilerenewaldidinfectionswarningset(A, q, mutewarnings)
+    return _quantilerenewaldidinfections(A, q)
 end
 
-function quantilerenewaldidinfections(A::Array{T, 3}, q; mutewarnings=nothing) where T
-    size(A, 3) > 1 || _singlesamplequantilewarning(mutewarnings)
+_quantilerenewaldidinfections(M::AbstractMatrix, ::Any) = M
+
+function _quantilerenewaldidinfections(A::Array{T, 3}, q) where T
     outputnumbertype = typeof(zero(T) / 1)
-    return _quantilerenewaldidinfections(outputnumbertype, A, q)
+    return __quantilerenewaldidinfections(outputnumbertype, A, q)
 end
 
-function _quantilerenewaldidinfections(outputnumbertype, A, q::Real)
+function __quantilerenewaldidinfections(outputnumbertype, A, q::Real)
     output = zeros(outputnumbertype, size(A, 1), size(A, 2))
     for t in axes(A, 1), j in axes(A, 2)
         output[t, j] = quantile((@view A[t, j, :]), q)
@@ -208,7 +209,7 @@ function _quantilerenewaldidinfections(outputnumbertype, A, q::Real)
     return output
 end
 
-function _quantilerenewaldidinfections(outputnumbertype, A, q::AbstractVector{<:Real}) 
+function __quantilerenewaldidinfections(outputnumbertype, A, q::AbstractVector{<:Real}) 
     output = zeros(outputnumbertype, size(A, 1), size(A, 2), length(q))
     for (i, qi) in enumerate(q), t in axes(A, 1), j in axes(A, 2)
         output[t, j, i] = quantile((@view A[t, j, :]), qi)
@@ -357,19 +358,68 @@ _samplerenewaldidinfectionsnseeds(::Nothing, seedmatrix) = _ntimes(seedmatrix)
 
 # Warnings ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-function _singlesamplequantilewarning(::Nothing)
+## Warning sets 
+
+function _quantilerenewaldidinfectionswarningset(A, q, mutewarnings::Bool)
+    if mutewarnings 
+        return nothing 
+    else 
+        return _quantilerenewaldidinfectionswarningset(A, q, nothing)
+    end
+end
+
+function _quantilerenewaldidinfectionswarningset(::AbstractMatrix, ::Any, ::Nothing)
+    return _singlesamplequantilewarning()
+end
+
+function _quantilerenewaldidinfectionswarningset(A::AbstractArray{T, 3}, q, ::Nothing) where T
+    size(A, 3) > 1 || _singlesamplequantilewarning()
+    return __quantilerenewaldidinfectionswarningset(q)
+end
+
+__quantilerenewaldidinfectionswarningset(::Real) = nothing
+
+function __quantilerenewaldidinfectionswarningset(q::AbstractVector)
+    isodd(length(q)) || return _evenquantilevectorlengthwarning(q)
+    _midpoint = convert(Int, length(q) / 2 + 0.5)
+    q[_midpoint] == 0.5 || _medianmidpointwarning(q)
+    qp = 0
+    for (i, qi) in enumerate(q) 
+        qi > qp || _descendingquantilewarning(qi, qp)
+        qp = qi 
+        i >= _midpoint && continue 
+        qo = q[(length(q) + 1 - i)]
+        qi ≈ 1 - qo || _assymetricquantileswarning(qi, qo)
+    end
+    return nothing
+end
+
+## Warning messages 
+
+function _assymetricquantileswarning(qi, qo)
+    @warn "($qi, $qo): other functions expect that credible intervals are symmetrical"
+end
+
+function _descendingquantilewarning(qi, qp)
+    @warn "$qi < $qp: other functions expect quantiles are calculated in ascending order"
+    return nothing
+end
+
+function _evenquantilevectorlengthwarning(q)
+    @warn "$q: other functions expect an odd number of quantiles"
+    return nothing 
+end
+
+function _medianmidpointwarning(q)
+    @warn "$q: other functions expect the middle quantile is the median"
+    return nothing
+end
+
+function _singlesamplequantilewarning()
     wm = "only a single sample provided to `quantilerenewaldidinfections`; input returned \
         unchanged for any value of `q`"
     @warn wm
     return nothing
-end
-
-function _singlesamplequantilewarning(mutewarnings::Bool)
-    if mutewarnings 
-        return nothing 
-    else 
-        return _singlesamplequantilewarning(nothing)
-    end
 end
 
 

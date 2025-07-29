@@ -574,6 +574,11 @@ end
 end
 
 @testset "quantiles from arrays of samples" begin
+    wm1 = "(0.25, 0.975): other functions expect that credible intervals are symmetrical"
+    wm2 = "0.05 < 0.25: other functions expect quantiles are calculated in ascending order"
+    wm3 = "[0.25, 0.5, 0.75, 0.975]: other functions expect an odd number of quantiles"
+    wm4 = "[0.25, 0.75, 0.975]: other functions expect the middle quantile is the median"
+    wm5 = "[0.25, 0.75, 0.5]: other functions expect the middle quantile is the median"
     @test quantilerenewaldidinfections(s8, 0.5) == zeros(11, 3)
     @test_nowarn quantilerenewaldidinfections(s8, 0.5)
     @test_nowarn quantilerenewaldidinfections(s8, 0.5; mutewarnings=true)
@@ -589,16 +594,34 @@ end
     @testset for t in 1:20, j in 1:3
         @test q025[t, j] < q05[t, j] < q25[t, j] < q5[t, j] < q75[t, j] < q95[t, j] < q975[t, j]
     end
-    @test quantilerenewaldidinfections(s8, [0.25, 0.5, 0.975]) == zeros(11, 3, 3)
-    @test_nowarn quantilerenewaldidinfections(s8, [0.25, 0.5, 0.975])
+    @test quantilerenewaldidinfections(s8, [0.25, 0.5, 0.975]; mutewarnings=true) == zeros(11, 3, 3)
+    @test_warn wm1 quantilerenewaldidinfections(s8, [0.25, 0.5, 0.975])
     @test_nowarn quantilerenewaldidinfections(s8, [0.25, 0.5, 0.975]; mutewarnings=true)
-    @test_nowarn quantilerenewaldidinfections(s8, [0.25, 0.5, 0.975]; mutewarnings=false)
-    qv = quantilerenewaldidinfections(A1, [0.25, 0.5, 0.975])
+    @test_warn wm1 quantilerenewaldidinfections(s8, [0.25, 0.5, 0.975]; mutewarnings=false)
+    @test_nowarn quantilerenewaldidinfections(s8, [0.25, 0.5, 0.75])
+    @test_nowarn quantilerenewaldidinfections(s8, [0.25, 0.5, 0.75]; mutewarnings=true)
+    @test_nowarn quantilerenewaldidinfections(s8, [0.25, 0.5, 0.75]; mutewarnings=false)
+    @test_nowarn quantilerenewaldidinfections(s8, [0.05, 0.25, 0.5, 0.75, 0.95])
+    @test_nowarn quantilerenewaldidinfections(s8, [0.05, 0.25, 0.5, 0.75, 0.95]; mutewarnings=true)
+    @test_nowarn quantilerenewaldidinfections(s8, [0.05, 0.25, 0.5, 0.75, 0.95]; mutewarnings=false)
+    @test_warn wm2 quantilerenewaldidinfections(s8, [0.25, 0.05, 0.5, 0.95, 0.75])
+    @test_nowarn quantilerenewaldidinfections(s8, [0.25, 0.05, 0.5, 0.95, 0.75]; mutewarnings=true)
+    @test_warn wm2 quantilerenewaldidinfections(s8, [0.25, 0.05, 0.5, 0.95, 0.75]; mutewarnings=false)
+    @test_warn wm3 quantilerenewaldidinfections(s8, [0.25, 0.5, 0.75, 0.975])
+    @test_nowarn quantilerenewaldidinfections(s8, [0.25, 0.5, 0.75, 0.975]; mutewarnings=true)
+    @test_warn wm3 quantilerenewaldidinfections(s8, [0.25, 0.5, 0.75, 0.975]; mutewarnings=false)
+    @test_warn wm4 quantilerenewaldidinfections(s8, [0.25, 0.75, 0.975])
+    @test_nowarn quantilerenewaldidinfections(s8, [0.25, 0.75, 0.975]; mutewarnings=true)
+    @test_warn wm4 quantilerenewaldidinfections(s8, [0.25, 0.75, 0.975]; mutewarnings=false)
+    @test_warn wm5 quantilerenewaldidinfections(s8, [0.25, 0.75, 0.5])
+    @test_nowarn quantilerenewaldidinfections(s8, [0.25, 0.75, 0.5]; mutewarnings=true)
+    @test_warn wm5 quantilerenewaldidinfections(s8, [0.25, 0.75, 0.5]; mutewarnings=false)
+    qv = quantilerenewaldidinfections(A1, [0.25, 0.5, 0.975]; mutewarnings=true)
     @test size(qv) == (20, 3, 3)
     @testset for (i, M) in enumerate([q25, q5, q975])
         @test qv[:, :, i] == M
     end
-    @test_nowarn quantilerenewaldidinfections(A1, [0.25, 0.5, 0.975])
+    @test_nowarn quantilerenewaldidinfections(A1, [0.25, 0.5, 0.75])
 end
 
 @testset "intervention starttimes" begin

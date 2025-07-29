@@ -8,8 +8,7 @@ function RenewalDiD.Plotting.traceplot(df, variable; kwargs...)
 end
 
 function RenewalDiD.Plotting.traceplot!(ax, df, variable; kwargs...)
-    _traceplot!(ax, df, variable; lineskws(kwargs...)...)
-    return nothing
+    return _traceplot!(ax, df, variable; lineskws(kwargs...)...)
 end
 
 function _traceplot!(ax, df, variable; kwargs...)
