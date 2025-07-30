@@ -273,10 +273,7 @@ function __samplerenewaldidinfectionarguments(
 )
     interventions = _samplerenewaldidinfectionsinterventions(inputdata, inputinterventions)
     Ns = _samplerenewaldidinfectionsNs(inputdata, inputNs)
-    seedmatrix = _samplerenewaldidinfectionsseedmatrix(
-        inputdata, inputseedmatrix, inputobservedcases, inputn_seeds; 
-        minvalue=seedcasesminvalue, doubletime, sampletime
-    )
+    seedmatrix = _samplerenewaldidinfectionsseedmatrix(inputdata, inputseedmatrix)
     ngroups = _samplerenewaldidinfectionsngroups(inputngroups, interventions)
     ntimes = _samplerenewaldidinfectionsntimes(inputntimes, interventions)
     n_seeds = _samplerenewaldidinfectionsnseeds(inputn_seeds, seedmatrix)
@@ -288,8 +285,8 @@ function _samplerenewaldidinfectionsinterventions(::Any, inputinterventions::Abs
     return inputinterventions
 end
 
-function _samplerenewaldidinfectionsinterventions(inputdata::Dict, ::Nothing)
-    return inputdata[:interventions]
+function _samplerenewaldidinfectionsinterventions(inputdata::RenewalDiDData, ::Nothing)
+    return inputdata.interventions
 end
 
 function _samplerenewaldidinfectionsinterventions(::Nothing, ::Nothing)
@@ -298,54 +295,22 @@ function _samplerenewaldidinfectionsinterventions(::Nothing, ::Nothing)
 end
 
 _samplerenewaldidinfectionsNs(::Any, Ns::AbstractVector) = Ns
-_samplerenewaldidinfectionsNs(inputdata::Dict, ::Nothing) = inputdata[:Ns]
+_samplerenewaldidinfectionsNs(inputdata::RenewalDiDData, ::Nothing) = inputdata.Ns
 
 function _samplerenewaldidinfectionsNs(::Nothing, ::Nothing)
     throw(_samplerenewaldidinfectionsNsargumenterror())
     return nothing
 end
 
-function _samplerenewaldidinfectionsseedmatrix(
-    ::Any, seedmatrix::AbstractMatrix, ::Any, ::Any; 
-    kwargs...
-)
-    return seedmatrix
+_samplerenewaldidinfectionsseedmatrix(::Any, seedmatrix::AbstractMatrix) = seedmatrix
+
+function _samplerenewaldidinfectionsseedmatrix(inputdata::RenewalDiDData, ::Automatic)
+    return inputdata.exptdseedcases
 end
 
-function _samplerenewaldidinfectionsseedmatrix( 
-    ::Any, ::Automatic, inputobservedcases::AbstractMatrix, n_seeds::Integer; 
-    kwargs...
-)
-    return _expectedseedcases(inputobservedcases, n_seeds; kwargs...)
-end 
-
-function _samplerenewaldidinfectionsseedmatrix( 
-    inputdata::Dict, ::Automatic, ::Any, n_seeds::Any; 
-    kwargs...
-)
-    return _samplerenewaldidinfectionsseedmatrix(
-        nothing, automatic, inputdata[:observedcases], n_seeds; 
-        kwargs...
-    )
-end
-
-function _samplerenewaldidinfectionsseedmatrix(
-    ::Nothing, ::Automatic, ::Nothing, ::Any; 
-    kwargs...
-)
+function _samplerenewaldidinfectionsseedmatrix(::Nothing, ::Automatic)
     throw(_samplerenewaldidinfectionsseedmatrixargumenterror())
     return nothing
-end
-
-function _samplerenewaldidinfectionsseedmatrix( 
-    inputdata::Any, ::Automatic, inputobservedcases::AbstractMatrix, ::Nothing; 
-    kwargs...
-)
-    # if n_seeds is not supplied, use the default from `renewaldid`
-    return _samplerenewaldidinfectionsseedmatrix(
-        inputdata, automatic, inputobservedcases, 7; 
-        kwargs...
-    )
 end
 
 _samplerenewaldidinfectionsngroups(inputngroups::Integer, ::Any) = inputngroups

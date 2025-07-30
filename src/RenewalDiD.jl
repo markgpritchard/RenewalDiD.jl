@@ -1,16 +1,19 @@
 module RenewalDiD
 
+using AutoHashEquals: @auto_hash_equals
 using PrettyTables: pretty_table
 using Random: AbstractRNG, default_rng
 using Reexport: @reexport
 using StatsBase: Weights, mean, ordinalrank, quantile, sample
-using Turing: @model, Exponential, Normal, arraydist, filldist
-using UnPack: @unpack
+using Turing: @model, Exponential, Normal, arraydist, filldist, truncated
 
 @reexport using DataFrames: DataFrame
 
 struct Automatic end  # not exported
 const automatic = Automatic()  # not exported
+
+const DEFAULT_SEEDMATRIX_HEIGHT = 7 
+const DEFAULT_SEEDMATRIX_MINVALUE = 0.5
 
 include("interventionmatrix.jl")
 include("generationinterval.jl")
@@ -25,7 +28,8 @@ export g_covid, g_seir, generationtime, testgenerationtime, vectorg_seir
 ## simulations.jl
 export packsimulations, packsimulationtuple, runsimulation, simulationcases, simulationu0
 ## fittingparameters.jl
-export packdata, packpriors, renewaldid, renewaldid_tracksusceptibles
+export RenewalDiDData, RenewalDiDPriors
+export expectedseedcases, logsumexp, renewaldid, renewaldid_tracksusceptibles
 ## processparameters.jl
 export nunique, quantilerenewaldidinfections, rankvalues, samplerenewaldidinfections
 

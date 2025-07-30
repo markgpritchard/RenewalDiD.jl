@@ -12,7 +12,7 @@ export plotmodel, plotmodel!
 export plotmodeldata, plotmodeldata!
 export plotmodelintervention, plotmodelintervention!
 export plotmodeloutput, plotmodeloutput!
-export traceplot, traceplot!
+export traceplot, traceplot!, trplot, trplot!
 export tracerankplot, tracerankplot!
 
 function __init__()
@@ -51,5 +51,9 @@ function traceplot end
 function traceplot! end
 function tracerankplot end
 function tracerankplot! end
+
+# `traceplot` is also exported by `MCMCChains` and `Turing`
+trplot(args...; kwargs...) = traceplot(args...; kwargs...)
+trplot!(args...; kwargs...) = traceplot!(args...; kwargs...)
 
 end  # module Plotting

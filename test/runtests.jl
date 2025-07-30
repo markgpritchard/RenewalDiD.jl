@@ -30,4 +30,7 @@ using Test
     @testset "plotting without Makie" begin
         include("plotting_testwithoutMakie.jl")
     end
+    @testset "example workflow" begin
+        include("exampleworkflow.jl")
+    end
 end 

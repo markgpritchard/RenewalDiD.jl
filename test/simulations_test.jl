@@ -372,10 +372,10 @@ end
 end 
 
 @testset "group simulations" begin
-    @test dict1[:interventions] == InterventionMatrix(20, 10, 12, nothing)
-    @test dict1[:Ns] == [250, 250, 221]
+    @test dict1.interventions == InterventionMatrix(20, 10, 12, nothing)
+    @test dict1.Ns == [250, 250, 221]
     @testset for i in 1:3 
-        @test dict1[:observedcases][:, i] == [sim1, sim2, sim3][i]
+        @test dict1.observedcases[:, i] == [sim1, sim2, sim3][i]
     end
     @test gensimtuple1 == simtuple1
     @test gensimtuple2 == simtuple2

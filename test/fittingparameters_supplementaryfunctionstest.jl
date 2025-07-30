@@ -228,12 +228,32 @@ predictedinfections9 = let
     ]
 end
 
-
-
 predictedcalcseedinfections4 = [3  0; 1  2]
 predictedcalcseedinfections8 = ComplexF64[1+0.9im  0+1im; 2+0.7im  1+0.9im]
 predictedcalcseedinfections9 = ComplexF64[1+0.98im  0+1im; 2+0.94im  1+0.99im]
 predictedcalcseedinfections10 = ComplexF64[3+0.94im  0+1im; 1+0.92im  2+0.98im]
+
+zerosstruct = RenewalDiDData( ; 
+    observedcases=zeros(4, 2), interventions=zeros(3, 2), Ns=zeros(Int, 2)
+)
+
+@testset "data struct" begin
+    @test (@inferred RenewalDiDData( ; 
+        observedcases=zeros(4, 2), interventions=zeros(3, 2), Ns=zeros(Int, 2)
+    )) == zerosstruct
+    @test_throws DimensionMismatch RenewalDiDData( ; 
+        observedcases=zeros(3, 2), interventions=zeros(3, 2), Ns=zeros(Int, 2)
+    )
+    @test_throws DimensionMismatch RenewalDiDData( ; 
+        observedcases=zeros(4, 3), interventions=zeros(3, 2), Ns=zeros(Int, 2)
+    )
+    @test_throws DimensionMismatch RenewalDiDData( ; 
+        observedcases=zeros(4, 2), interventions=zeros(3, 3), Ns=zeros(Int, 2)
+    )
+    @test_throws DimensionMismatch RenewalDiDData( ; 
+        observedcases=zeros(4, 2), interventions=zeros(3, 2), Ns=zeros(Int, 3)
+    )
+end
 
 @testset "calculate ntimes" begin
     @test RenewalDiD._ntimes(zeros(2, 3)) == 2
@@ -281,50 +301,66 @@ end
 end
 
 @testset "expected seed cases" begin
-    @test RenewalDiD._expectedseedcases(zeros(20, 2), 7) == zeros(7, 2)
-    @test RenewalDiD._expectedseedcases(zeros(20, 2), 5) == zeros(5, 2)
-    @test RenewalDiD._expectedseedcases(zeros(20, 3), 5) == zeros(5, 3)
-    @test RenewalDiD._expectedseedcases(obs1, 5) == seedexpectation1
-    @test RenewalDiD._expectedseedcases(obs1, 5; doubletime=5) == seedexpectation2
-    @test RenewalDiD._expectedseedcases(obs1, 5; doubletime=10) == seedexpectation3
-    @test RenewalDiD._expectedseedcases(obs1, 5; sampletime=5) == seedexpectation4
-    @test RenewalDiD._expectedseedcases(obs1, 5; sampletime=3) == seedexpectation5
-    @test RenewalDiD._expectedseedcases(obs2, 5) == seedexpectation6
-    @test RenewalDiD._expectedseedcases(zeros(2, 3), 5) == zeros(5, 3)
-    @test_throws BoundsError RenewalDiD._expectedseedcases(zeros(2, 3), 5; sampletime=5)
-    mm01 = RenewalDiD._expectedseedcases(zeros(20, 2), 7; minvalue=1)
+    @test expectedseedcases(zeros(20, 2), 7; minvalue=0) == zeros(7, 2)
+    @test expectedseedcases(zeros(20, 2), 5; minvalue=0) == zeros(5, 2)
+    @test expectedseedcases(zeros(20, 3), 5; minvalue=0) == zeros(5, 3)
+    @test expectedseedcases(obs1, 5; minvalue=0) == seedexpectation1
+    @test expectedseedcases(obs1, 5; doubletime=5, minvalue=0) == seedexpectation2
+    @test expectedseedcases(obs1, 5; doubletime=10, minvalue=0) == seedexpectation3
+    @test expectedseedcases(obs1, 5; sampletime=5, minvalue=0) == seedexpectation4
+    @test expectedseedcases(obs1, 5; sampletime=3, minvalue=0) == seedexpectation5
+    @test expectedseedcases(obs2, 5; minvalue=0) == seedexpectation6
+    @test expectedseedcases(zeros(2, 3), 5; minvalue=0) == zeros(5, 3)
+    @test_throws BoundsError expectedseedcases(zeros(2, 3), 5; sampletime=5)
+    mm01 = expectedseedcases(zeros(20, 2), 7; minvalue=1)
     @testset for i in eachindex(mm01)
         @test mm01[i] ≈ mseedexpectation01[i] atol=1e-10
     end
-    mm02 = RenewalDiD._expectedseedcases(zeros(20, 2), 5; minvalue=2)
+    mm02 = expectedseedcases(zeros(20, 2), 5; minvalue=2)
     @testset for i in eachindex(mm02)
         @test mm02[i] ≈ mseedexpectation02[i] atol=1e-10
     end
-    mm03 = RenewalDiD._expectedseedcases(zeros(20, 3), 5; minvalue=0.5) 
+    mm03 = expectedseedcases(zeros(20, 3), 5; minvalue=0.5) 
     @testset for i in eachindex(mm03)
         @test mm03[i] ≈ mseedexpectation03[i] atol=1e-10
     end
-    mm1 = RenewalDiD._expectedseedcases(obs1, 5; minvalue=0.5) 
+    mm03a = expectedseedcases(zeros(20, 3), 5)  # `minvalue=0.5` is now default
+    @testset for i in eachindex(mm03)
+        @test mm03a[i] ≈ mseedexpectation03[i] atol=1e-10
+    end
+    mm1 = expectedseedcases(obs1, 5; minvalue=0.5) 
     @testset for i in eachindex(mm1)
         @test mm1[i] ≈ mseedexpectation1[i] atol=1e-10
     end
-    mm2 = RenewalDiD._expectedseedcases(obs1, 5; doubletime=5, minvalue=0.5) 
+    mm1a = expectedseedcases(obs1, 5) 
+    @testset for i in eachindex(mm1)
+        @test mm1a[i] ≈ mseedexpectation1[i] atol=1e-10
+    end
+    mm2 = expectedseedcases(obs1, 5; doubletime=5, minvalue=0.5) 
     @testset for i in eachindex(mm2)
         @test mm2[i] ≈ mseedexpectation2[i] atol=1e-10
     end
-    mm3 = RenewalDiD._expectedseedcases(obs1, 5; doubletime=10, minvalue=0.1) 
+    mm2a = expectedseedcases(obs1, 5; doubletime=5) 
+    @testset for i in eachindex(mm2)
+        @test mm2a[i] ≈ mseedexpectation2[i] atol=1e-10
+    end
+    mm3 = expectedseedcases(obs1, 5; doubletime=10, minvalue=0.1) 
     @testset for i in eachindex(mm3)
         @test mm3[i] ≈ mseedexpectation3[i] atol=1e-10
     end
-    mm4 = RenewalDiD._expectedseedcases(obs1, 5; sampletime=5, minvalue=1) 
+    mm4 = expectedseedcases(obs1, 5; sampletime=5, minvalue=1) 
     @testset for i in eachindex(mm4)
         @test mm4[i] ≈ mseedexpectation4[i] atol=1e-10
     end
-    mm5 = RenewalDiD._expectedseedcases(obs1, 5; sampletime=3, minvalue=0.5) 
+    mm5 = expectedseedcases(obs1, 5; sampletime=3, minvalue=0.5) 
     @testset for i in eachindex(mm5)
         @test mm5[i] ≈ mseedexpectation5[i] atol=1e-10
     end
-    mm6 = RenewalDiD._expectedseedcases(obs2, 5; minvalue=0.75)
+    mm5a = expectedseedcases(obs1, 5; sampletime=3) 
+    @testset for i in eachindex(mm5)
+        @test mm5a[i] ≈ mseedexpectation5[i] atol=1e-10
+    end
+    mm6 = expectedseedcases(obs2, 5; minvalue=0.75)
     @testset for i in eachindex(mm6)
         @test mm6[i] ≈ mseedexpectation6[i] atol=1e-10
     end
@@ -444,8 +480,7 @@ end
     @test RenewalDiD._expectedinfections(g_covid, 0.5, log(1), ones(10)) == 
         sum(RenewalDiD.COVIDSERIALINTERVAL[2:11]) / 2
     
-    @test_throws ArgumentError RenewalDiD._expectedinfections(g_covid, 2, log(0), zeros(10)) 
-    @test_throws ArgumentError RenewalDiD._expectedinfections(g_covid, -0.5, log(0), zeros(10))     
+    # `RenewalDiD._expectedinfections` now accepts proportions <0 and >1
 end   
 
 @testset "calculate numbers of infections in seed period with proportion susceptible" begin

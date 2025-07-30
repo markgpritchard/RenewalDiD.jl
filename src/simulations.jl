@@ -401,7 +401,8 @@ end
 """
     packsimulations([rng::AbstractRNG], duration, m1_args, args...)
 
-Run a series of simulations and collate results into a `Dict` to be passed to `renewaldid`.
+Run a series of simulations and collate results into a `RenewalDiDData` struct to be passed 
+    to `renewaldid`.
 
 `m1_args` is a `Tuple` containing `{u0, beta, gamma, delta, theta, sigma, intervention}` in 
 order for the first simulation. Subsequent arguments are equivalent Tuples for the remaining 
@@ -412,11 +413,11 @@ there is no intervention.
 A `Dict` with contents, a Matrix :observedcases, an InterventionMatrix :interventions, and a 
 vector :Ns (population size in each simulation)
 """
-function packsimulations(duration, m1_args, args...)
-    return packsimulations(default_rng(), duration, m1_args, args...)
+function packsimulations(duration, m1_args, args...; kwargs...)
+    return packsimulations(default_rng(), duration, m1_args, args...; kwargs...)
 end
 
-function packsimulations(rng::AbstractRNG, duration, m1_args, args...)
+function packsimulations(rng::AbstractRNG, duration, m1_args, args...; kwargs...)
     interventiontimes = Vector{Union{Int, Nothing}}(undef, 0)
     Ns = zeros(Int, 0)
     observedcases = zeros(Int, duration + 1, 0)
@@ -424,7 +425,7 @@ function packsimulations(rng::AbstractRNG, duration, m1_args, args...)
         interventiontimes, Ns, rng, observedcases, duration, m1_args, args...
     )
     interventions = InterventionMatrix{Int}(duration, interventiontimes)
-    return packdata(; observedcases, interventions, Ns)
+    return RenewalDiDData(; observedcases, interventions, Ns, kwargs...)
 end
 
 function _packsimulation!(interventiontimes, Ns, rng, observedcases, duration, m1_args)

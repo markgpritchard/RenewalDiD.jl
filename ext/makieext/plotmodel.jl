@@ -21,11 +21,14 @@ function RenewalDiD.Plotting.plotmodel!(
 end
 
 function RenewalDiD.Plotting.plotmodel!(
-    axs::AbstractVector{Axis}, modeloutputs::AbstractArray, data::Dict, t=automatic; 
+    axs::AbstractVector{Axis}, 
+    modeloutputs::AbstractArray, 
+    data::RenewalDiDData, 
+    t=automatic; 
     kwargs...
 ) 
-    observedcases = data[:observedcases]
-    interventions = data[:interventions]
+    observedcases = data.observedcases
+    interventions = data.interventions
     return plotmodel!(
         axs, modeloutputs, observedcases, interventions, t; 
         kwargs...

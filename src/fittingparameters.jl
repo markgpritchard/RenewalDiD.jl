@@ -1,8 +1,56 @@
 # Use Turing.jl to fit parameters to a dataset
 
-## Functions ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ 
+# Structs ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+@auto_hash_equals struct RenewalDiDData{S, T}
+    observedcases::Matrix{S}
+    interventions::T
+    Ns::Vector{Int}
+    exptdseedcases::Matrix{Float64}
+
+    function RenewalDiDData(
+        observedcases::Matrix{S}, 
+        interventions::T, 
+        Ns::Vector{Int}, 
+        exptdseedcases::Matrix{Float64}
+    ) where {S <:Number, T <:AbstractArray}
+        _diddataassertions(observedcases, interventions, Ns, exptdseedcases)
+        return new{S, T}(observedcases, interventions, Ns, exptdseedcases)
+    end
+end
+
+function RenewalDiDData(; 
+    observedcases, 
+    interventions, 
+    Ns, 
+    exptdseedcases=nothing,
+    n_seeds=DEFAULT_SEEDMATRIX_HEIGHT, 
+    doubletime=automatic, 
+    sampletime=automatic, 
+    minvalue=DEFAULT_SEEDMATRIX_MINVALUE,
+)
+    newexptdseedcases = _expectedseedcasesifneeded(
+        exptdseedcases, observedcases, n_seeds; 
+        doubletime, sampletime, minvalue
+    )
+    return RenewalDiDData(observedcases, interventions, Ns, newexptdseedcases)
+end
+
+@kwdef struct RenewalDiDPriors{S, T, U, V, W, X}
+    alphaprior::S=Normal(0, 1)
+    M_xprior::T=truncated(Normal(0, 1); lower=-2)
+    sigma_gammaprior::U=Exponential(1)
+    sigma_thetaprior::V=Exponential(1)
+    tauprior::W=Normal(0, 1)
+    omegaprior::X=0
+end
+
+
+# Functions ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ 
 
 ## Functions called by `_renewaldid`
+
+logsumexp(args...; alpha) = log(sum([exp(alpha * x) for x in args])) / alpha
 
 _ntimes(M::AbstractMatrix) = size(M, 1)
 _ngroups(M::AbstractMatrix) = size(M, 2)
@@ -38,9 +86,9 @@ function _predictedlogR_0(alpha, gammavec, thetavec, tau, interventions)
     return R_0
 end
 
-function _expectedseedcases(
-    observedcases, n_seeds; 
-    doubletime=automatic, sampletime=automatic, minvalue=nothing,
+function expectedseedcases(
+    observedcases, n_seeds=DEFAULT_SEEDMATRIX_HEIGHT; 
+    doubletime=automatic, sampletime=automatic, minvalue=DEFAULT_SEEDMATRIX_MINVALUE,
 )
     return _expectedseedcases(observedcases, n_seeds, doubletime, sampletime, minvalue)
 end
@@ -88,17 +136,30 @@ end
 
 _expectedseedcasesminimum!(::Any, ::Any, ::Nothing) = nothing
 
+_expectedseedcasesifneeded(exptdseedcases::Matrix, ::Any, ::Any; kwargs...) = exptdseedcases
+
+function _expectedseedcasesifneeded(::Nothing, observedcases, n_seeds; kwargs...)
+    return expectedseedcases(observedcases, n_seeds; kwargs...)
+end
+
 function _expectedinfections(g, logR_0, hx; kwargs...)
     return _expectedinfections(g, 1, logR_0, hx; kwargs...)
 end
 
-function _expectedinfections(g, propsus, logR_0, hx; kwargs...)
-    0 <= propsus <= 1 || throw(_propsusargumenterror(propsus))
+function _expectedinfections(g, inputpropsus::T, logR_0, hx; kwargs...) where T
+    # rather than throw an error, enforce 0 <= propsus <= 1 
+    propsus = min(one(T), max(zero(T), inputpropsus))
     t = length(hx) + 1
     return sum(exp(logR_0) .* propsus .* [hx[x] * g(t - x; kwargs...) for x in eachindex(hx)])
 end
 
-_approxcases(x, sigma) = max(0, x * (1 + sigma))
+_approxcasescalc(x, sigma) = x * (1 + sigma)
+_approxcases(x, sigma) = __approxcases(_approxcasescalc(x, sigma))
+_approxcases(x, sigma, ceiling) = __approxcases(_approxcasescalc(x, sigma), ceiling)
+
+function __approxcases(x_oneplussigma::T, ceiling=typemax(T)) where T
+    return min(max(zero(T), x_oneplussigma), ceiling)
+end
 
 function _infections(
     g, M_x, logR_0::Matrix{T}, exptdseedcases, Ns, n_seeds; 
@@ -166,7 +227,10 @@ function _infections_transmitted!(g, infn, M_x, logR_0, ::Any, n_seeds; kwargs..
     return nothing
 end
 
-function _infections_transmitted!(g, infn::Matrix{<:Complex}, M_x, logR_0, Ns, n_seeds; kwargs...) 
+function _infections_transmitted!(
+    g, infn::Matrix{<:Complex}, M_x, logR_0, Ns, n_seeds; 
+    kwargs...
+) 
     for j in 1:_ngroups(M_x), t in 1:_ntimes(logR_0)
         prevsus = _prevpropsus(infn, t + n_seeds, j; kwargs...) * Ns[j] 
         expectednewcases = _approxcases(
@@ -177,7 +241,8 @@ function _infections_transmitted!(g, infn::Matrix{<:Complex}, M_x, logR_0, Ns, n
                 real.(@view infn[1:t+n_seeds-1, j]); 
                 kwargs...
             ), 
-            M_x[t+n_seeds, j]
+            M_x[t+n_seeds, j],
+            prevsus
         )
         newcases = min(expectednewcases, prevsus)
         infn[t+n_seeds, j] = newcases + ((prevsus - newcases) / Ns[j])im
@@ -193,77 +258,43 @@ function _prevpropsus(infn, t, j; kwargs...)
     return propsus
 end
 
-function packdata(; observedcases, interventions, Ns)
-    return Dict(
-        :observedcases => observedcases,
-        :interventions => interventions,
-        :Ns => Ns,
-    )
-end
-
-function packpriors( ;
-    alphaprior=Normal(0, 1),
-    sigma_gammaprior=Exponential(1),
-    sigma_thetaprior=Exponential(1),
-    tauprior=Normal(0, 1),
-)
-    return Dict(
-        :alphaprior => alphaprior,
-        :sigma_gammaprior => sigma_gammaprior,
-        :sigma_thetaprior => sigma_thetaprior,
-        :tauprior => tauprior,
-    )
-end
-
 function renewaldid(
-    data, g, priors; 
-    doubletime=automatic, n_seeds=7, sampletime=automatic, seedcasesminvalue=0.5, 
-    kwargs...
+    data::RenewalDiDData, g, priors::RenewalDiDPriors; 
+    n_seeds=DEFAULT_SEEDMATRIX_HEIGHT, kwargs...
 )
-    @unpack observedcases, interventions, Ns = data 
-    @unpack alphaprior, sigma_gammaprior, sigma_thetaprior, tauprior = priors
-    expectedseedcases = _expectedseedcases(
-        observedcases, n_seeds; 
-        doubletime, minvalue=seedcasesminvalue, sampletime
-    )
     return _renewaldid(
-        observedcases,
-        interventions,
-        expectedseedcases,
-        Ns,
+        data.observedcases,
+        data.interventions,
+        data.exptdseedcases,
+        data.Ns,
         g,    
-        alphaprior,
-        sigma_gammaprior,
-        sigma_thetaprior,
-        tauprior,
+        priors.alphaprior,
+        priors.M_xprior,
+        priors.sigma_gammaprior,
+        priors.sigma_thetaprior,
+        priors.tauprior,
         n_seeds;
         kwargs...
     )
 end
 
 function renewaldid_tracksusceptibles(
-    data, g, priors; 
-    doubletime=automatic, n_seeds=7, omega=0, sampletime=automatic, seedcasesminvalue=0.5, 
-    kwargs...
+    data::RenewalDiDData, g, priors::RenewalDiDPriors; 
+    n_seeds=DEFAULT_SEEDMATRIX_HEIGHT, kwargs...
 )
-    @unpack observedcases, interventions, Ns = data 
-    @unpack alphaprior, sigma_gammaprior, sigma_thetaprior, tauprior = priors
-    expectedseedcases = _expectedseedcases(
-        observedcases, n_seeds; 
-        doubletime, minvalue=seedcasesminvalue, sampletime
-    )
     return _renewaldid_tracksusceptibles(
-        observedcases,
-        interventions,
-        expectedseedcases,
-        Ns,
+        data.observedcases,
+        data.interventions,
+        data.exptdseedcases,
+        data.Ns,
         g,    
-        alphaprior,
-        sigma_gammaprior,
-        sigma_thetaprior,
-        tauprior,
+        priors.alphaprior,
+        priors.M_xprior,
+        priors.sigma_gammaprior,
+        priors.sigma_thetaprior,
+        priors.tauprior,
         n_seeds,
-        omega;
+        priors.omegaprior;
         kwargs...
     )
 end
@@ -275,6 +306,7 @@ end
     Ns,
     g,    
     alphaprior,
+    M_xprior,
     sigma_gammaprior,
     sigma_thetaprior,
     tauprior,
@@ -290,7 +322,7 @@ end
     gammas_raw ~ filldist(Normal(0, 1), ngroups - 1)
     thetas_raw ~ filldist(Normal(0, 1), ntimes - 1)
     sigma_theta ~ sigma_thetaprior
-    M_x ~ filldist(Normal(0, 1), ntimes + n_seeds, ngroups)
+    M_x ~ filldist(M_xprior, ntimes + n_seeds, ngroups)
 
     gammavec = _gammavec(gammas_raw, sigma_gamma)
     thetavec = _thetavec(thetas_raw, sigma_theta)
@@ -314,6 +346,7 @@ end
     Ns,
     g,    
     alphaprior,
+    M_xprior,
     sigma_gammaprior,
     sigma_thetaprior,
     tauprior,
@@ -330,7 +363,7 @@ end
     gammas_raw ~ filldist(Normal(0, 1), ngroups - 1)
     thetas_raw ~ filldist(Normal(0, 1), ntimes - 1)
     sigma_theta ~ sigma_thetaprior
-    M_x ~ filldist(Normal(0, 1), ntimes + n_seeds, ngroups)
+    M_x ~ filldist(M_xprior, ntimes + n_seeds, ngroups)
 
     gammavec = _gammavec(gammas_raw, sigma_gamma)
     thetavec = _thetavec(thetas_raw, sigma_theta)
@@ -349,8 +382,21 @@ end
 end
 
 
-
 # Assertions ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+function _diddataassertions(observedcases, interventions, Ns, exptdseedcases) 
+    _ngroups(observedcases) == _ngroups(interventions) || throw(
+        _ngroupsdimensionmismatch("observedcases", "interventions")
+    )
+    _ngroups(observedcases) == length(Ns) || throw(
+        _ngroupsdimensionmismatch("observedcases", "Ns")
+    )
+    _ngroups(observedcases) == _ngroups(exptdseedcases) || throw(
+        _ngroupsdimensionmismatch("observedcases", exptdseedcases)
+    )
+    _ntimes(observedcases) == _ntimes(interventions) + 1 || throw(_ntimesdimensionmismatch())
+    return nothing
+end
 
 function _infectionsassertions(infn, M_x, logR_0, exptdseedcases, Ns, n_seeds)
     _expctdtotaltimes = _ntimes(logR_0) + _ntimes(exptdseedcases)
@@ -384,10 +430,20 @@ end
 
 _MxNserror(Ns, M_x) = _vm_dimensionmismatch(length(Ns), "Ns", "width", "M_x", _ngroups(M_x))
 
+function _ngroupsdimensionmismatch(a, b)
+    return DimensionMismatch("number of groups must be equal for $a and $b")
+end
+
 function _ngroupsmmerror(gammavec, interventions)
     return _R_0_dimensionmismatch(
         length(gammavec), "gammavec", "width", _ngroups(interventions)
     )
+end
+
+function _ntimesdimensionmismatch()
+    m = "number of times of observed cases must be 1 greater than number of times for \
+        interventions"
+    return DimensionMismatch(m)
 end
 
 function _ntimesmmerror(thetavec, interventions)

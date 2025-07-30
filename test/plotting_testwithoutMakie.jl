@@ -19,7 +19,7 @@ df1 = testdataframe( ;
 )
 
 @testset "method errors" begin
-    @test_throws MethodError RenewalDiD.Plotting.traceplot(df1, :tau)
+    @test_throws MethodError trplot(df1, :tau)
     @test_throws MethodError tracerankplot(df1, :tau)
     @test_throws MethodError plotmodeloutput(df1, :tau)
 end
