@@ -46,8 +46,8 @@ priorschain = sample(rng, model1, Prior(), 1000)
 priorsdf = DataFrame(priorschain)
 priortraceplot = trplot(priorsdf, :tau)
 priorsfittedoutputs = samplerenewaldidinfections(
-    priorsdf, sim, g_seir; 
-    gamma=0.2, sigma=0.5
+    g_seir, priorsdf, sim; 
+    gamma=0.2, sigma=0.5,
 )
 priorsoutputquantiles = quantilerenewaldidinfections(
     priorsfittedoutputs, [0.025, 0.05, 0.25, 0.5, 0.75, 0.95, 0.975]
@@ -56,8 +56,8 @@ priorsplot = plotmodel(priorsoutputquantiles, sim)
 
 initindices = findall(x -> x > 996, ordinalrank(priorsdf.lp)) 
 priorsfittedinitoutputs = samplerenewaldidinfections(
-    priorsdf, sim, g_seir, initindices; 
-    gamma=0.2, sigma=0.5
+    g_seir, priorsdf, sim, initindices; 
+    gamma=0.2, sigma=0.5,
 )
 priorsoutputinitquantiles = quantilerenewaldidinfections(
     priorsfittedinitoutputs, [0.025, 0.05, 0.25, 0.5, 0.75, 0.95, 0.975]
@@ -75,7 +75,8 @@ p1 = trplot(shortdf, :tau)
 p2 = tracerankplot(shortdf, :tau; binsize=4)
 
 shortfittedoutputs = samplerenewaldidinfections(
-    shortdf, sim, g_seir; gamma=0.2, sigma=0.5
+    g_seir, shortdf, sim; 
+    gamma=0.2, sigma=0.5,
 )
 shortoutputquantiles = quantilerenewaldidinfections(
     shortfittedoutputs, [0.025, 0.05, 0.25, 0.5, 0.75, 0.95, 0.975]

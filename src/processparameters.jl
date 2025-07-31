@@ -104,7 +104,7 @@ end
 ## take samples from DataFrame of fitted parameters and generate expected outcomes
 
 function samplerenewaldidinfections(
-    df::DataFrame, data::RenewalDiDData, g, indexes::AbstractVector{<:Integer}=axes(df, 1);
+    g, df::DataFrame, data::RenewalDiDData, indexes::AbstractVector{<:Integer}=axes(df, 1);
     kwargs...
 )
     ngroups = _ngroups(data.interventions)
@@ -113,7 +113,7 @@ function samplerenewaldidinfections(
     output = zeros(ntimes + 1, ngroups, length(indexes))
     for (r, j) in enumerate(indexes)
         _samplerenewaldidinfections!(
-            (@view output[:, :, r]), df, data, g, j, ngroups, ntimes, n_seeds; 
+            g, (@view output[:, :, r]), df, data, j, ngroups, ntimes, n_seeds; 
             kwargs...
         )
     end
@@ -121,7 +121,7 @@ function samplerenewaldidinfections(
 end
 
 function samplerenewaldidinfections(
-    df::DataFrame, data::RenewalDiDData, g, i::Integer;
+    g, df::DataFrame, data::RenewalDiDData, i::Integer;
     kwargs...
 )
     ngroups = _ngroups(data.interventions)
@@ -129,14 +129,14 @@ function samplerenewaldidinfections(
     n_seeds = size(data.exptdseedcases, 1)
     output = zeros(ntimes + 1, ngroups)
     _samplerenewaldidinfections!(
-            output, df, data, g, i, ngroups, ntimes, n_seeds; 
+            g, output, df, data, i, ngroups, ntimes, n_seeds; 
             kwargs...
         )
     return output 
 end
 
 function _samplerenewaldidinfections!(
-    output::AbstractArray, df, data::RenewalDiDData, g, i, ngroups, ntimes, n_seeds; 
+    g, output::AbstractArray, df, data::RenewalDiDData, i, ngroups, ntimes, n_seeds; 
     kwargs...
 )
     alpha = df.alpha[i]
