@@ -5,6 +5,7 @@ using Random
 using RenewalDiD
 using RenewalDiD.Plotting
 using ReverseDiff
+using StatsBase
 using Test
 using Turing
 
@@ -34,23 +35,50 @@ sim = let
     packsimulations(rng, 100, s1, s2, s3)
 end
 
-model1 = renewaldid_tracksusceptibles(                      
+model1 = renewaldid(                      
     sim, 
     g_seir, 
-    RenewalDiDPriors(; sigma_thetaprior=Exponential(0.05));                          
+    RenewalDiDPriors(; alphaprior=Normal(log(2.5), 1), sigma_thetaprior=Exponential(0.075));                          
     gamma=0.2, sigma=0.5               
 )
-shortchain = sample(rng, model1, NUTS(0.65; adtype=AutoReverseDiff()), MCMCThreads(), 20, 4) 
+
+priorschain = sample(rng, model1, Prior(), 1000)
+priorsdf = DataFrame(priorschain)
+priortraceplot = trplot(priorsdf, :tau)
+priorsfittedoutputs = samplerenewaldidinfections(
+    priorsdf, sim, g_seir; 
+    gamma=0.2, sigma=0.5
+)
+priorsoutputquantiles = quantilerenewaldidinfections(
+    priorsfittedoutputs, [0.025, 0.05, 0.25, 0.5, 0.75, 0.95, 0.975]
+)
+priorsplot = plotmodel(priorsoutputquantiles, sim)
+
+initindices = findall(x -> x > 996, ordinalrank(priorsdf.lp)) 
+priorsfittedinitoutputs = samplerenewaldidinfections(
+    priorsdf, sim, g_seir, initindices; 
+    gamma=0.2, sigma=0.5
+)
+priorsoutputinitquantiles = quantilerenewaldidinfections(
+    priorsfittedinitoutputs, [0.025, 0.05, 0.25, 0.5, 0.75, 0.95, 0.975]
+)
+priorsinitplot = plotmodel(priorsoutputinitquantiles, sim)
+
+priorinitparams = [[values(priorsdf[i, 3:733])...] for i in initindices]
+
+shortchain = sample(
+    rng, model1, NUTS(0.65; adtype=AutoReverseDiff()), MCMCThreads(), 20, 4; 
+    initial_params=priorinitparams,
+) 
 shortdf = DataFrame(shortchain)
 p1 = trplot(shortdf, :tau)
 p2 = tracerankplot(shortdf, :tau; binsize=4)
 
 shortfittedoutputs = samplerenewaldidinfections(
-    g_seir, shortdf; 
-    data=sim, gamma=0.2, sigma=0.5
+    shortdf, sim, g_seir; gamma=0.2, sigma=0.5
 )
 shortoutputquantiles = quantilerenewaldidinfections(
-    shortfittedoutputs, [0.025, 0.05, 0.5, 0.95, 0.975]
+    shortfittedoutputs, [0.025, 0.05, 0.25, 0.5, 0.75, 0.95, 0.975]
 )
 p3 = plotmodel(shortoutputquantiles, sim)
 

@@ -36,13 +36,14 @@ function RenewalDiDData(;
     return RenewalDiDData(observedcases, interventions, Ns, newexptdseedcases)
 end
 
-@kwdef struct RenewalDiDPriors{S, T, U, V, W, X}
+@kwdef struct RenewalDiDPriors{S, T, U, V, W, X, Y}
     alphaprior::S=Normal(0, 1)
     M_xprior::T=truncated(Normal(0, 1); lower=-1)
     sigma_gammaprior::U=Exponential(1)
     sigma_thetaprior::V=Exponential(1)
     tauprior::W=Normal(0, 1)
-    omegaprior::X=0
+    psiprior::X=Beta(1, 1)
+    omegaprior::Y=0
 end
 
 
@@ -71,19 +72,11 @@ end  # a second version of this function is given in `processparameters.jl`
 
 function _predictedlogR_0(alpha, gammavec, thetavec, tau, interventions)
     _predictedlogR_0assertions(gammavec, thetavec, interventions)
-
-    R_0 = alpha .* ones(size(interventions)...)  # intercept
-    
-    for (g, gamma) in enumerate(gammavec)
-        R_0[:, g] .+= gamma  # group-dependent values 
-    end 
-    
-    for (t, theta) in enumerate(thetavec)
-        R_0[t, :] .+= theta  # time-dependent values 
-    end
-    
-    R_0 .+= tau .* interventions  # effect of the intervention
-    return R_0
+    logR_0 = [
+        alpha + gammavec[g] + thetavec[t] + tau * interventions[t, g] 
+        for t in axes(interventions, 1), g in axes(interventions, 2)
+    ]
+    return logR_0
 end
 
 function expectedseedcases(
@@ -157,7 +150,11 @@ _approxcasescalc(x, sigma) = x * (1 + sigma)
 _approxcases(x, sigma) = __approxcases(_approxcasescalc(x, sigma))
 _approxcases(x, sigma, ceiling) = __approxcases(_approxcasescalc(x, sigma), ceiling)
 
-function __approxcases(x_oneplussigma::T, ceiling=typemax(T)) where T
+function __approxcases(x_oneplussigma::T) where T
+    return max(zero(T), x_oneplussigma)
+end
+
+function __approxcases(x_oneplussigma::T, ceiling) where T
     return min(max(zero(T), x_oneplussigma), ceiling)
 end
 
@@ -263,8 +260,9 @@ end
 
 function renewaldid(
     data::RenewalDiDData, g, priors::RenewalDiDPriors; 
-    n_seeds=DEFAULT_SEEDMATRIX_HEIGHT, kwargs...
+    kwargs...
 )
+    n_seeds = size(data.exptdseedcases, 1)
     return _renewaldid(
         data.observedcases,
         data.interventions,
@@ -273,26 +271,7 @@ function renewaldid(
         g,    
         priors.alphaprior,
         priors.M_xprior,
-        priors.sigma_gammaprior,
-        priors.sigma_thetaprior,
-        priors.tauprior,
-        n_seeds;
-        kwargs...
-    )
-end
-
-function renewaldid_tracksusceptibles(
-    data::RenewalDiDData, g, priors::RenewalDiDPriors; 
-    n_seeds=DEFAULT_SEEDMATRIX_HEIGHT, kwargs...
-)
-    return _renewaldid_tracksusceptibles(
-        data.observedcases,
-        data.interventions,
-        data.exptdseedcases,
-        data.Ns,
-        g,    
-        priors.alphaprior,
-        priors.M_xprior,
+        priors.psiprior,
         priors.sigma_gammaprior,
         priors.sigma_thetaprior,
         priors.tauprior,
@@ -310,46 +289,7 @@ end
     g,    
     alphaprior,
     M_xprior,
-    sigma_gammaprior,
-    sigma_thetaprior,
-    tauprior,
-    n_seeds;
-    kwargs...
-)
-    ngroups = _ngroups(interventions)
-    ntimes = _ntimes(interventions)
-
-    tau ~ tauprior
-    alpha ~ alphaprior
-    sigma_gamma ~ sigma_gammaprior
-    gammas_raw ~ filldist(Normal(0, 1), ngroups - 1)
-    thetas_raw ~ filldist(Normal(0, 1), ntimes - 1)
-    sigma_theta ~ sigma_thetaprior
-    M_x ~ filldist(M_xprior, ntimes + n_seeds, ngroups)
-
-    gammavec = _gammavec(gammas_raw, sigma_gamma)
-    thetavec = _thetavec(thetas_raw, sigma_theta)
-
-    predictedlogR_0 = _predictedlogR_0(alpha, gammavec, thetavec, tau, interventions)
-
-    predictedinfections = _infectionsmatrix(predictedlogR_0, n_seeds)
-    _infections!(
-        g, predictedinfections, M_x, predictedlogR_0, expectedseedcases, Ns, n_seeds; 
-        kwargs...
-    )
-
-    # to add delay later 
-    observedcases ~ arraydist(Normal.(predictedinfections[n_seeds:n_seeds+ntimes, :], 1))
-end
-
-@model function _renewaldid_tracksusceptibles(
-    observedcases,
-    interventions,
-    expectedseedcases,
-    Ns,
-    g,    
-    alphaprior,
-    M_xprior,
+    psiprior,
     sigma_gammaprior,
     sigma_thetaprior,
     tauprior,
@@ -366,7 +306,10 @@ end
     gammas_raw ~ filldist(Normal(0, 1), ngroups - 1)
     thetas_raw ~ filldist(Normal(0, 1), ntimes - 1)
     sigma_theta ~ sigma_thetaprior
+    psi ~ psiprior
     M_x ~ filldist(M_xprior, ntimes + n_seeds, ngroups)
+    fittingsigma ~ Exponential(1)
+    predictobservedinfectionssigmamatrix ~ filldist(truncated(Normal(0, 1); lower=-1), ntimes + 1, ngroups)
 
     gammavec = _gammavec(gammas_raw, sigma_gamma)
     thetavec = _thetavec(thetas_raw, sigma_theta)
@@ -380,8 +323,29 @@ end
         kwargs...
     )
 
+    # Normal approximation of Binomial to avoid forcing integer values 
+    np = real.(predictedinfections[n_seeds:n_seeds+ntimes, :]) .* psi
+
+    if isnan(maximum(np)) 
+        @addlogprob! -Inf
+        return  # exit the model evaluation early
+    end
+#=
+    predictobservedinfections ~ arraydist(
+        truncated.(Normal.(np, np .* (1 - psi) .+ 1e-9); lower=0)
+    )
+=#
+    predictobservedinfections = max.(0, np .+ predictobservedinfectionssigmamatrix .* np .* (1 - psi))
+
+    if isnan(maximum(predictobservedinfections)) 
+        @addlogprob! -Inf
+        return  # exit the model evaluation early
+    end
+
+    if minimum(predictobservedinfections) < 0 println("predictobservedinfections=$predictobservedinfections") end
+
     # to add delay later 
-    observedcases ~ arraydist(Normal.(real.(predictedinfections[n_seeds:n_seeds+ntimes, :]), 1))
+    observedcases ~ arraydist(Normal.(predictobservedinfections, fittingsigma))
 end
 
 

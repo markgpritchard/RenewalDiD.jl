@@ -97,94 +97,73 @@ function _mxmatrix(df, i, ngroups, ntimes, n_seeds)
     return [getproperty(df, Symbol("M_x[$t, $j]"))[i] for t in 1:totaltimes, j in 1:ngroups]
 end
 
+function _observedsigmamatrix(df, i, ngroups, ntimes)
+    return return [getproperty(df, Symbol("predictobservedinfectionssigmamatrix[$t, $j]"))[i] for t in 1:(ntimes + 1), j in 1:ngroups]
+end
+
 ## take samples from DataFrame of fitted parameters and generate expected outcomes
 
 function samplerenewaldidinfections(
-    g, df::DataFrame, indexes::AbstractVector{<:Integer}=axes(df, 1); 
+    df::DataFrame, data::RenewalDiDData, g, indexes::AbstractVector{<:Integer}=axes(df, 1);
     kwargs...
 )
-    interventions, Ns, seedmatrix, ngroups, ntimes, n_seeds, kws = __sra(; kwargs...)
-    infn = zeros(ComplexF64, ntimes + n_seeds, ngroups, length(indexes))
-    _samplerenewaldidinfectionsassertions(df, seedmatrix, indexes, ngroups, ntimes)
+    ngroups = _ngroups(data.interventions)
+    ntimes = _ntimes(data.interventions)
+    n_seeds = size(data.exptdseedcases, 1)
+    output = zeros(ntimes + 1, ngroups, length(indexes))
     for (r, j) in enumerate(indexes)
         _samplerenewaldidinfections!(
-            g, 
-            (@view infn[:, :, r]), 
-            df, 
-            interventions, 
-            Ns, 
-            seedmatrix, 
-            j, 
-            ngroups, 
-            ntimes, 
-            n_seeds;
-            kws...
+            (@view output[:, :, r]), df, data, g, j, ngroups, ntimes, n_seeds; 
+            kwargs...
         )
     end
-    return real.(infn[n_seeds:n_seeds+ntimes, :, :])
+    return output 
 end
 
-function samplerenewaldidinfections(g, df::DataFrame, i::Integer; kwargs...)
-    interventions, Ns, seedmatrix, ngroups, ntimes, n_seeds, kws = __sra(; kwargs...)
-    infn = zeros(ComplexF64, ntimes + n_seeds, ngroups)
-    _samplerenewaldidinfectionsassertions(df, seedmatrix, i, ngroups, ntimes)
-    _samplerenewaldidinfections!(
-        g, infn, df, interventions, Ns, seedmatrix, i, ngroups, ntimes, n_seeds;
-        kws...
-    )
-    return real.(infn[n_seeds:n_seeds+ntimes, :])
-end
-
-function samplerenewaldidinfections!(g, infn, df::DataFrame, i; kwargs...)
-    interventions, Ns, seedmatrix, ngroups, ntimes, n_seeds, kws = __sra(; kwargs...)
-    _samplerenewaldidinfectionsassertions(df, seedmatrix, i, ngroups, ntimes)
-    _samplerenewaldidinfections!(
-        g, infn, df, interventions, Ns, seedmatrix, i, ngroups, ntimes, n_seeds;
-        kws...
-    )
-    return nothing
-end
-
-function _samplerenewaldidinfections!(
-    g::Vector, infn, df, interventions, Ns, seedmatrix, i, ngroups, ntimes, n_seeds;
+function samplerenewaldidinfections(
+    df::DataFrame, data::RenewalDiDData, g, i::Integer;
     kwargs...
 )
-    return _samplerenewaldidinfections!(
-        generationtime, infn, df, interventions, Ns, seedmatrix, i, ngroups, ntimes, n_seeds; 
-        vec=g, kwargs...
-    )
+    ngroups = _ngroups(data.interventions)
+    ntimes = _ntimes(data.interventions)
+    n_seeds = size(data.exptdseedcases, 1)
+    output = zeros(ntimes + 1, ngroups)
+    _samplerenewaldidinfections!(
+            output, df, data, g, i, ngroups, ntimes, n_seeds; 
+            kwargs...
+        )
+    return output 
 end
 
 function _samplerenewaldidinfections!(
-    g::_Useablegenerationfunctions, 
-    infn, 
-    df, 
-    interventions, 
-    Ns, 
-    seedmatrix, 
-    i, 
-    ngroups, 
-    ntimes, 
-    n_seeds; 
+    output::AbstractArray, df, data::RenewalDiDData, g, i, ngroups, ntimes, n_seeds; 
     kwargs...
 )
     alpha = df.alpha[i]
     gammavec = _gammavec(df, i, ngroups)
     thetavec = _thetavec(df, i, ntimes)
     tau = df.tau[i]
-    logR_0 = _predictedlogR_0(alpha, gammavec, thetavec, tau, interventions)
+    psi = df.psi[i]
     M_x = _mxmatrix(df, i, ngroups, ntimes, n_seeds)
+    predictobservedinfectionssigmamatrix = _observedsigmamatrix(df, i, ngroups, ntimes)
+
+    predictedlogR_0 = _predictedlogR_0(alpha, gammavec, thetavec, tau, data.interventions)
+    T = Complex{typeof(predictedlogR_0[1, 1])}
+    predictedinfections = _infectionsmatrix(T, predictedlogR_0, n_seeds)
     _infections!(
-        g, 
-        infn,
-        M_x, 
-        logR_0, 
-        seedmatrix, 
-        Ns, 
-        n_seeds; 
+        g, predictedinfections, M_x, predictedlogR_0, data.exptdseedcases, data.Ns, n_seeds; 
         kwargs...
     )
+    np = real.(predictedinfections[n_seeds:n_seeds+ntimes, :]) .* psi
+    isnan(maximum(np)) && return _halt_samplerenewaldidinfections(i)  # exit early 
+    predictobservedinfections = max.(0, np .+ predictobservedinfectionssigmamatrix .* np .* (1 - psi))
+    output .= predictobservedinfections
     return nothing
+end
+
+function _halt_samplerenewaldidinfections(i) 
+    @warn "Parameters in row $i give `NaN` predicted infections"
+    return nothing 
 end
 
 ## quantiles of sampled outputs

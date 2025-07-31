@@ -8,7 +8,7 @@ function RenewalDiD.Plotting.tracerankplot(df, variable; binsize=10, kwargs...)
 end
 
 function RenewalDiD.Plotting.tracerankplot!(ax, df, variable; binsize=10, kwargs...)
-    _tracerankplot!(ax, df, variable; binsize=10, lineskws(kwargs...)...)
+    _tracerankplot!(ax, df, variable; binsize, lineskws(kwargs...)...)
     return nothing
 end
 
