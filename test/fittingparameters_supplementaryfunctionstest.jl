@@ -32,32 +32,32 @@ calcseedinfections4 = let  # note, Ns not yet used
     infectionsmatrix
 end
 calcseedinfections5 = let 
-    infectionsmatrix = zeros(Complex{Float64}, 2, 2)
+    infectionsmatrix = zeros(ComplexF64, 2, 2)
     RenewalDiD._infections_seed!(infectionsmatrix, zeros(5, 2), zeros(2, 2), ones(2), 2)
     infectionsmatrix
 end
 calcseedinfections6 = let 
-    infectionsmatrix = zeros(Complex{Float64}, 2, 2)
+    infectionsmatrix = zeros(ComplexF64, 2, 2)
     RenewalDiD._infections_seed!(infectionsmatrix, zeros(5, 2), zeros(2, 2), [1000, 2000], 2)
     infectionsmatrix
 end
 calcseedinfections7 = let 
-    infectionsmatrix = zeros(Complex{Float64}, 3, 2)
+    infectionsmatrix = zeros(ComplexF64, 3, 2)
     RenewalDiD._infections_seed!(infectionsmatrix, zeros(6, 2), zeros(3, 2), ones(2), 3)
     infectionsmatrix
 end
 calcseedinfections8 = let 
-    infectionsmatrix = zeros(Complex{Float64}, 2, 2)
+    infectionsmatrix = zeros(ComplexF64, 2, 2)
     RenewalDiD._infections_seed!(infectionsmatrix, zeros(5, 2), seedinfections1, [10, 10], 2)
     infectionsmatrix
 end
 calcseedinfections9 = let 
-    infectionsmatrix = zeros(Complex{Float64}, 2, 2)
+    infectionsmatrix = zeros(ComplexF64, 2, 2)
     RenewalDiD._infections_seed!(infectionsmatrix, zeros(5, 2), seedinfections1, [50, 100], 2)
     infectionsmatrix
 end
 calcseedinfections10 = let  
-    infectionsmatrix = zeros(Complex{Float64}, 2, 2)
+    infectionsmatrix = zeros(ComplexF64, 2, 2)
     RenewalDiD._infections_seed!(infectionsmatrix, M_x1, seedinfections1, [50, 100], 2)
     infectionsmatrix
 end
@@ -92,14 +92,14 @@ calcinfections5 = RenewalDiD._infections(
     vec=[0, 1]
 )
 calcinfections6 = RenewalDiD._infections(
-    g_covid, Complex{Float64}, zeros(5, 2), log.(zeros(3, 2)), zeros(2, 2), [10, 10], 2
+    g_covid, ComplexF64, zeros(5, 2), log.(zeros(3, 2)), zeros(2, 2), [10, 10], 2
 )
 calcinfections7 = RenewalDiD._infections(
-    g_covid, Complex{Float64}, zeros(6, 2), log.(zeros(4, 2)), zeros(2, 2), [10, 10], 2
+    g_covid, ComplexF64, zeros(6, 2), log.(zeros(4, 2)), zeros(2, 2), [10, 10], 2
 )
 calcinfections8 = RenewalDiD._infections(
     generationtime, 
-    Complex{Float64}, 
+    ComplexF64, 
     zeros(5, 2), 
     log.(zeros(3, 2)), 
     seedinfections1, 
@@ -109,7 +109,7 @@ calcinfections8 = RenewalDiD._infections(
 )
 calcinfections9 = RenewalDiD._infections(
     generationtime, 
-    Complex{Float64}, 
+    ComplexF64, 
     zeros(5, 2), 
     log.(1.5 * ones(3, 2)), 
     seedinfections1, 
@@ -496,19 +496,19 @@ end
     @test calcinfections6 == ones(5, 2) * (0 + 1im)
     @test calcinfections7 == ones(6, 2) * (0 + 1im)
         @test_throws DimensionMismatch RenewalDiD._infections(
-        g_covid, Complex{Float64}, zeros(5, 2), log.(zeros(3, 3)), zeros(2, 2), ones(2), 2
+        g_covid, ComplexF64, zeros(5, 2), log.(zeros(3, 3)), zeros(2, 2), ones(2), 2
     ) 
     @test_throws DimensionMismatch RenewalDiD._infections(
-        g_covid, Complex{Float64}, zeros(5, 2), log.(zeros(3, 2)), zeros(2, 3), ones(2), 2
+        g_covid, ComplexF64, zeros(5, 2), log.(zeros(3, 2)), zeros(2, 3), ones(2), 2
     ) 
     @test_throws DimensionMismatch RenewalDiD._infections(
-        g_covid, Complex{Float64}, zeros(5, 2), log.(zeros(3, 2)), zeros(2, 2), ones(3), 2
+        g_covid, ComplexF64, zeros(5, 2), log.(zeros(3, 2)), zeros(2, 2), ones(3), 2
     ) 
     @test_throws DimensionMismatch RenewalDiD._infections(
-        g_covid, Complex{Float64}, zeros(5, 2), log.(zeros(4, 2)), zeros(2, 2), ones(2), 2
+        g_covid, ComplexF64, zeros(5, 2), log.(zeros(4, 2)), zeros(2, 2), ones(2), 2
     ) 
     @test_throws DimensionMismatch RenewalDiD._infections(
-        g_covid, Complex{Float64}, zeros(5, 2), log.(zeros(3, 2)), zeros(2, 2), ones(2), 3
+        g_covid, ComplexF64, zeros(5, 2), log.(zeros(3, 2)), zeros(2, 2), ones(2), 3
     ) 
     @test calcinfections8 == predictedinfections8
     @testset for j in 1:2 
@@ -517,3 +517,51 @@ end
         end
     end
 end     
+
+@testset "when tracking susceptibles, limit possible number of infections (seed)" begin
+    infn = let 
+        infn = zeros(ComplexF64, 6, 3)
+        Mx = (m = zeros(6, 3); m[:, 2] .= -1.5; m[:, 3] .= 5; m)
+        exptdseedcases = 10 .* ones(5, 3)
+        Ns = 100 * ones(Int, 3)
+        RenewalDiD._infections_seed!(infn, Mx, exptdseedcases, Ns, 5) 
+        infn
+    end
+    @testset for t in 1:5 
+        @test infn[t, 1] == 10 + (1 - 0.1 * t) * im
+        @test infn[t, 2] == 0+1im
+    end
+    @testset for g in 1:3 
+        @test minimum(real.(infn[:, g])) >= 0
+        @test maximum(real.(infn[:, g])) <= 100
+        @test sum(real.(infn[:, g])) <= 100
+        @test minimum(imag.(infn[:, g])) >= 0
+        @test maximum(imag.(infn[:, g])) <= 1
+    end
+end
+
+@testset "when tracking susceptibles, limit possible infections (transmissions)" begin
+    infn = let 
+        _g(t) = generationtime(t; vec=(0.2 * ones(5)))
+        infn = (m = zeros(ComplexF64, 6, 3); m[1, 1] = m[1, 2] = m[1, 3] = 1+0.99im; m)
+        Mx = (m = zeros(6, 3); m[:, 2] .= -1.5; m[:, 3] .= 5; m)
+        logR_0 = log(5) .* ones(5, 3)
+        Ns = 100 * ones(Int, 3)
+        RenewalDiD._infections_transmitted!(_g, infn, Mx, logR_0, Ns, 1)
+        infn
+    end
+    @testset for g in 1:3 
+        @test infn[1, g] == 1+0.99im
+    end 
+    @test infn[2, 1] ≈ 0.99 + (0.99^2) * im atol=1e-9
+    @testset for t in 2:5 
+        @test infn[t, 2] == 0+0.99im 
+    end
+    @testset for g in 1:3 
+        @test minimum(real.(infn[:, g])) >= 0
+        @test maximum(real.(infn[:, g])) <= 100
+        @test sum(real.(infn[:, g])) <= 100
+        @test minimum(imag.(infn[:, g])) >= 0
+        @test maximum(imag.(infn[:, g])) <= 0.99
+    end
+end

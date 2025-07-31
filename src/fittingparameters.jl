@@ -38,7 +38,7 @@ end
 
 @kwdef struct RenewalDiDPriors{S, T, U, V, W, X}
     alphaprior::S=Normal(0, 1)
-    M_xprior::T=truncated(Normal(0, 1); lower=-2)
+    M_xprior::T=truncated(Normal(0, 1); lower=-1)
     sigma_gammaprior::U=Exponential(1)
     sigma_thetaprior::V=Exponential(1)
     tauprior::W=Normal(0, 1)
@@ -204,8 +204,11 @@ function _infections_seed!(  # version that tracks proportion susceptible
     for j in 1:_ngroups(M_x), t in 1:n_seeds
         # previous proportion susceptible
         prevsus = _prevpropsus(infn, t, j; kwargs...) * Ns[j]  
-        # add new proportion susceptible
-        infn[t, j] += ((prevsus - real(infn[t, j])) / Ns[j])im
+        if real(infn[t, j]) > prevsus  # use this as a maximum 
+            infn[t, j] = prevsus + 0im 
+        else  # add new proportion susceptible
+            infn[t, j] += ((prevsus - real(infn[t, j])) / Ns[j])im
+        end
     end
     return nothing
 end
@@ -228,7 +231,7 @@ function _infections_transmitted!(g, infn, M_x, logR_0, ::Any, n_seeds; kwargs..
 end
 
 function _infections_transmitted!(
-    g, infn::Matrix{<:Complex}, M_x, logR_0, Ns, n_seeds; 
+    g, infn::AbstractArray{<:Complex}, M_x, logR_0, Ns, n_seeds; 
     kwargs...
 ) 
     for j in 1:_ngroups(M_x), t in 1:_ntimes(logR_0)

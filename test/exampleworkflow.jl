@@ -4,6 +4,7 @@ using CairoMakie
 using Random
 using RenewalDiD
 using RenewalDiD.Plotting
+using ReverseDiff
 using Test
 using Turing
 
@@ -39,7 +40,7 @@ model1 = renewaldid_tracksusceptibles(
     RenewalDiDPriors(; sigma_thetaprior=Exponential(0.05));                          
     gamma=0.2, sigma=0.5               
 )
-shortchain = sample(rng, model1, NUTS(0.65), MCMCThreads(), 20, 4;) 
+shortchain = sample(rng, model1, NUTS(0.65; adtype=AutoReverseDiff()), MCMCThreads(), 20, 4) 
 shortdf = DataFrame(shortchain)
 p1 = trplot(shortdf, :tau)
 p2 = tracerankplot(shortdf, :tau; binsize=4)

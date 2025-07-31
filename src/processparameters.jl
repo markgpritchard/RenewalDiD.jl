@@ -104,7 +104,7 @@ function samplerenewaldidinfections(
     kwargs...
 )
     interventions, Ns, seedmatrix, ngroups, ntimes, n_seeds, kws = __sra(; kwargs...)
-    infn = zeros(Float64, ntimes + n_seeds, ngroups, length(indexes))
+    infn = zeros(ComplexF64, ntimes + n_seeds, ngroups, length(indexes))
     _samplerenewaldidinfectionsassertions(df, seedmatrix, indexes, ngroups, ntimes)
     for (r, j) in enumerate(indexes)
         _samplerenewaldidinfections!(
@@ -121,18 +121,18 @@ function samplerenewaldidinfections(
             kws...
         )
     end
-    return infn[n_seeds:n_seeds+ntimes, :, :]
+    return real.(infn[n_seeds:n_seeds+ntimes, :, :])
 end
 
 function samplerenewaldidinfections(g, df::DataFrame, i::Integer; kwargs...)
     interventions, Ns, seedmatrix, ngroups, ntimes, n_seeds, kws = __sra(; kwargs...)
-    infn = zeros(Float64, ntimes + n_seeds, ngroups)
+    infn = zeros(ComplexF64, ntimes + n_seeds, ngroups)
     _samplerenewaldidinfectionsassertions(df, seedmatrix, i, ngroups, ntimes)
     _samplerenewaldidinfections!(
         g, infn, df, interventions, Ns, seedmatrix, i, ngroups, ntimes, n_seeds;
         kws...
     )
-    return infn[n_seeds:n_seeds+ntimes, :]
+    return real.(infn[n_seeds:n_seeds+ntimes, :])
 end
 
 function samplerenewaldidinfections!(g, infn, df::DataFrame, i; kwargs...)
