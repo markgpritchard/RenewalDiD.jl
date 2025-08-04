@@ -26,7 +26,10 @@ end
 
 function testdataframe(
     rng::AbstractRNG, nchains, niterations, ngroups, ntimes, nseeds; 
-    gammadefault=automatic, thetadefault=automatic, mxdefault=automatic,
+    gammadefault=automatic, 
+    thetadefault=automatic, 
+    mxdefault=automatic, 
+    predictiondefault=automatic,
     kwargs...
 )
     df = DataFrame(
@@ -40,7 +43,12 @@ function testdataframe(
     _addgammastotestdataframe!(rng, df, ngroups, nrows, kwargs, gammadefault)
     _addthetastotestdataframe!(rng, df, ntimes, nrows, kwargs, thetadefault)
     _addtotestdataframe!(df, :sigma_theta, kwargs, rand(rng, nrows))
+    _addtotestdataframe!(df, :psi, kwargs, rand(rng, nrows))
     _addmxtotestdataframe!(rng, df, ngroups, ntimes, nseeds, nrows, kwargs, mxdefault)
+    _addtotestdataframe!(df, :fittingsigma, kwargs, -100 .* rand(rng, nrows))
+    _addpredobsinfsigmatotestdataframe!(
+        rng, df, ngroups, ntimes, nrows, kwargs, predictiondefault
+    )
     _addtotestdataframe!(df, :lp, kwargs, -100 .* rand(rng, nrows))
     _addtotestdataframe!(df, :n_steps, kwargs, ones(nrows))
     _addtotestdataframe!(df, :is_accept, kwargs, ones(nrows))
@@ -64,40 +72,75 @@ function _addtotestdataframe!(df, name, kws, default)
     return nothing
 end
 
-function _addgammastotestdataframe!(rng, df, ngroups, nrows, kwargs, ::Automatic)
+function _addgammastotestdataframe!(
+    rng::AbstractRNG, df, ngroups, nrows, kwargs, ::Automatic
+)
     _addgammastotestdataframe!(rng, df, ngroups, nrows, kwargs, rand(rng, nrows))
     return nothing
 end
 
-function _addgammastotestdataframe!(::Any, df, ngroups, ::Any, kwargs, gammadefault)
+function _addgammastotestdataframe!(
+    ::AbstractRNG, df, ngroups, ::Int, kwargs, gammavalues::AbstractVector
+)
     for g in 1:(ngroups - 1)
-        _addtotestdataframe!(df, Symbol("gammas_raw[$g]"), kwargs, gammadefault)
+        _addtotestdataframe!(df, Symbol("gammas_raw[$g]"), kwargs, gammavalues)
     end
     return nothing
 end
 
-function _addthetastotestdataframe!(rng, df, ntimes, nrows, kwargs, ::Automatic)
+function _addthetastotestdataframe!(
+    rng::AbstractRNG, df, ntimes, nrows, kwargs, ::Automatic
+)
     _addthetastotestdataframe!(rng, df, ntimes, nrows, kwargs, rand(rng, nrows))
     return nothing
 end
 
-function _addthetastotestdataframe!(::Any, df, ntimes, ::Any, kwargs, thetadefault)
+function _addthetastotestdataframe!(
+    ::AbstractRNG, df, ntimes, ::Int, kwargs, thetavalues::AbstractVector
+)
     for t in 1:(ntimes - 1)
-        _addtotestdataframe!(df, Symbol("thetas_raw[$t]"), kwargs, thetadefault)
+        _addtotestdataframe!(df, Symbol("thetas_raw[$t]"), kwargs, thetavalues)
     end
     return nothing
 end
 
-function _addmxtotestdataframe!(rng, df, ngroups, ntimes, nseeds, nrows, kwargs, ::Automatic)
+function _addmxtotestdataframe!(
+    rng::AbstractRNG, df, ngroups, ntimes, nseeds, nrows, kwargs, ::Automatic
+)
     _addmxtotestdataframe!(
         rng, df, ngroups, ntimes, nseeds, nrows, kwargs, rand(rng, nrows)
     )
     return nothing
 end
 
-function _addmxtotestdataframe!(::Any, df, ngroups, ntimes, nseeds, ::Any, kwargs, mxdefault)
+function _addmxtotestdataframe!(
+    ::AbstractRNG, df, ngroups, ntimes, nseeds, ::Int, kwargs, mxvalues::AbstractVector
+)
     for g in 1:(ngroups), t in 1:(ntimes + nseeds)
-        _addtotestdataframe!(df, Symbol("M_x[$t, $g]"), kwargs, mxdefault)
+        _addtotestdataframe!(df, Symbol("M_x[$t, $g]"), kwargs, mxvalues)
+    end
+    return nothing
+end
+
+function _addpredobsinfsigmatotestdataframe!(
+    rng::AbstractRNG, df, ngroups, ntimes, nrows, kwargs, ::Automatic
+)
+    _addpredobsinfsigmatotestdataframe!(
+        rng, df, ngroups, ntimes, nrows, kwargs, rand(rng, nrows)
+    )
+    return nothing
+end
+
+function _addpredobsinfsigmatotestdataframe!(
+    ::AbstractRNG, df, ngroups, ntimes, ::Int, kwargs, predictionvalues::AbstractVector
+)
+    for g in 1:(ngroups), t in 1:(ntimes + 1)
+        _addtotestdataframe!(
+            df, 
+            Symbol("predictobservedinfectionssigmamatrix[$t, $g]"), 
+            kwargs, 
+            predictionvalues
+        )
     end
     return nothing
 end

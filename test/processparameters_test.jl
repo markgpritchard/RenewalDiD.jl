@@ -210,110 +210,61 @@ df10 = testdataframe( ;
     thetadefault=zeros(16), 
     mxdefault=zeros(16),
 )
-s1 = samplerenewaldidinfections(
-    zeros(2), df1, 2;
+data1 = RenewalDiDDataUnlimitedPopn( ; 
+    observedcases=zeros(11, 3), 
     interventions=zeros(10, 3), 
     Ns=(100 .* ones(3)), 
-    seedmatrix=zeros(7, 3), 
-    ngroups=3, 
-    ntimes=10,
+    exptdseedcases=zeros(7, 3),
 )
-s2 = samplerenewaldidinfections(
-    zeros(2), df2, 2;
+data2 = RenewalDiDDataUnlimitedPopn( ; 
+    observedcases=zeros(13, 4), 
     interventions=zeros(12, 4), 
     Ns=(100 .* ones(4)), 
-    seedmatrix=zeros(7, 4), 
-    ngroups=4, 
-    ntimes=12,
+    exptdseedcases=zeros(7, 4), 
 )
-s3 = samplerenewaldidinfections(
-    [0, 1], df3, 1;
+data3 = RenewalDiDDataUnlimitedPopn( ; 
+    observedcases=zeros(3, 2), 
     interventions=zeros(2, 2), 
-    Ns=(100 .* ones(2)), 
-    seedmatrix=[0  0; 1  1], 
-    ngroups=2, 
-    ntimes=2,
+    Ns=(Inf .* ones(2)), 
+    exptdseedcases=[0  0; 1  1],
 )
-s4 = samplerenewaldidinfections(
-    [0, 1], df4, 1;
-    interventions=zeros(2, 2), 
-    Ns=(100 .* ones(2)), 
-    seedmatrix=[0  0; 1  1], 
-    ngroups=2, 
-    ntimes=2,
-)
-s5 = samplerenewaldidinfections(
-    [0, 1], df5, 1;
-    interventions=zeros(2, 2), 
-    Ns=(100 .* ones(2)), 
-    seedmatrix=[0  0; 1  1], 
-    ngroups=2, 
-    ntimes=2,
-)
-s6 = samplerenewaldidinfections(
-    [0, 1], df6, 1;
-    interventions=zeros(2, 2), 
-    Ns=(100 .* ones(2)), 
-    seedmatrix=[0  0; 1  1], 
-    ngroups=2, 
-    ntimes=2,
-)
-s7 = samplerenewaldidinfections(
-    [0, 1], df7, 1;
-    interventions=zeros(2, 2), 
-    Ns=(100 .* ones(2)), 
-    seedmatrix=[0  0; 1  1], 
-    ngroups=2, 
-    ntimes=2,
-)
-s8 = samplerenewaldidinfections(
-    zeros(2), df8;
+data8 = RenewalDiDDataUnlimitedPopn( ; 
+    observedcases=zeros(11, 3), 
     interventions=zeros(10, 3), 
     Ns=(100 .* ones(3)), 
-    seedmatrix=zeros(2, 3), 
-    ngroups=3, 
-    ntimes=10,
+    exptdseedcases=zeros(2, 3),
 )
-s9 = samplerenewaldidinfections(
-    zeros(2), df9;
-    interventions=zeros(10, 3), 
-    Ns=(100 .* ones(3)), 
-    seedmatrix=zeros(2, 3), 
-    ngroups=3, 
-    ntimes=10,
-)
-s10 = samplerenewaldidinfections(
-    zeros(2), df10;
+data10 = RenewalDiDDataUnlimitedPopn( ; 
+    observedcases=zeros(21, 4), 
     interventions=zeros(20, 4), 
     Ns=(100 .* ones(4)), 
-    seedmatrix=zeros(2, 4), 
-    ngroups=4, 
-    ntimes=20,
+    exptdseedcases=zeros(2, 4),
 )
-s3ma = samplerenewaldidinfections(
-    zeros(2), df3;
+data3ma = RenewalDiDDataUnlimitedPopn( ; 
+    observedcases=zeros(3, 2), 
     interventions=zeros(2, 2), 
     Ns=(100 .* ones(2)), 
-    seedmatrix=[0  0; _r1  _r2], 
-    ngroups=2, 
-    ntimes=2,
+    exptdseedcases=[0  0; _r1  _r2],
 )
-s3mb = samplerenewaldidinfections(
-    [0, 1], df3;
+data3mb = RenewalDiDDataUnlimitedPopn( ; 
+    observedcases=zeros(3, 2), 
     interventions=zeros(2, 2), 
     Ns=(100 .* ones(2)), 
-    seedmatrix=[0  0; 1  1], 
-    ngroups=2, 
-    ntimes=2,
+    exptdseedcases=[0  0; 1  1],
 )
-s3mc = samplerenewaldidinfections(
-    [0, 1], df3, 4:6;
-    interventions=zeros(2, 2), 
-    Ns=(100 .* ones(2)), 
-    seedmatrix=[0  0; 1  1], 
-    ngroups=2, 
-    ntimes=2,
-)
+s1 = samplerenewaldidinfections(zeros(2), df1, data1, 2)
+s2 = samplerenewaldidinfections(zeros(2), df2, data2, 2)
+s3 = samplerenewaldidinfections([0, 1], df3, data3, 1)
+s4 = samplerenewaldidinfections([0, 1], df4, data3, 1)
+s5 = samplerenewaldidinfections([0, 1], df5, data3, 1)
+s6 = samplerenewaldidinfections([0, 1], df6, data3, 1)
+s7 = samplerenewaldidinfections([0, 1], df7, data3, 1)
+s8 = samplerenewaldidinfections(zeros(2), df8, data8)
+s9 = samplerenewaldidinfections(zeros(2), df9, data8)
+s10 = samplerenewaldidinfections(zeros(2), df10, data10)
+s3ma = samplerenewaldidinfections(zeros(2), df3, data3ma)
+s3mb = samplerenewaldidinfections([0, 1], df3, data3mb)
+s3mc = samplerenewaldidinfections([0, 1], df3, data3mb, 4:6)
 
 rv16a = let
     _rvs = rankvalues(rankvaluedf16, :tau)
@@ -385,13 +336,6 @@ end
     @test s7 == zeros(3, 2)
 end
 
-@testset "keyword errors" begin
-    @test_throws ArgumentError samplerenewaldidinfections(zeros(2), df1, 2)
-    # test removed as not providing `n_seeds` to `samplerenewaldidinfections` no longer 
-    # intended to throw an error
-end
-
-
 @testset "sample multiple rows" begin
     @test s8 == zeros(11, 3, 16)
     @test s9 == zeros(11, 3, 24)
@@ -402,150 +346,104 @@ end
 end
 
 @testset "sampling errors" begin
-    @test_throws DimensionMismatch samplerenewaldidinfections(
-        zeros(2), df1, 2;
+    # some dimension mismatch errors should now be caught while calling `RenewalDiDData`
+    @test_throws DimensionMismatch RenewalDiDData( ; 
+        observedcases=zeros(11, 3), 
         interventions=zeros(10, 3), 
-        Ns=100 .* ones(3), 
-        seedmatrix=zeros(7, 4),
-        ngroups=3,
-        ntimes=10,
+        Ns=(100 .* ones(3)), 
+        exptdseedcases=zeros(7, 4),
     )
-    @test_throws DimensionMismatch samplerenewaldidinfections(
-        zeros(2), df1, 2;
+    @test_throws DimensionMismatch RenewalDiDData( ; 
+        observedcases=zeros(11, 3), 
         interventions=zeros(10, 3), 
-        Ns=100 .* ones(3), 
-        seedmatrix=zeros(8, 3), 
-        ngroups=3, 
-        ntimes=10,
-    ) 
-    @test_throws DimensionMismatch samplerenewaldidinfections(
-        zeros(2), df1, 2;
+        Ns=(100 .* ones(3)), 
+        exptdseedcases=zeros(8, 3),
+    )
+    data11 = RenewalDiDData( ; 
+        observedcases=zeros(11, 3), 
         interventions=zeros(10, 3), 
-        Ns=100 .* ones(3), 
-        seedmatrix=zeros(6, 3), 
-        ngroups=3, 
-        ntimes=10,
-    ) 
-    @test_throws DimensionMismatch samplerenewaldidinfections(
-        zeros(2), df1, 2;
+        Ns=(100 .* ones(3)), 
+        exptdseedcases=zeros(6, 3),
+    )
+    @test_throws DimensionMismatch samplerenewaldidinfections(zeros(2), df1, data11, 2) 
+    data12 = RenewalDiDData( ; 
+        observedcases=zeros(11, 2), 
         interventions=zeros(10, 2), 
-        Ns=100 .* ones(3), 
-        seedmatrix=zeros(7, 3), 
-        ngroups=2, 
-        ntimes=10,
-    ) 
-    @test_throws DimensionMismatch samplerenewaldidinfections(
-        zeros(2), df1, 2;
+        Ns=(100 .* ones(3)), 
+        exptdseedcases=zeros(7, 3),
+    )
+    @test_throws DimensionMismatch samplerenewaldidinfections(zeros(2), df1, data12, 2) 
+    @test_throws DimensionMismatch RenewalDiDData( ; 
+        observedcases=zeros(11, 4), 
         interventions=zeros(10, 4), 
-        Ns=100 .* ones(4), 
-        seedmatrix=zeros(7, 3), 
-        ngroups=4, 
-        ntimes=10,
-    ) 
-    @test_throws DimensionMismatch samplerenewaldidinfections(
-        zeros(2), df1, 2;
+        Ns=(100 .* ones(4)), 
+        exptdseedcases=zeros(7, 3),
+    )
+    data13 = RenewalDiDData( ; 
+        observedcases=zeros(10, 3), 
         interventions=zeros(9, 3), 
-        Ns=100 .* ones(3), 
-        seedmatrix=zeros(7, 3), 
-        ngroups=3, 
-        ntimes=9,
-    ) 
-    @test_throws DimensionMismatch samplerenewaldidinfections(
-        zeros(2), df1, 2;
+        Ns=(100 .* ones(3)), 
+        exptdseedcases=zeros(7, 3),
+    )
+    @test_throws DimensionMismatch samplerenewaldidinfections(zeros(2), df1, data13, 2) 
+    data14 = RenewalDiDData( ; 
+        observedcases=zeros(12, 3), 
         interventions=zeros(11, 3), 
-        Ns=100 .* ones(3), 
-        seedmatrix=zeros(7, 3), 
-        ngroups=3, 
-        ntimes=11,
-    ) 
-    @test_throws BoundsError samplerenewaldidinfections(
-        zeros(2), df1, 3;
-        interventions=zeros(10, 3), 
-        Ns=100 .* ones(3), 
-        seedmatrix=zeros(7, 3), 
-        ngroups=3, 
-        ntimes=10,
-    ) 
-    @test_throws MethodError samplerenewaldidinfections(
-        [0, 1], df3, 4.0:6;
-        interventions=zeros(2, 2), 
-        Ns=(100 .* ones(2)), 
-        seedmatrix=[0  0; 1  1], 
-        ngroups=2, 
-        ntimes=2,
+        Ns=(100 .* ones(3)), 
+        exptdseedcases=zeros(7, 3),
     )
-    @test_throws MethodError samplerenewaldidinfections(
-        [0, 1], df3, 4:0.5:6;
-        interventions=zeros(2, 2), 
-        Ns=(100 .* ones(2)), 
-        seedmatrix=[0  0; 1  1], 
-        ngroups=2, 
-        ntimes=2,
-    )
-    @test_throws BoundsError samplerenewaldidinfections(
-        [0, 1], df3, 4:16;  # df3 is 10 rows long
-        interventions=zeros(2, 2), 
-        Ns=(100 .* ones(2)), 
-        seedmatrix=[0  0; 1  1], 
-        ngroups=2, 
-        ntimes=2,
-    )
-        @test_throws DimensionMismatch samplerenewaldidinfections(
-        zeros(2), df1;
+    @test_throws DimensionMismatch samplerenewaldidinfections(zeros(2), df1, data14, 2) 
+    @test_throws BoundsError samplerenewaldidinfections(zeros(2), df1, data1, 3) 
+    @test_throws MethodError samplerenewaldidinfections([0, 1], df3, data3, 4.0:6)
+    @test_throws MethodError samplerenewaldidinfections([0, 1], df3, data3, 4:0.5:6)
+    @test_throws BoundsError samplerenewaldidinfections([0, 1], df3, data3, 4:16)  # df3 is 10 rows long
+    data15 = RenewalDiDData( ; 
+        observedcases=zeros(11, 3), 
         interventions=zeros(10, 3), 
-        Ns=100 .* ones(3), 
-        seedmatrix=zeros(7, 4),
-        ngroups=3,
-        ntimes=10,
+        Ns=(100 .* ones(3)), 
+        exptdseedcases=zeros(7, 4),
     )
-    @test_throws DimensionMismatch samplerenewaldidinfections(
-        zeros(2), df1;
+    @test_throws DimensionMismatch samplerenewaldidinfections(zeros(2), df1, data15)
+    data16 = RenewalDiDData( ; 
+        observedcases=zeros(11, 3), 
         interventions=zeros(10, 3), 
-        Ns=100 .* ones(3), 
-        seedmatrix=zeros(8, 3), 
-        ngroups=3, 
-        ntimes=10,
+        Ns=(100 .* ones(3)), 
+        exptdseedcases=zeros(8, 3),
     ) 
-    @test_throws DimensionMismatch samplerenewaldidinfections(
-        zeros(2), df1;
+    @test_throws DimensionMismatch samplerenewaldidinfections(zeros(2), df1, data16) 
+    data17 = RenewalDiDData( ; 
+        observedcases=zeros(11, 3), 
         interventions=zeros(10, 3), 
-        Ns=100 .* ones(3), 
-        seedmatrix=zeros(6, 3), 
-        ngroups=3, 
-        ntimes=10,
+        Ns=(100 .* ones(3)), 
+        exptdseedcases=zeros(6, 3),
     ) 
-    @test_throws DimensionMismatch samplerenewaldidinfections(
-        zeros(2), df1;
+    @test_throws DimensionMismatch samplerenewaldidinfections(zeros(2), df1, data17) 
+    @test_throws DimensionMismatch RenewalDiDData( ; 
+        observedcases=zeros(11, 2), 
         interventions=zeros(10, 2), 
-        Ns=100 .* ones(3), 
-        seedmatrix=zeros(7, 3), 
-        ngroups=2, 
-        ntimes=10,
+        Ns=(100 .* ones(3)), 
+        exptdseedcases=zeros(7, 3),
     ) 
-    @test_throws DimensionMismatch samplerenewaldidinfections(
-        zeros(2), df1;
+    @test_throws DimensionMismatch RenewalDiDData( ; 
+        observedcases=zeros(11, 4), 
         interventions=zeros(10, 4), 
-        Ns=100 .* ones(4), 
-        seedmatrix=zeros(7, 3), 
-        ngroups=4, 
-        ntimes=10,
+        Ns=(100 .* ones(4)), 
+        exptdseedcases=zeros(7, 3),
     ) 
-    @test_throws DimensionMismatch samplerenewaldidinfections(
-        zeros(2), df1;
+    data18 = RenewalDiDData( ; 
+        observedcases=zeros(10, 3), 
         interventions=zeros(9, 3), 
-        Ns=100 .* ones(3), 
-        seedmatrix=zeros(7, 3), 
-        ngroups=3, 
-        ntimes=9,
+        Ns=(100 .* ones(3)), 
+        exptdseedcases=zeros(7, 3),
     ) 
-    @test_throws DimensionMismatch samplerenewaldidinfections(
-        zeros(2), df1;
+    @test_throws DimensionMismatch samplerenewaldidinfections(zeros(2), df1, data18) 
+    data19 = RenewalDiDData( ; 
+        observedcases=zeros(12, 3), 
         interventions=zeros(11, 3), 
-        Ns=100 .* ones(3), 
-        seedmatrix=zeros(7, 3), 
-        ngroups=3, 
-        ntimes=11,
+        Ns=(100 .* ones(3)), 
+        exptdseedcases=zeros(7, 3),
     ) 
+    @test_throws DimensionMismatch samplerenewaldidinfections(zeros(2), df1, data19) 
 end
 
 @testset "quantiles of a single sample return a warning and the input" begin

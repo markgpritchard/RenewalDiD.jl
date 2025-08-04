@@ -38,7 +38,11 @@ end
 model1 = renewaldid(                      
     sim, 
     g_seir, 
-    RenewalDiDPriors(; alphaprior=Normal(log(2.5), 1), sigma_thetaprior=Exponential(0.075));                          
+    RenewalDiDPriors( ; 
+        alphaprior=Normal(log(2.5), 1), 
+        sigma_thetaprior=Exponential(0.075), 
+        psiprior=Beta(6, 4)
+    );                          
     gamma=0.2, sigma=0.5               
 )
 
@@ -54,7 +58,7 @@ priorsoutputquantiles = quantilerenewaldidinfections(
 )
 priorsplot = plotmodel(priorsoutputquantiles, sim)
 
-initindices = findall(x -> x > 996, ordinalrank(priorsdf.lp)) 
+initindices = findall(x -> x <= 4, ordinalrank(priorsdf.lp; rev=true)) 
 priorsfittedinitoutputs = samplerenewaldidinfections(
     g_seir, priorsdf, sim, initindices; 
     gamma=0.2, sigma=0.5,

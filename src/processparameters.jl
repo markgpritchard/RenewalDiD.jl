@@ -104,7 +104,7 @@ end
 ## take samples from DataFrame of fitted parameters and generate expected outcomes
 
 function samplerenewaldidinfections(
-    g, df::DataFrame, data::RenewalDiDData, indexes::AbstractVector{<:Integer}=axes(df, 1);
+    g, df::DataFrame, data::AbstractRenewalDiDData, indexes::AbstractVector{<:Integer}=axes(df, 1);
     kwargs...
 )
     ngroups = _ngroups(data.interventions)
@@ -121,7 +121,7 @@ function samplerenewaldidinfections(
 end
 
 function samplerenewaldidinfections(
-    g, df::DataFrame, data::RenewalDiDData, i::Integer;
+    g, df::DataFrame, data::AbstractRenewalDiDData, i::Integer;
     kwargs...
 )
     ngroups = _ngroups(data.interventions)
@@ -136,7 +136,61 @@ function samplerenewaldidinfections(
 end
 
 function _samplerenewaldidinfections!(
-    g, output::AbstractArray, df, data::RenewalDiDData, i, ngroups, ntimes, n_seeds; 
+    g, output::AbstractArray, df, data::AbstractRenewalDiDData, i, ngroups, ntimes, n_seeds; 
+    kwargs...
+)
+    return _samplerenewaldidinfections!(
+        generationtime, output, df, data, i, ngroups, ntimes, n_seeds; 
+        func=g,  # `generationtime` accepts function or vector from the keyword `func`
+        kwargs...
+    )
+end
+
+function _samplerenewaldidinfections!(
+    g::_Useablegenerationfunctions, 
+    output::AbstractArray, 
+    df, 
+    data::RenewalDiDData, 
+    i, 
+    ngroups, 
+    ntimes, 
+    n_seeds; 
+    kwargs...
+)
+    Ns = data.Ns  
+    return _samplerenewaldidinfections!(
+        g, output::AbstractArray, df, data, i, ngroups, ntimes, n_seeds, Ns; 
+        kwargs...
+    )
+end
+
+function _samplerenewaldidinfections!(
+    g::_Useablegenerationfunctions, 
+    output::AbstractArray, 
+    df, 
+    data::RenewalDiDDataUnlimitedPopn, 
+    i, 
+    ngroups, 
+    ntimes, 
+    n_seeds; 
+    kwargs...
+)
+    return _samplerenewaldidinfections!(
+        g, output::AbstractArray, df, data, i, ngroups, ntimes, n_seeds, nothing; 
+        kwargs...
+    )
+end
+
+function _samplerenewaldidinfections!(
+    g::_Useablegenerationfunctions, 
+    output::AbstractArray, 
+    df, 
+    data::AbstractRenewalDiDData, 
+    i, 
+    ngroups, 
+    ntimes, 
+    n_seeds, 
+    Ns; 
     kwargs...
 )
     alpha = df.alpha[i]
@@ -151,12 +205,15 @@ function _samplerenewaldidinfections!(
     T = Complex{typeof(predictedlogR_0[1, 1])}
     predictedinfections = _infectionsmatrix(T, predictedlogR_0, n_seeds)
     _infections!(
-        g, predictedinfections, M_x, predictedlogR_0, data.exptdseedcases, data.Ns, n_seeds; 
+        g, predictedinfections, M_x, predictedlogR_0, data.exptdseedcases, Ns, n_seeds; 
         kwargs...
     )
     np = real.(predictedinfections[n_seeds:n_seeds+ntimes, :]) .* psi
     isnan(maximum(np)) && return _halt_samplerenewaldidinfections(i)  # exit early 
-    predictobservedinfections = max.(0, np .+ predictobservedinfectionssigmamatrix .* np .* (1 - psi))
+    predictobservedinfections = max.(
+        0, 
+        np .+ predictobservedinfectionssigmamatrix .* np .* (1 - psi)
+    )
     output .= predictobservedinfections
     return nothing
 end
@@ -200,104 +257,6 @@ end
 
 # other versions of this function are in `interventionmatrix.jl`
 _interventionstarttimes(M::AbstractMatrix, i) = findfirst(x -> x == 1, M[:, i])
-
-
-# select parameters from keyword arguments ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-__sra(; kwargs...) = _samplerenewaldidinfectionarguments(; kwargs...)
-
-function _samplerenewaldidinfectionarguments( ;
-    data=nothing,
-    doubletime=automatic,
-    interventions=nothing, 
-    n_seeds=nothing,
-    ngroups=automatic, 
-    ntimes=automatic,
-    Ns=nothing, 
-    observedcases=nothing,
-    sampletime=automatic,
-    seedcasesminvalue=0.5,
-    seedmatrix=automatic, 
-    kwargs...
-)
-    return __samplerenewaldidinfectionarguments( 
-        data,
-        doubletime,
-        interventions, 
-        n_seeds,
-        ngroups, 
-        ntimes,
-        Ns, 
-        observedcases,
-        sampletime,
-        seedcasesminvalue,
-        seedmatrix;
-        kwargs...
-    )
-end
-
-function __samplerenewaldidinfectionarguments( 
-    inputdata,
-    doubletime,
-    inputinterventions, 
-    inputn_seeds,
-    inputngroups, 
-    inputntimes,
-    inputNs, 
-    inputobservedcases,
-    sampletime,
-    seedcasesminvalue,
-    inputseedmatrix;
-    kwargs...
-)
-    interventions = _samplerenewaldidinfectionsinterventions(inputdata, inputinterventions)
-    Ns = _samplerenewaldidinfectionsNs(inputdata, inputNs)
-    seedmatrix = _samplerenewaldidinfectionsseedmatrix(inputdata, inputseedmatrix)
-    ngroups = _samplerenewaldidinfectionsngroups(inputngroups, interventions)
-    ntimes = _samplerenewaldidinfectionsntimes(inputntimes, interventions)
-    n_seeds = _samplerenewaldidinfectionsnseeds(inputn_seeds, seedmatrix)
-    kws = kwargs
-    return (interventions, Ns, seedmatrix, ngroups, ntimes, n_seeds, kws)
-end
-
-function _samplerenewaldidinfectionsinterventions(::Any, inputinterventions::AbstractMatrix)
-    return inputinterventions
-end
-
-function _samplerenewaldidinfectionsinterventions(inputdata::RenewalDiDData, ::Nothing)
-    return inputdata.interventions
-end
-
-function _samplerenewaldidinfectionsinterventions(::Nothing, ::Nothing)
-    throw(_samplerenewaldidinfectionsinterventionargumenterror())
-    return nothing
-end
-
-_samplerenewaldidinfectionsNs(::Any, Ns::AbstractVector) = Ns
-_samplerenewaldidinfectionsNs(inputdata::RenewalDiDData, ::Nothing) = inputdata.Ns
-
-function _samplerenewaldidinfectionsNs(::Nothing, ::Nothing)
-    throw(_samplerenewaldidinfectionsNsargumenterror())
-    return nothing
-end
-
-_samplerenewaldidinfectionsseedmatrix(::Any, seedmatrix::AbstractMatrix) = seedmatrix
-
-function _samplerenewaldidinfectionsseedmatrix(inputdata::RenewalDiDData, ::Automatic)
-    return inputdata.exptdseedcases
-end
-
-function _samplerenewaldidinfectionsseedmatrix(::Nothing, ::Automatic)
-    throw(_samplerenewaldidinfectionsseedmatrixargumenterror())
-    return nothing
-end
-
-_samplerenewaldidinfectionsngroups(inputngroups::Integer, ::Any) = inputngroups
-_samplerenewaldidinfectionsngroups(::Automatic, interventions) = _ngroups(interventions)
-_samplerenewaldidinfectionsntimes(inputntimes::Integer, ::Any) = inputntimes
-_samplerenewaldidinfectionsntimes(::Automatic, interventions) = _ntimes(interventions)
-_samplerenewaldidinfectionsnseeds(inputn_seeds::Integer, ::Any) = inputn_seeds
-_samplerenewaldidinfectionsnseeds(::Nothing, seedmatrix) = _ntimes(seedmatrix)
 
 
 # Warnings ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

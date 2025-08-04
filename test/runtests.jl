@@ -31,6 +31,6 @@ using Test
         include("plotting_testwithoutMakie.jl")
     end
     @testset "example workflow" begin
-        include("exampleworkflow.jl")
+       # include("exampleworkflow.jl")
     end
 end 

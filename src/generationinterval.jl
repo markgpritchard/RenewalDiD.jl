@@ -212,6 +212,7 @@ function _generationtime(::Automatic, ::Automatic, ::Integer; kwargs...)
 end
 
 function _generationtime(func, vec, ::Integer; kwargs...)
+    func == vec && return _generationtime(func, t; kwargs...)
     throw(_generationtimebothfunctionvectorerror())
     return nothing
 end

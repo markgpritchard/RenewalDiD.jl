@@ -29,7 +29,8 @@ export g_covid, g_seir, generationtime, testgenerationtime, vectorg_seir
 ## simulations.jl
 export packsimulations, packsimulationtuple, runsimulation, simulationcases, simulationu0
 ## fittingparameters.jl
-export RenewalDiDData, RenewalDiDPriors, expectedseedcases, logsumexp, renewaldid
+export RenewalDiDData, RenewalDiDDataUnlimitedPopn, RenewalDiDPriors
+export expectedseedcases, logsumexp, renewaldid
 ## processparameters.jl
 export nunique, quantilerenewaldidinfections, rankvalues, samplerenewaldidinfections
 

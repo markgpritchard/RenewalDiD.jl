@@ -2,7 +2,9 @@
 
 # Structs ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-@auto_hash_equals struct RenewalDiDData{S, T}
+abstract type AbstractRenewalDiDData end
+
+@auto_hash_equals struct RenewalDiDData{S, T} <: AbstractRenewalDiDData
     observedcases::Matrix{S}
     interventions::T
     Ns::Vector{Int}
@@ -11,15 +13,20 @@
     function RenewalDiDData(
         observedcases::Matrix{S}, 
         interventions::T, 
-        Ns::Vector{Int}, 
-        exptdseedcases::Matrix{Float64}
+        Ns::Vector{<:Number}, 
+        exptdseedcases::Matrix{<:Number}
     ) where {S <:Number, T <:AbstractArray}
         _diddataassertions(observedcases, interventions, Ns, exptdseedcases)
-        return new{S, T}(observedcases, interventions, Ns, exptdseedcases)
+        return new{S, T}(
+            observedcases, 
+            interventions, 
+            convert.(Int, Ns), 
+            convert.(Float64, exptdseedcases)
+        )
     end
 end
 
-function RenewalDiDData(; 
+function RenewalDiDData( ; 
     observedcases, 
     interventions, 
     Ns, 
@@ -34,6 +41,87 @@ function RenewalDiDData(;
         doubletime, sampletime, minvalue
     )
     return RenewalDiDData(observedcases, interventions, Ns, newexptdseedcases)
+end
+
+@auto_hash_equals struct RenewalDiDDataUnlimitedPopn{S, T} <: AbstractRenewalDiDData
+    observedcases::Matrix{S}
+    interventions::T
+    exptdseedcases::Matrix{Float64}
+
+    function RenewalDiDDataUnlimitedPopn(
+        observedcases::Matrix{S}, 
+        interventions::T, 
+        exptdseedcases::Matrix{<:Number}
+    ) where {S <:Number, T <:AbstractArray}
+        _diddataassertions(observedcases, interventions, exptdseedcases)
+        return new{S, T}(
+            observedcases, 
+            interventions, 
+            convert.(Float64, exptdseedcases)
+        )
+    end
+end
+
+function RenewalDiDDataUnlimitedPopn( ; 
+    observedcases, 
+    interventions, 
+    Ns=nothing,
+    exptdseedcases=nothing,
+    n_seeds=DEFAULT_SEEDMATRIX_HEIGHT, 
+    doubletime=automatic, 
+    sampletime=automatic, 
+    minvalue=DEFAULT_SEEDMATRIX_MINVALUE,
+)
+    return _RenewalDiDDataUnlimitedPopn(
+        observedcases, 
+        interventions, 
+        Ns,
+        exptdseedcases,
+        n_seeds, 
+        doubletime, 
+        sampletime, 
+        minvalue,
+    )
+end
+
+function _RenewalDiDDataUnlimitedPopn(
+    observedcases, 
+    interventions, 
+    Ns,
+    exptdseedcases,
+    n_seeds, 
+    doubletime, 
+    sampletime, 
+    minvalue,
+)
+    @warn "$Ns: keyword argument `Ns` not used in constructing `RenewalDiDDataUnlimitedPopn`"
+    return _RenewalDiDDataUnlimitedPopn(
+        observedcases, 
+        interventions, 
+        nothing,
+        exptdseedcases,
+        n_seeds, 
+        doubletime, 
+        sampletime, 
+        minvalue,
+    )
+end
+
+function _RenewalDiDDataUnlimitedPopn(
+    observedcases, 
+    interventions, 
+    ::Nothing,
+    exptdseedcases,
+    n_seeds, 
+    doubletime, 
+    sampletime, 
+    minvalue,
+)
+    newexptdseedcases = _expectedseedcasesifneeded(
+        exptdseedcases, observedcases, n_seeds; 
+        doubletime, sampletime, minvalue
+    )
+    return RenewalDiDDataUnlimitedPopn(observedcases, interventions, newexptdseedcases)
 end
 
 @kwdef struct RenewalDiDPriors{S, T, U, V, W, X, Y}
@@ -135,11 +223,19 @@ function _expectedseedcasesifneeded(::Nothing, observedcases, n_seeds; kwargs...
     return expectedseedcases(observedcases, n_seeds; kwargs...)
 end
 
-function _expectedinfections(g, logR_0, hx; kwargs...)
+function _expectedinfections(g, args...; kwargs...) 
+    return _expectedinfections(generationtime, args...; func=g, kwargs...)
+    # `_expectedinfections` will accept a function or a vector from the keyword argument `func`
+end
+
+function _expectedinfections(g::_Useablegenerationfunctions, logR_0, hx; kwargs...)
     return _expectedinfections(g, 1, logR_0, hx; kwargs...)
 end
 
-function _expectedinfections(g, inputpropsus::T, logR_0, hx; kwargs...) where T
+function _expectedinfections(
+    g::_Useablegenerationfunctions, inputpropsus::T, logR_0, hx; 
+    kwargs...
+) where T
     # rather than throw an error, enforce 0 <= propsus <= 1 
     propsus = min(one(T), max(zero(T), inputpropsus))
     t = length(hx) + 1
@@ -186,17 +282,12 @@ function _infections!(g, infn, M_x, logR_0, exptdseedcases, Ns, n_seeds; kwargs.
     return nothing
 end
 
-function _infections_seed!(
-    infn::AbstractArray{<:Real, 2}, M_x, exptdseedcases, ::Any, n_seeds; 
-    kwargs...
-) 
+function _infections_seed!(infn, M_x, exptdseedcases, ::Nothing, n_seeds; kwargs...) 
     return __infections_seed!(infn, M_x, exptdseedcases, n_seeds; kwargs...) 
 end
 
-function _infections_seed!(  # version that tracks proportion susceptible
-    infn::AbstractArray{<:Complex, 2}, M_x, exptdseedcases, Ns, n_seeds; 
-    kwargs...
-) 
+# version that tracks proportion susceptible
+function _infections_seed!(  infn, M_x, exptdseedcases, Ns, n_seeds; kwargs...) 
     __infections_seed!(infn, M_x, exptdseedcases, n_seeds; kwargs...) 
     for j in 1:_ngroups(M_x), t in 1:n_seeds
         # previous proportion susceptible
@@ -217,20 +308,20 @@ function __infections_seed!(infn, M_x, exptdseedcases, n_seeds; kwargs...)
     return nothing
 end
 
-function _infections_transmitted!(g, infn, M_x, logR_0, ::Any, n_seeds; kwargs...) 
+function _infections_transmitted!(g, infn, M_x, logR_0, ::Nothing, n_seeds; kwargs...) 
     for j in 1:_ngroups(M_x), t in 1:_ntimes(logR_0)
         infn[t+n_seeds, j] = _approxcases(
-            _expectedinfections(g, logR_0[t, j], @view infn[1:t+n_seeds-1, j]; kwargs...), 
+            _expectedinfections(
+                g, logR_0[t, j], real.(@view infn[1:t+n_seeds-1, j]); 
+                kwargs...
+            ), 
             M_x[t+n_seeds, j]
         )
     end
     return nothing
 end
 
-function _infections_transmitted!(
-    g, infn::AbstractArray{<:Complex}, M_x, logR_0, Ns, n_seeds; 
-    kwargs...
-) 
+function _infections_transmitted!(g, infn, M_x, logR_0, Ns, n_seeds; kwargs...) 
     for j in 1:_ngroups(M_x), t in 1:_ntimes(logR_0)
         prevsus = _prevpropsus(infn, t + n_seeds, j; kwargs...) * Ns[j] 
         expectednewcases = _approxcases(
@@ -268,6 +359,29 @@ function renewaldid(
         data.interventions,
         data.exptdseedcases,
         data.Ns,
+        g,    
+        priors.alphaprior,
+        priors.M_xprior,
+        priors.psiprior,
+        priors.sigma_gammaprior,
+        priors.sigma_thetaprior,
+        priors.tauprior,
+        n_seeds,
+        priors.omegaprior;
+        kwargs...
+    )
+end
+
+function renewaldid(
+    data::RenewalDiDDataUnlimitedPopn, g, priors::RenewalDiDPriors; 
+    kwargs...
+)
+    n_seeds = size(data.exptdseedcases, 1)
+    return _renewaldid(
+        data.observedcases,
+        data.interventions,
+        data.exptdseedcases,
+        nothing,
         g,    
         priors.alphaprior,
         priors.M_xprior,
@@ -337,13 +451,6 @@ end
 =#
     predictobservedinfections = max.(0, np .+ predictobservedinfectionssigmamatrix .* np .* (1 - psi))
 
-    if isnan(maximum(predictobservedinfections)) 
-        @addlogprob! -Inf
-        return  # exit the model evaluation early
-    end
-
-    if minimum(predictobservedinfections) < 0 println("predictobservedinfections=$predictobservedinfections") end
-
     # to add delay later 
     observedcases ~ arraydist(Normal.(predictobservedinfections, fittingsigma))
 end
@@ -351,29 +458,39 @@ end
 
 # Assertions ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-function _diddataassertions(observedcases, interventions, Ns, exptdseedcases) 
+function _diddataassertions(observedcases, interventions, exptdseedcases) 
     _ngroups(observedcases) == _ngroups(interventions) || throw(
         _ngroupsdimensionmismatch("observedcases", "interventions")
     )
-    _ngroups(observedcases) == length(Ns) || throw(
-        _ngroupsdimensionmismatch("observedcases", "Ns")
-    )
     _ngroups(observedcases) == _ngroups(exptdseedcases) || throw(
-        _ngroupsdimensionmismatch("observedcases", exptdseedcases)
+        _ngroupsdimensionmismatch("observedcases", "exptdseedcases")
     )
     _ntimes(observedcases) == _ntimes(interventions) + 1 || throw(_ntimesdimensionmismatch())
     return nothing
 end
 
-function _infectionsassertions(infn, M_x, logR_0, exptdseedcases, Ns, n_seeds)
+function _diddataassertions(observedcases, interventions, Ns, exptdseedcases) 
+    _diddataassertions(observedcases, interventions, exptdseedcases) 
+    _ngroups(observedcases) == length(Ns) || throw(
+        _ngroupsdimensionmismatch("observedcases", "Ns")
+    )
+    return nothing
+end
+
+function _infectionsassertions(infn, M_x, logR_0, exptdseedcases, ::Nothing, n_seeds)
     _expctdtotaltimes = _ntimes(logR_0) + _ntimes(exptdseedcases)
     _ngroups(infn) == _ngroups(logR_0) || throw(_widthmismatch("infn", "logR_0"))
     _ntimes(infn) == _expctdtotaltimes || throw(_infectionsntimeserror("infn"))
     _ngroups(M_x) == _ngroups(logR_0) || throw(_widthmismatch("M_x", "logR_0"))
     _ngroups(M_x) == _ngroups(exptdseedcases) || throw(_widthmismatch("M_x", "exptdseedcases"))
-    _ngroups(M_x) == length(Ns) || throw(_MxNserror(Ns, M_x))
     _ntimes(M_x) == _expctdtotaltimes || throw(_infectionsntimeserror("M_x"))
     _ntimes(exptdseedcases) == n_seeds || throw(_infectionsnseedserror())
+    return nothing
+end
+
+function _infectionsassertions(infn, M_x, logR_0, exptdseedcases, Ns, n_seeds)
+    _infectionsassertions(infn, M_x, logR_0, exptdseedcases, nothing, n_seeds)
+    _ngroups(M_x) == length(Ns) || throw(_MxNserror(Ns, M_x))
     return nothing
 end
 
