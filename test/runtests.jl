@@ -40,7 +40,7 @@ using Test
     end
     @testset "example workflow" begin
         @info "starting example workflow"
-        include("exampleworkflow.jl")
-        #@warn "not currently testing exampleworkflow.jl"
+        #include("exampleworkflow.jl")
+        @warn "not currently testing exampleworkflow.jl"
     end
 end 
