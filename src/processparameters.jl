@@ -150,7 +150,7 @@ function _samplerenewaldidinfections!(
     g::_Useablegenerationfunctions, 
     output::AbstractArray, 
     df, 
-    data::RenewalDiDData, 
+    data::AbstractRenewalDiDData, 
     i, 
     ngroups, 
     ntimes, 
@@ -159,11 +159,11 @@ function _samplerenewaldidinfections!(
 )
     Ns = data.Ns  
     return _samplerenewaldidinfections!(
-        g, output::AbstractArray, df, data, i, ngroups, ntimes, n_seeds, Ns; 
+        g, output, df, data, i, ngroups, ntimes, n_seeds, Ns; 
         kwargs...
     )
 end
-
+#=
 function _samplerenewaldidinfections!(
     g::_Useablegenerationfunctions, 
     output::AbstractArray, 
@@ -180,6 +180,7 @@ function _samplerenewaldidinfections!(
         kwargs...
     )
 end
+=#
 
 function _samplerenewaldidinfections!(
     g::_Useablegenerationfunctions, 
@@ -193,6 +194,8 @@ function _samplerenewaldidinfections!(
     Ns; 
     kwargs...
 )
+    _samplerenewaldidinfectionsassertions(df, data.exptdseedcases, i, ngroups, ntimes)
+
     alpha = df.alpha[i]
     gammavec = _gammavec(df, i, ngroups)
     thetavec = _thetavec(df, i, ntimes)

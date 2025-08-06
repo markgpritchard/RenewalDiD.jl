@@ -32,7 +32,7 @@ sim = let
     s3 = packsimulationtuple( ; 
         u0=u0_3, beta=_beta3, gamma, delta, theta, sigma, intervention=nothing,
     )
-    packsimulations(rng, 100, s1, s2, s3)
+    packsimulations(rng, 100, s1, s2, s3; sampletime=14)
 end
 
 model1 = renewaldid(                      
@@ -40,13 +40,14 @@ model1 = renewaldid(
     g_seir, 
     RenewalDiDPriors( ; 
         alphaprior=Normal(log(2.5), 1), 
+        sigma_delayprior=truncated(Exponential(log(5)); lower=1e-6, upper=log(14)),
         sigma_thetaprior=Exponential(0.075), 
         psiprior=Beta(6, 4)
     );                          
     gamma=0.2, sigma=0.5               
 )
 
-priorschain = sample(rng, model1, Prior(), 1000)
+priorschain = sample(rng, model1, Prior(), 10_000)
 priorsdf = DataFrame(priorschain)
 priortraceplot = trplot(priorsdf, :tau)
 priorsfittedoutputs = samplerenewaldidinfections(
@@ -56,7 +57,7 @@ priorsfittedoutputs = samplerenewaldidinfections(
 priorsoutputquantiles = quantilerenewaldidinfections(
     priorsfittedoutputs, [0.025, 0.05, 0.25, 0.5, 0.75, 0.95, 0.975]
 )
-priorsplot = plotmodel(priorsoutputquantiles, sim)
+priorsplot = plotmodel(priorsoutputquantiles, sim; linewidth=1)
 
 initindices = findall(x -> x <= 4, ordinalrank(priorsdf.lp; rev=true)) 
 priorsfittedinitoutputs = samplerenewaldidinfections(
@@ -68,10 +69,12 @@ priorsoutputinitquantiles = quantilerenewaldidinfections(
 )
 priorsinitplot = plotmodel(priorsoutputinitquantiles, sim)
 
-priorinitparams = [[values(priorsdf[i, 3:733])...] for i in initindices]
+#priorinitparams = [[values(priorsdf[i, 3:735])...] for i in initindices]
+priorinitparams = [[values(priorsdf[i, 3:734])...] for i in initindices]
 
 shortchain = sample(
     rng, model1, NUTS(0.65; adtype=AutoReverseDiff()), MCMCThreads(), 20, 4; 
+    #rng, model1, NUTS(0.65; adtype=AutoReverseDiff()), MCMCThreads(), 5, 4; 
     initial_params=priorinitparams,
 ) 
 shortdf = DataFrame(shortchain)
@@ -87,23 +90,7 @@ shortoutputquantiles = quantilerenewaldidinfections(
 )
 p3 = plotmodel(shortoutputquantiles, sim)
 
-
-
-#=
-
-chain = sample(rng, model1, NUTS(1000, 0.65), MCMCThreads(), 20, 4;) 
-df = DataFrame(chain)
-
-RenewalDiD.Plotting.traceplot(df, :tau)
-tracerankplot(df, :tau)
-
-fittedoutputs = samplerenewaldidinfections(g_seir, df; data=sim, gamma=0.2, sigma=0.5)
-outputquantiles = quantilerenewaldidinfections(fittedoutputs, [0.025, 0.05, 0.5, 0.95, 0.975])
-
-plotmodel(outputquantiles, sim)
-=#
-
-@testset "everything ran and produced expected types" begin
+@testset "everything ran and produced expected types" begin  # to add further tests later
     @test rng isa Xoshiro
     @test sim isa RenewalDiDData{Int64, InterventionMatrix{Int64}} 
     @test shortchain isa Chains

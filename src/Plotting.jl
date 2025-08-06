@@ -1,43 +1,9 @@
 # functions for plotting 
 
-# to avoid loading the `CairoMakie` package for users who are not planning to use it, this 
-# module simply exports the names of the plotting functions. Their signatures are added in
-# `RenewalDiDCairoMakieExt` after `using CairoMakie`
-
-module Plotting 
-
-using RenewalDiD
-
-export plotmodel, plotmodel!
-export plotmodeldata, plotmodeldata!
-export plotmodelintervention, plotmodelintervention!
-export plotmodeloutput, plotmodeloutput!
-export traceplot, traceplot!, trplot, trplot!
-export tracerankplot, tracerankplot!
-
-function __init__()
-    if isdefined(Base.Experimental, :register_error_hint)
-        Base.Experimental.register_error_hint(MethodError) do io, exc, argtypes, kwargs
-            plottinghint = "\nHINT: Plotting functions from `RenewalDiD.Plotting` are only \
-                available after `using CairoMakie`"
-            plottingfunctionslist = [
-                plotmodel, plotmodel!,
-                plotmodeldata, plotmodeldata!,
-                plotmodelintervention, plotmodelintervention!,
-                plotmodeloutput, plotmodeloutput!,
-                traceplot, traceplot!, 
-                tracerankplot, tracerankplot!,
-            ]
-
-            if exc.f in plottingfunctionslist && 
-                isnothing(Base.get_extension(RenewalDiD, :RenewalDiDCairoMakieExt))
-
-                print(io, plottinghint)
-            end
-        end
-    end
-    return nothing
-end
+# to avoid loading the `CairoMakie` package for users who are not planning to use it, 
+# definitions of plotting functions are given in `RenewalDiDCairoMakieExt`. Plotting
+# functions can be accessed by users either as `RenewalDiD.plotmodel` or with
+# `using RenewalDiD.Plotting; plotmodel`
 
 function plotmodel end
 function plotmodel! end
@@ -52,8 +18,24 @@ function traceplot! end
 function tracerankplot end
 function tracerankplot! end
 
-# `traceplot` is also exported by `MCMCChains` and `Turing`
+# `traceplot` is also exported by `Turing`
 trplot(args...; kwargs...) = traceplot(args...; kwargs...)
 trplot!(args...; kwargs...) = traceplot!(args...; kwargs...)
+
+module Plotting 
+
+using RenewalDiD: plotmodel, plotmodel!
+using RenewalDiD: plotmodeldata, plotmodeldata!
+using RenewalDiD: plotmodelintervention, plotmodelintervention!
+using RenewalDiD: plotmodeloutput, plotmodeloutput!
+using RenewalDiD: traceplot, traceplot!, trplot, trplot!
+using RenewalDiD: tracerankplot, tracerankplot!
+
+export plotmodel, plotmodel!
+export plotmodeldata, plotmodeldata!
+export plotmodelintervention, plotmodelintervention!
+export plotmodeloutput, plotmodeloutput!
+export traceplot, traceplot!, trplot, trplot!
+export tracerankplot, tracerankplot!
 
 end  # module Plotting

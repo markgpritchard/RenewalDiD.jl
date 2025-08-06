@@ -408,10 +408,6 @@ Run a series of simulations and collate results into a `RenewalDiDData` struct t
 order for the first simulation. Subsequent arguments are equivalent Tuples for the remaining 
 simulations. `intervention` is the time of the intervention under study, or `nothing` if 
 there is no intervention.
-
-# Returns
-A `Dict` with contents, a Matrix :observedcases, an InterventionMatrix :interventions, and a 
-vector :Ns (population size in each simulation)
 """
 function packsimulations(duration, m1_args, args...; kwargs...)
     return packsimulations(default_rng(), duration, m1_args, args...; kwargs...)

@@ -13,22 +13,22 @@ seedinfections1 = [1  0; 2  1]
 M_x1 = [2  0; -0.5  1; 1  0.5; -2  1; 0  1]
 calcseedinfections1 = let  # note, Ns not yet used  
     infectionsmatrix = zeros(2, 2)
-    RenewalDiD._infections_seed!(infectionsmatrix, zeros(5, 2), zeros(2, 2), 0, 2)
+    RenewalDiD._infections_seed!(infectionsmatrix, zeros(5, 2), zeros(2, 2), nothing, 2)
     infectionsmatrix
 end
 calcseedinfections2 = let  # note, Ns not yet used  
     infectionsmatrix = zeros(3, 2)
-    RenewalDiD._infections_seed!(infectionsmatrix, zeros(6, 2), zeros(3, 2), 0, 3)
+    RenewalDiD._infections_seed!(infectionsmatrix, zeros(6, 2), zeros(3, 2), nothing, 3)
     infectionsmatrix
 end
 calcseedinfections3 = let  # note, Ns not yet used  
     infectionsmatrix = zeros(2, 2)
-    RenewalDiD._infections_seed!(infectionsmatrix, zeros(5, 2), seedinfections1, 0, 2)
+    RenewalDiD._infections_seed!(infectionsmatrix, zeros(5, 2), seedinfections1, nothing, 2)
     infectionsmatrix
 end
 calcseedinfections4 = let  # note, Ns not yet used  
     infectionsmatrix = zeros(2, 2)
-    RenewalDiD._infections_seed!(infectionsmatrix, M_x1, seedinfections1, 0, 2)
+    RenewalDiD._infections_seed!(infectionsmatrix, M_x1, seedinfections1, nothing, 2)
     infectionsmatrix
 end
 calcseedinfections5 = let 
@@ -62,33 +62,39 @@ calcseedinfections10 = let
     infectionsmatrix
 end
 calcinfections1 = RenewalDiD._infections(
-    g_covid, Float64, zeros(5, 2), log.(zeros(3, 2)), zeros(2, 2), zeros(2), 2
+    g_covid, ComplexF64, zeros(5, 2), log.(zeros(3, 2)), zeros(2, 2), nothing, 2
 )
 calcinfections2 = RenewalDiD._infections(
-    g_covid, Float64, zeros(6, 2), log.(zeros(4, 2)), zeros(2, 2), zeros(2), 2
+    g_covid, ComplexF64, zeros(6, 2), log.(zeros(4, 2)), zeros(2, 2), nothing, 2
 )
 calcinfections3 = RenewalDiD._infections(
     generationtime, 
-    Float64, 
+    ComplexF64, 
     zeros(5, 2), 
     log.(zeros(3, 2)), 
-    seedinfections1, 
-    1000 .* ones(2), 
+    seedinfections1,  
+    nothing,  # tests below assume no change in susceptibility 
     2;
     vec=[0, 1],
 )
 calcinfections4 = RenewalDiD._infections(
     generationtime, 
-    Float64, 
+    ComplexF64, 
     zeros(5, 2), 
     log.(1.5 .* ones(3, 2)), 
     seedinfections1, 
-    1000 .* ones(2), 
+    nothing,  # tests below assume no change in susceptibility 
     2;
     vec=[0, 1],
 )
 calcinfections5 = RenewalDiD._infections(
-    generationtime, Float64, M_x1, log.(ones(3, 2)), seedinfections1, 1000 .* ones(2), 2;
+    generationtime, 
+    ComplexF64, 
+    M_x1, 
+    log.(ones(3, 2)), 
+    seedinfections1, 
+    nothing,  # tests below assume no change in susceptibility 
+    2;
     vec=[0, 1]
 )
 calcinfections6 = RenewalDiD._infections(
@@ -439,19 +445,19 @@ end
     @test calcinfections1 == zeros(5, 2)
     @test calcinfections2 == zeros(6, 2)
     @test_throws DimensionMismatch RenewalDiD._infections(
-        g_covid, Float64, zeros(5, 2), log.(zeros(3, 3)), zeros(2, 2), zeros(2), 2
+        g_covid, ComplexF64, zeros(5, 2), log.(zeros(3, 3)), zeros(2, 2), zeros(2), 2
     ) 
     @test_throws DimensionMismatch RenewalDiD._infections(
-        g_covid, Float64, zeros(5, 2), log.(zeros(3, 2)), zeros(2, 3), zeros(2), 2
+        g_covid, ComplexF64, zeros(5, 2), log.(zeros(3, 2)), zeros(2, 3), zeros(2), 2
     ) 
     @test_throws DimensionMismatch RenewalDiD._infections(
-        g_covid, Float64, zeros(5, 2), log.(zeros(3, 2)), zeros(2, 2), zeros(3), 2
+        g_covid, ComplexF64, zeros(5, 2), log.(zeros(3, 2)), zeros(2, 2), zeros(3), 2
     ) 
     @test_throws DimensionMismatch RenewalDiD._infections(
-        g_covid, Float64, zeros(5, 2), log.(zeros(4, 2)), zeros(2, 2), zeros(2), 2
+        g_covid, ComplexF64, zeros(5, 2), log.(zeros(4, 2)), zeros(2, 2), zeros(2), 2
     ) 
     @test_throws DimensionMismatch RenewalDiD._infections(
-        g_covid, Float64, zeros(5, 2), log.(zeros(3, 2)), zeros(2, 2), zeros(2), 3
+        g_covid, ComplexF64, zeros(5, 2), log.(zeros(3, 2)), zeros(2, 2), zeros(2), 3
     ) 
     @test calcinfections3 == predictedinfections3
     @test calcinfections4 == predictedinfections4

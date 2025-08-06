@@ -141,6 +141,10 @@ end  # another version of this function is in `processparameters.jl`
 
 ## Show
 
+function _showliststarttimes(M::InterventionMatrix)
+    return [x > M.duration ? nothing : x for x in M.starttimes]
+end
+
 function _showtimes(M::InterventionMatrix)
     uniquestarttimes = unique(M.starttimes)
     unsortedshowtimes = unique([uniquestarttimes; 1; _duration(M)])
@@ -211,6 +215,14 @@ function Base.show(io::IO, ::MIME"text/plain", M::InterventionMatrix)
         title=summary(M), 
         vlines=[1], 
     )
+end
+
+function Base.show(io::IO, M::InterventionMatrix) 
+    show(io, collect(M))
+    print(io, " {duration $(M.duration), starttimes [")
+    join(io, _showliststarttimes(M), ", ")
+    print(io, "]}")
+    return nothing
 end
 
 

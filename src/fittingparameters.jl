@@ -2,6 +2,8 @@
 
 # Structs ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+## data passed to `renewaldid`
+
 abstract type AbstractRenewalDiDData end
 
 @auto_hash_equals struct RenewalDiDData{S, T} <: AbstractRenewalDiDData
@@ -124,14 +126,69 @@ function _RenewalDiDDataUnlimitedPopn(
     return RenewalDiDDataUnlimitedPopn(observedcases, interventions, newexptdseedcases)
 end
 
-@kwdef struct RenewalDiDPriors{S, T, U, V, W, X, Y}
-    alphaprior::S=Normal(0, 1)
-    M_xprior::T=truncated(Normal(0, 1); lower=-1)
+function Base.getproperty(obj::RenewalDiDDataUnlimitedPopn, name::Symbol)
+    if name === :Ns 
+        return nothing 
+    else 
+        return getfield(obj, name)
+    end
+end
+
+function Base.show(io::IO, ::MIME"text/plain", d::AbstractRenewalDiDData)
+    _showtitle(io, d)
+    print(io, "\n observedcases:  ")
+    show(io, d.observedcases)
+    print(io, "\n interventions:  ")
+    show(io, d.interventions)
+    print(io, "\n Ns:             ")
+    _showns(io, d)
+    print(io, "\n exptdseedcases: ")
+    show(io, d.exptdseedcases)
+    return nothing
+end
+
+_showtitle(io, ::RenewalDiDData{S, T}) where {S, T} = print(io, "RenewalDiDData{$S, $T}")
+
+function _showtitle(io, ::RenewalDiDDataUnlimitedPopn{S, T}) where {S, T}
+    print(io, "RenewalDiDDataUnlimitedPopn{$S, $T}")
+    return nothing
+end
+
+_showns(io, d::RenewalDiDData) = show(io, d.Ns)
+_showns(io, ::RenewalDiDDataUnlimitedPopn) = print(io, "unlimited")
+
+## struct of prior distributions 
+
+@kwdef struct RenewalDiDPriors{Q, R, S, T, U, V, W, X, Y}
+    # attempting to fit `mu_delay` and `sigma_delay` gives NaN gradients so currently use
+    # constants (not that changing the priors in this struct will not affect `renewaldid`)
+    alphaprior::Q=Normal(0, 1)
+    M_xprior::R=truncated(Normal(0, 1); lower=-1)
+    mu_delayprior::S=log(2)  #mu_delayprior::S=Normal(0, 1)
+    sigma_delayprior::T=log(5)  #sigma_delayprior::T=Exponential(1)
     sigma_gammaprior::U=Exponential(1)
     sigma_thetaprior::V=Exponential(1)
     tauprior::W=Normal(0, 1)
     psiprior::X=Beta(1, 1)
     omegaprior::Y=0
+end
+
+function Base.show(
+    io::IO, ::MIME"text/plain", p::RenewalDiDPriors{Q, R, S, T, U, V, W, X, Y}
+) where {Q, R, S, T, U, V, W, X, Y}
+    print(
+        io,
+        "RenewalDiDPriors{$Q, $R, $S, $T, $U, $V, $W, $X, $Y}",
+        "\n alphaprior:       ", p.alphaprior,
+        "\n M_xprior:         ", p.M_xprior,
+        "\n mu_delayprior:    ", p.mu_delayprior,
+        "\n sigma_delayprior: ", p.sigma_delayprior,
+        "\n sigma_gammaprior: ", p.sigma_gammaprior,
+        "\n sigma_thetaprior: ", p.sigma_thetaprior,
+        "\n tauprior:         ", p.tauprior,
+        "\n psiprior:         ", p.psiprior,
+        "\n omegaprior:       ", p.omegaprior,
+    )
 end
 
 
@@ -267,12 +324,20 @@ function _infections(g, T::DataType, M_x, logR_0, exptdseedcases, Ns, n_seeds; k
     return infn
 end
 
-function _infectionsmatrix(logR_0::Matrix{T}, n_seeds) where T
-    return _infectionsmatrix(T, logR_0, n_seeds)
+# `_infectionsmatrix` will always return a `Matrix{<:Complex}` and will give a warning if 
+# something different is requested
+
+function _infectionsmatrix(logR_0, n_seeds) 
+    return _infectionsmatrix(ComplexF64, logR_0, n_seeds)
 end
 
 function _infectionsmatrix(T::DataType, logR_0, n_seeds)
-    return zeros(T, _ntimes(logR_0) + n_seeds, _ngroups(logR_0))
+    if T <: Complex
+        return zeros(T, _ntimes(logR_0) + n_seeds, _ngroups(logR_0))
+    else 
+    _realinfectionmatrixwarning(T)
+        return _infectionsmatrix(ComplexF64, logR_0, n_seeds)
+    end
 end
 
 function _infections!(g, infn, M_x, logR_0, exptdseedcases, Ns, n_seeds; kwargs...) 
@@ -287,7 +352,8 @@ function _infections_seed!(infn, M_x, exptdseedcases, ::Nothing, n_seeds; kwargs
 end
 
 # version that tracks proportion susceptible
-function _infections_seed!(  infn, M_x, exptdseedcases, Ns, n_seeds; kwargs...) 
+function _infections_seed!(infn, M_x, exptdseedcases, Ns, n_seeds; kwargs...) 
+    minimum(Ns) > 0 || throw(_zeropopulationerror(Ns))
     __infections_seed!(infn, M_x, exptdseedcases, n_seeds; kwargs...) 
     for j in 1:_ngroups(M_x), t in 1:n_seeds
         # previous proportion susceptible
@@ -362,7 +428,9 @@ function renewaldid(
         g,    
         priors.alphaprior,
         priors.M_xprior,
+        priors.mu_delayprior,
         priors.psiprior,
+        priors.sigma_delayprior,
         priors.sigma_gammaprior,
         priors.sigma_thetaprior,
         priors.tauprior,
@@ -385,7 +453,9 @@ function renewaldid(
         g,    
         priors.alphaprior,
         priors.M_xprior,
+        priors.mu_delayprior,
         priors.psiprior,
+        priors.sigma_delayprior,
         priors.sigma_gammaprior,
         priors.sigma_thetaprior,
         priors.tauprior,
@@ -403,7 +473,9 @@ end
     g,    
     alphaprior,
     M_xprior,
+    mu_delayprior,
     psiprior,
+    sigma_delayprior,
     sigma_gammaprior,
     sigma_thetaprior,
     tauprior,
@@ -421,9 +493,39 @@ end
     thetas_raw ~ filldist(Normal(0, 1), ntimes - 1)
     sigma_theta ~ sigma_thetaprior
     psi ~ psiprior
-    M_x ~ filldist(M_xprior, ntimes + n_seeds, ngroups)
+    #mu_delay ~ mu_delayprior
+    #sigma_delay ~ sigma_delayprior
+    M_x ~ filldist(truncated(Normal(0, 1); lower=-1), ntimes + n_seeds, ngroups)
     fittingsigma ~ Exponential(1)
-    predictobservedinfectionssigmamatrix ~ filldist(truncated(Normal(0, 1); lower=-1), ntimes + 1, ngroups)
+    predictobservedinfectionssigmamatrix ~ filldist(
+        truncated(Normal(0, 1); lower=-1), ntimes + 1, ngroups
+    )
+
+    # attempting to fit `mu_delay` and `sigma_delay` gives NaN gradients so currently use
+    # constants
+    mu_delay = log(2)
+    sigma_delay = log(5)
+
+    _z = max(
+        maximum(
+            [
+                [
+                    tau, 
+                    alpha, 
+                    sigma_gamma, 
+                    sigma_theta, 
+                    psi, 
+                    mu_delay, 
+                    sigma_delay, 
+                    fittingsigma
+                ]; 
+                gammas_raw; 
+                thetas_raw
+            ]
+        ),
+        maximum(M_x),
+        maximum(predictobservedinfectionssigmamatrix)
+    ) 
 
     gammavec = _gammavec(gammas_raw, sigma_gamma)
     thetavec = _thetavec(thetas_raw, sigma_theta)
@@ -437,22 +539,40 @@ end
         kwargs...
     )
 
+    # equal delay assumed for all cases 
+    delaydistn = LogNormal(mu_delay, sigma_delay)
+    delayedinfections = zeros(T, n_seeds + ntimes, ngroups)
+
+    for t in 1:(n_seeds + ntimes) 
+        for j in 1:ngroups
+            newvalue = zero(T) 
+            for x in 1:t 
+                newvalue += _delayedinfections(predictedinfections, delaydistn, x, t, j)
+            end
+            delayedinfections[t, j] += newvalue 
+        end
+    end
+
     # Normal approximation of Binomial to avoid forcing integer values 
-    np = real.(predictedinfections[n_seeds:n_seeds+ntimes, :]) .* psi
+    np = real.(delayedinfections[n_seeds:n_seeds+ntimes, :]) .* psi
 
     if isnan(maximum(np)) 
         @addlogprob! -Inf
         return  # exit the model evaluation early
     end
-#=
-    predictobservedinfections ~ arraydist(
-        truncated.(Normal.(np, np .* (1 - psi) .+ 1e-9); lower=0)
-    )
-=#
+
     predictobservedinfections = max.(0, np .+ predictobservedinfectionssigmamatrix .* np .* (1 - psi))
 
-    # to add delay later 
     observedcases ~ arraydist(Normal.(predictobservedinfections, fittingsigma))
+end
+
+function _delayedinfections(
+    predictedinfections::AbstractArray{T}, delaydistn, x, t, j
+) where T
+    if isnan(cdf(delaydistn, t + 1 - x)) || isnan(cdf(delaydistn, t - x))
+        return zero(T)
+    end
+    return predictedinfections[x, j] * (cdf(delaydistn, t + 1 - x) - cdf(delaydistn, t - x))
 end
 
 
@@ -501,6 +621,15 @@ function _predictedlogR_0assertions(gammas, thetas, interventions)
 end
 
 
+# Warnings ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+function _realinfectionmatrixwarning(T)
+    m = "`infectionsmatrix` requested with type `Matrix{$T}`. Must be complex so type \
+        `Matrix{ComplexF64}` returned"
+    @warn m
+    return nothing 
+end
+
 # Error messages ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 function _infectionsnseedserror()
@@ -548,3 +677,9 @@ function _vm_dimensionmismatch(len, vec, dim, mat, size)
 end
 
 _widthmismatch(a, b) = DimensionMismatch("`$a` and `$b` must have the same width")
+
+function _zeropopulationerror(Ns)
+    m = "$Ns: all population sizes must be greater than 0. To use the function without a \
+        population size use `Ns=nothing`"
+    return ArgumentError(m)
+end

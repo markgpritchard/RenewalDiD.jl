@@ -115,6 +115,7 @@ df3 = testdataframe( ;
     nseeds=2,
     alpha=zeros(10),
     gammadefault=zeros(10), 
+    psi=ones(10),
     thetadefault=zeros(10), 
     mxdefault=zeros(10),
 )
@@ -126,6 +127,7 @@ df4 = testdataframe( ;
     nseeds=2,
     alpha=[log(2)],
     gammadefault=zeros(1), 
+    psi=ones(1),
     thetadefault=zeros(1), 
     mxdefault=zeros(1),
 )
@@ -140,6 +142,7 @@ df5 = let
         alpha=zeros(1),
         sigma_gamma=ones(1),
         gammadefault=zeros(1), 
+        psi=ones(1),
         thetadefault=zeros(1), 
         mxdefault=zeros(1),
         kw...
@@ -156,6 +159,7 @@ df6 = let
         alpha=zeros(1),
         sigma_gamma=[0.5],
         gammadefault=zeros(1), 
+        psi=ones(1),
         thetadefault=zeros(1), 
         mxdefault=zeros(1),
         kw...
@@ -213,43 +217,36 @@ df10 = testdataframe( ;
 data1 = RenewalDiDDataUnlimitedPopn( ; 
     observedcases=zeros(11, 3), 
     interventions=zeros(10, 3), 
-    Ns=(100 .* ones(3)), 
     exptdseedcases=zeros(7, 3),
 )
 data2 = RenewalDiDDataUnlimitedPopn( ; 
     observedcases=zeros(13, 4), 
     interventions=zeros(12, 4), 
-    Ns=(100 .* ones(4)), 
     exptdseedcases=zeros(7, 4), 
 )
 data3 = RenewalDiDDataUnlimitedPopn( ; 
     observedcases=zeros(3, 2), 
     interventions=zeros(2, 2), 
-    Ns=(Inf .* ones(2)), 
     exptdseedcases=[0  0; 1  1],
 )
 data8 = RenewalDiDDataUnlimitedPopn( ; 
     observedcases=zeros(11, 3), 
     interventions=zeros(10, 3), 
-    Ns=(100 .* ones(3)), 
     exptdseedcases=zeros(2, 3),
 )
 data10 = RenewalDiDDataUnlimitedPopn( ; 
     observedcases=zeros(21, 4), 
     interventions=zeros(20, 4), 
-    Ns=(100 .* ones(4)), 
     exptdseedcases=zeros(2, 4),
 )
 data3ma = RenewalDiDDataUnlimitedPopn( ; 
     observedcases=zeros(3, 2), 
     interventions=zeros(2, 2), 
-    Ns=(100 .* ones(2)), 
     exptdseedcases=[0  0; _r1  _r2],
 )
 data3mb = RenewalDiDDataUnlimitedPopn( ; 
     observedcases=zeros(3, 2), 
     interventions=zeros(2, 2), 
-    Ns=(100 .* ones(2)), 
     exptdseedcases=[0  0; 1  1],
 )
 s1 = samplerenewaldidinfections(zeros(2), df1, data1, 2)
@@ -293,14 +290,7 @@ rv16b = let
 end
 
 sim1 = testsimulation(rng1)
-#=
-model1 =  renewaldid(
-    sim1, g_seir, packpriors(; sigma_thetaprior=Exponential(0.05)); 
-    gamma=0.2, sigma=0.5
-)
-chain1 = sample(rng1, model1, NUTS(), MCMCThreads(), 20, 4; verbose=false, progress=false)
-chaindf1 = DataFrame(chain1)
-=#
+
 @testset "number of unique elements" begin
     @test nunique([1, 2, 3]) == 3
     @test nunique(ones(3)) == 1
@@ -346,33 +336,21 @@ end
 end
 
 @testset "sampling errors" begin
-    # some dimension mismatch errors should now be caught while calling `RenewalDiDData`
+    # tests updated as some dimension mismatch errors should now be caught while calling 
+    # `RenewalDiDData`
     @test_throws DimensionMismatch RenewalDiDData( ; 
         observedcases=zeros(11, 3), 
         interventions=zeros(10, 3), 
         Ns=(100 .* ones(3)), 
         exptdseedcases=zeros(7, 4),
     )
+    # tests removed that used to throw an error for an older form of this function 
     @test_throws DimensionMismatch RenewalDiDData( ; 
-        observedcases=zeros(11, 3), 
-        interventions=zeros(10, 3), 
-        Ns=(100 .* ones(3)), 
-        exptdseedcases=zeros(8, 3),
-    )
-    data11 = RenewalDiDData( ; 
-        observedcases=zeros(11, 3), 
-        interventions=zeros(10, 3), 
-        Ns=(100 .* ones(3)), 
-        exptdseedcases=zeros(6, 3),
-    )
-    @test_throws DimensionMismatch samplerenewaldidinfections(zeros(2), df1, data11, 2) 
-    data12 = RenewalDiDData( ; 
         observedcases=zeros(11, 2), 
         interventions=zeros(10, 2), 
         Ns=(100 .* ones(3)), 
         exptdseedcases=zeros(7, 3),
     )
-    @test_throws DimensionMismatch samplerenewaldidinfections(zeros(2), df1, data12, 2) 
     @test_throws DimensionMismatch RenewalDiDData( ; 
         observedcases=zeros(11, 4), 
         interventions=zeros(10, 4), 
@@ -397,13 +375,12 @@ end
     @test_throws MethodError samplerenewaldidinfections([0, 1], df3, data3, 4.0:6)
     @test_throws MethodError samplerenewaldidinfections([0, 1], df3, data3, 4:0.5:6)
     @test_throws BoundsError samplerenewaldidinfections([0, 1], df3, data3, 4:16)  # df3 is 10 rows long
-    data15 = RenewalDiDData( ; 
+    @test_throws DimensionMismatch RenewalDiDData( ; 
         observedcases=zeros(11, 3), 
         interventions=zeros(10, 3), 
         Ns=(100 .* ones(3)), 
         exptdseedcases=zeros(7, 4),
     )
-    @test_throws DimensionMismatch samplerenewaldidinfections(zeros(2), df1, data15)
     data16 = RenewalDiDData( ; 
         observedcases=zeros(11, 3), 
         interventions=zeros(10, 3), 
