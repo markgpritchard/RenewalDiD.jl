@@ -299,9 +299,8 @@ end
     @testset "time step" begin
         @test RenewalDiD._tstep(StableRNG(1), [80, 10, 50, 30, 60, 20]) == expectedv1
     end
-    @testset "next event time" begin
-        @test RenewalDiD._nexteventtime(StableRNG(1), 3, [80, 10, 50, 30, 60, 20]) == 3 + expectedv1
-        @test RenewalDiD._nexteventtime(3, [80, 10, 50, 30, 60, 20]) > 3
+    @testset "next event time" begin  
+        # function not used in the package so no longer needs testing (and is deleted)
     end
     @testset "identifying next event" begin
         @test RenewalDiD._nextevent([100, 0, 0, 0, 0, 0]) == 1

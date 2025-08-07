@@ -110,9 +110,11 @@ end
     @test InterventionMatrix{Bool}(3, [2, 3]; mutewarnings=true)[3, 1]  
 end
 @testset "invalid arguments to contructor" begin
-    @test_throws MethodError InterventionMatrix(3.3, 2)
-    @test_throws MethodError InterventionMatrix(3, 2.3)
-    @test_throws MethodError InterventionMatrix(3, [2.3, 2])
+    @test_throws InexactError InterventionMatrix(3.3, 2; mutewarnings=true)  # a change in 
+    # the function means that it assesses the timings of interventions before finding the 
+    # InexactError
+    @test_throws InexactError InterventionMatrix(3, 2.3)
+    @test_throws InexactError InterventionMatrix(3, [2.3, 2])
 end
 @testset "indexing InterventionMatrix" begin
     @test M1[1] == 0

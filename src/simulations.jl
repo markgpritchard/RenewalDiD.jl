@@ -267,6 +267,9 @@ end
 ## Effect the next event
 
 _tstep(rng, rates) = -log(rand(rng)) / sum(rates)
+_nextevent(rates) = _nextevent(default_rng(), rates)  
+# `_nextevent(rates)` is not used by any functions expect the tests -- may be worth changing 
+# the tests and removing this method
 _nextevent(rng, rates) = sample(rng, eachindex(rates), Weights(rates))
 _updateevent!(u, nextevent) = u .+= _SEIREVENTSMATRIX[nextevent, :]
 

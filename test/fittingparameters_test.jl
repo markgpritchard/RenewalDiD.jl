@@ -38,8 +38,8 @@ model1 = renewaldid(
     g_seir, 
     RenewalDiDPriors( ; 
         alphaprior=Normal(log(2.5), 1), 
-        mu_delayprior=Normal(log(2.5), log(2)),
-        sigma_delayprior=truncated(Exponential(log(5)); lower=1e-6, upper=log(14)),
+        mu_delayprior=log(2.5),  # cannot currently accept distributions
+        sigma_delayprior=log(5),  # cannot currently accept distributions
         sigma_thetaprior=Exponential(0.075), 
         psiprior=Beta(6, 4)
     );                          
