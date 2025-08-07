@@ -299,9 +299,8 @@ end
     @testset "time step" begin
         @test RenewalDiD._tstep(StableRNG(1), [80, 10, 50, 30, 60, 20]) == expectedv1
     end
-    @testset "next event time" begin
-        @test RenewalDiD._nexteventtime(StableRNG(1), 3, [80, 10, 50, 30, 60, 20]) == 3 + expectedv1
-        @test RenewalDiD._nexteventtime(3, [80, 10, 50, 30, 60, 20]) > 3
+    @testset "next event time" begin  
+        # function not used in the package so no longer needs testing (and is deleted)
     end
     @testset "identifying next event" begin
         @test RenewalDiD._nextevent([100, 0, 0, 0, 0, 0]) == 1
@@ -372,10 +371,10 @@ end
 end 
 
 @testset "group simulations" begin
-    @test dict1[:interventions] == InterventionMatrix(20, 10, 12, nothing)
-    @test dict1[:Ns] == [250, 250, 221]
+    @test dict1.interventions == InterventionMatrix(20, 10, 12, nothing)
+    @test dict1.Ns == [250, 250, 221]
     @testset for i in 1:3 
-        @test dict1[:observedcases][:, i] == [sim1, sim2, sim3][i]
+        @test dict1.observedcases[:, i] == [sim1, sim2, sim3][i]
     end
     @test gensimtuple1 == simtuple1
     @test gensimtuple2 == simtuple2

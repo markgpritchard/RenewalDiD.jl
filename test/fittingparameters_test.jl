@@ -1,44 +1,54 @@
 # test the function `renewaldid`
 
+using DynamicPPL.TestUtils.AD: run_ad
+using Random
 using RenewalDiD
+using ReverseDiff
 using Test
-using StableRNGs
 using Turing
 
-# initially just a test that it doesn't error
-
-rng = StableRNG(1)
+rng = Xoshiro(1729)
 
 sim = let 
-    u0_1 = simulationu0(; s=98, e=2)
-    u0_2 = simulationu0(; s=198, e=2)
-    u0_3 = simulationu0(; s=48, e=2)
-    beta1(t) = 0.3 + 0.1 * cos((t - 20) * 2pi / 365)
-    beta2(t) = beta1(t) * t < 4 ? 1.1 : 0.88
-    beta3(t) = beta1(t) * t < 6 ? 0.9 : 0.72
+    u0_1 = simulationu0(; s=100_000, e=5, i_n=3, i_f=2)
+    u0_2 = simulationu0(; s=200_000, e=5, i_n=3, i_f=2)
+    u0_3 = simulationu0(; s=50_000, e=5, i_n=3, i_f=2)
     gamma = 0.2
     delta = 0.3
     theta = 0.6
     sigma = 0.5
+    _beta1counter(t) = 0.4 + 0.1 * cos((t-20) * 2pi / 365) 
+    _beta1(t) = t >= 50 ? 0.8 * _beta1counter(t) : _beta1counter(t)
+    _beta2(t) = t >= 30 ? 0.72 * _beta1counter(t) : 0.9 * _beta1counter(t)
+    _beta3(t) = 1.05 * _beta1counter(t)
     s1 = packsimulationtuple( ; 
-        u0=u0_1, beta=beta1, gamma, delta, theta, sigma, intervention=nothing,
+        u0=u0_1, beta=_beta1, gamma, delta, theta, sigma, intervention=50,
     )
     s2 = packsimulationtuple( ; 
-        u0=u0_2, beta=beta2, gamma, delta, theta, sigma, intervention=4,
+        u0=u0_2, beta=_beta2, gamma, delta, theta, sigma, intervention=30,
     )
     s3 = packsimulationtuple( ; 
-        u0=u0_3, beta=beta3, gamma, delta, theta, sigma, intervention=6,
+        u0=u0_3, beta=_beta3, gamma, delta, theta, sigma, intervention=nothing,
     )
-    packsimulations(rng, 10, s1, s2, s3)
+    packsimulations(rng, 100, s1, s2, s3; sampletime=14)
 end
 
-model =  renewaldid(
-    sim, g_seir, packpriors(; sigma_thetaprior=Exponential(0.05)); 
-    gamma=0.2, sigma=0.5
+model1 = renewaldid(                      
+    sim, 
+    g_seir, 
+    RenewalDiDPriors( ; 
+        alphaprior=Normal(log(2.5), 1), 
+        mu_delayprior=log(2.5),  # cannot currently accept distributions
+        sigma_delayprior=log(5),  # cannot currently accept distributions
+        sigma_thetaprior=Exponential(0.075), 
+        psiprior=Beta(6, 4)
+    );                          
+    gamma=0.2, sigma=0.5               
 )
 
-chain = sample(rng, model, NUTS(), MCMCThreads(), 20, 4; verbose=false, progress=false)
-
-df = DataFrame(chain)
-
-@test df.tau[1] == -0.04157675192947863
+@testset "any `NaN` gradients?" begin
+    adtype = AutoReverseDiff()
+    result = run_ad(model1, adtype; test=false, verbose=false,);
+    @test sum(isnan.(result.grad_actual)) == 0
+    @test isnothing(findfirst(isnan, result.grad_actual))
+end
