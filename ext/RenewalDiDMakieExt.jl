@@ -3,11 +3,13 @@
 module RenewalDiDMakieExt
 
 using RenewalDiD
-using RenewalDiD.Plotting
 using RenewalDiD: Automatic, automatic
-using Makie: Axis, Cycled, Figure, GridLayout, band!, lines!, linkaxes!, scatter!, vlines! 
+using Makie: Axis, Cycled, Figure, GridLayout, Label
+using Makie: band!, lines!, linkaxes!, scatter!, vlines!
 
-const FigOrGridLayout = Union{Figure, GridLayout}  # not exported
+const FigOrGridLayout = Union{Figure, GridLayout} 
+const StringOrSymbol = Union{<:AbstractString, Symbol} 
+const StringOrSymbolOrMissing = Union{<:AbstractString, Symbol, Missing} 
 
 include("makieext/keywords.jl")
 include("makieext/traceplot.jl")

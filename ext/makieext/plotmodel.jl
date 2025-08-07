@@ -4,23 +4,23 @@
 
 ## Combined figure 
 
-function RenewalDiD.Plotting.plotmodel(args...; kwargs...)
+function RenewalDiD.plotmodel(args...; kwargs...)
     fig = Figure(; kwargs...)
-    plotmodel!(fig, args...; kwargs...)
+    RenewalDiD.plotmodel!(fig, args...; kwargs...)
     return fig
 end
 
-function RenewalDiD.Plotting.plotmodel!(
+function RenewalDiD.plotmodel!(
     gl::FigOrGridLayout, modeloutputs::AbstractArray, args...; 
     kwargs...
 ) 
     axs = _plotmodeloutputaxs(gl, modeloutputs; axiskws(; kwargs...)...)
-    plotmodel!(axs, modeloutputs, args...; kwargs...)
+    RenewalDiD.plotmodel!(axs, modeloutputs, args...; kwargs...)
     linkaxes!(axs...)
     return axs
 end
 
-function RenewalDiD.Plotting.plotmodel!(
+function RenewalDiD.plotmodel!(
     axs::AbstractVector{Axis}, 
     modeloutputs::AbstractArray, 
     data::RenewalDiDData, 
@@ -29,13 +29,13 @@ function RenewalDiD.Plotting.plotmodel!(
 ) 
     observedcases = data.observedcases
     interventions = data.interventions
-    return plotmodel!(
+    return RenewalDiD.plotmodel!(
         axs, modeloutputs, observedcases, interventions, t; 
         kwargs...
     ) 
 end
 
-function RenewalDiD.Plotting.plotmodel!(
+function RenewalDiD.plotmodel!(
     axs::AbstractVector{Axis}, 
     modeloutputs::AbstractArray, 
     observedcases::AbstractArray, 
@@ -54,15 +54,15 @@ function _plotmodel!(
     modeloutputcolor=automatic,
     kwargs...
 ) 
-    plotmodeloutput!(
+    RenewalDiD.plotmodeloutput!(
         axs, modeloutputs, t; 
         _plotmodel_plotoutputkws(color, modeloutputcolor; kwargs...)...
     ) 
-    plotmodeldata!(
+    RenewalDiD.plotmodeldata!(
         axs, observedcases, t; 
         _plotmodel_plotdatakws(color, datacolor; kwargs...)...
     ) 
-    plotmodelintervention!(
+    RenewalDiD.plotmodelintervention!(
         axs, interventions; 
         _plotmodel_plotinterventionkws(color, interventioncolor; kwargs...)...
     ) 
@@ -97,13 +97,13 @@ _plotmodeloutputaxs(gl, A; kwargs...) = [Axis(gl[1, i]; kwargs...) for i in axes
 
 ## Model output 
 
-function RenewalDiD.Plotting.plotmodeloutput(args...; kwargs...)
+function RenewalDiD.plotmodeloutput(args...; kwargs...)
     fig = Figure(; kwargs...)
-    plotmodeloutput!(fig, args...; kwargs...)
+    RenewalDiD.plotmodeloutput!(fig, args...; kwargs...)
     return fig
 end
 
-function RenewalDiD.Plotting.plotmodeloutput!(
+function RenewalDiD.plotmodeloutput!(
     gl::FigOrGridLayout, A::AbstractArray, t=automatic; 
     kwargs...
 ) 
@@ -113,7 +113,7 @@ function RenewalDiD.Plotting.plotmodeloutput!(
     return axs
 end
 
-function RenewalDiD.Plotting.plotmodeloutput!(
+function RenewalDiD.plotmodeloutput!(
     axs::AbstractVector{Axis}, A::AbstractArray, t=automatic; 
     kwargs...
 ) 
@@ -171,13 +171,13 @@ end
 
 ## Model data 
 
-function RenewalDiD.Plotting.plotmodeldata(args...; kwargs...)
+function RenewalDiD.plotmodeldata(args...; kwargs...)
     fig = Figure(; kwargs...)
-    plotmodeldata!(fig, args...; kwargs...)
+    RenewalDiD.plotmodeldata!(fig, args...; kwargs...)
     return fig
 end
 
-function RenewalDiD.Plotting.plotmodeldata!(
+function RenewalDiD.plotmodeldata!(
     gl::FigOrGridLayout, A::AbstractArray, t=automatic; 
     kwargs...
 ) 
@@ -187,7 +187,7 @@ function RenewalDiD.Plotting.plotmodeldata!(
     return axs
 end
 
-function RenewalDiD.Plotting.plotmodeldata!(
+function RenewalDiD.plotmodeldata!(
     axs::AbstractVector{Axis}, A::AbstractArray, t=automatic; 
     kwargs...
 ) 
@@ -213,23 +213,23 @@ end
 
 ## Plot time of intervention 
 
-function RenewalDiD.Plotting.plotmodelintervention(args...; kwargs...)
+function RenewalDiD.plotmodelintervention(args...; kwargs...)
     fig = Figure(; kwargs...)
-    plotmodelintervention!(fig, args...; kwargs...)
+    RenewalDiD.plotmodelintervention!(fig, args...; kwargs...)
     return fig
 end
 
-function RenewalDiD.Plotting.plotmodelintervention!(
+function RenewalDiD.plotmodelintervention!(
     gl::FigOrGridLayout, A::AbstractArray; 
     kwargs...
 ) 
     axs = _plotmodeloutputaxs(gl, A; axiskws(; kwargs...)...)
-    plotmodelintervention!(axs, A; vlineskws(; kwargs...)...)
+    RenewalDiD.plotmodelintervention!(axs, A; vlineskws(; kwargs...)...)
     linkaxes!(axs...)
     return axs
 end
 
-function RenewalDiD.Plotting.plotmodelintervention!(
+function RenewalDiD.plotmodelintervention!(
     axs::AbstractVector{Axis}, A::AbstractArray; 
     kwargs...
 ) 

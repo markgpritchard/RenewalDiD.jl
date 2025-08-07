@@ -5,8 +5,6 @@
 # keyword arguments to multiple functions.  Functions on this page provide the correct 
 # keyword argument for each function.
 
-# Nothing in this file is exported
-
 # is this a good way of doing it?
 
 const AXISKWS = [
@@ -183,6 +181,26 @@ const BANDKWS = [
     :visible
 ]
 
+const LABELKWs = [
+    :alignmode
+    :color
+    :font
+    :fontsize
+    :halign
+    :height
+    :justification      
+    :lineheight
+    :padding
+    :rotation
+    :tellheight
+    :tellwidth
+    :text
+    :valign
+    :visible
+    :width
+    :word_wrap
+]
+
 const LINEKWS = [
     :alpha
     :clip_planes
@@ -287,6 +305,7 @@ const VLINESKWS = [
 
 axiskws(; kwargs...) = _selectkws(AXISKWS; kwargs...)
 bandkws(; kwargs...) = _selectkws(BANDKWS; kwargs...)
+labelkws(; kwargs...) = _selectkws(LABELKWs; kwargs...)
 lineskws(; kwargs...) = _selectkws(LINEKWS; kwargs...)
 scatterkws(; kwargs...) = _selectkws(SCATTERKWS; kwargs...)
 vlineskws(; kwargs...) = _selectkws(VLINESKWS; kwargs...)
@@ -302,3 +321,29 @@ function _selectkws(expectedarguments; skip=Symbol[], kwargs...)
     end
     return (; (kwkeys .=> kwvals)...)
 end
+
+## outputs from MCMC that are not plotted 
+const NOPLOTNAMES = [ 
+    "iteration", 
+    "chain", 
+    "lp", 
+    "n_steps", 
+    "is_accept", 
+    "acceptance_rate", 
+    "log_density", 
+    "hamiltonian_energy", 
+    "hamiltonian_energy_error", 
+    "max_hamiltonian_energy_error", 
+    "tree_depth", 
+    "numerical_error", 
+    "step_size", 
+    "nom_step_size"
+]
+
+function _plotnames(df) 
+    allnames = names(df)
+    plotnames = allnames[findall(x -> x ∉ NOPLOTNAMES, allnames)]
+    return plotnames 
+end
+
+_plotnames(df, vs) = _plotnames(df)[vs]

@@ -161,7 +161,7 @@ _showns(io, ::RenewalDiDDataUnlimitedPopn) = print(io, "unlimited")
 
 @kwdef struct RenewalDiDPriors{Q, R, S, T, U, V, W, X, Y}
     # attempting to fit `mu_delay` and `sigma_delay` gives NaN gradients so currently use
-    # constants (not that changing the priors in this struct will not affect `renewaldid`)
+    # constants. `renewaldid` will throw a MethodError if these are distributions
     alphaprior::Q=Normal(0, 1)
     M_xprior::R=truncated(Normal(0, 1); lower=-1)
     mu_delayprior::S=log(2)  #mu_delayprior::S=Normal(0, 1)
@@ -416,40 +416,25 @@ function _prevpropsus(infn, t, j; kwargs...)
 end
 
 function renewaldid(
-    data::RenewalDiDData, g, priors::RenewalDiDPriors; 
+    data::AbstractRenewalDiDData, g, priors::RenewalDiDPriors{Q, R, S, T, U, V, W, X, Y}; 
     kwargs...
-)
+) where {
+    Q <: Distribution, 
+    R <: Distribution, 
+    S <: Number, 
+    T <: Number, 
+    U <: Distribution, 
+    V <: Distribution, 
+    W <: Distribution, 
+    X <: Distribution, 
+    Y <: Any
+}
     n_seeds = size(data.exptdseedcases, 1)
     return _renewaldid(
         data.observedcases,
         data.interventions,
         data.exptdseedcases,
         data.Ns,
-        g,    
-        priors.alphaprior,
-        priors.M_xprior,
-        priors.mu_delayprior,
-        priors.psiprior,
-        priors.sigma_delayprior,
-        priors.sigma_gammaprior,
-        priors.sigma_thetaprior,
-        priors.tauprior,
-        n_seeds,
-        priors.omegaprior;
-        kwargs...
-    )
-end
-
-function renewaldid(
-    data::RenewalDiDDataUnlimitedPopn, g, priors::RenewalDiDPriors; 
-    kwargs...
-)
-    n_seeds = size(data.exptdseedcases, 1)
-    return _renewaldid(
-        data.observedcases,
-        data.interventions,
-        data.exptdseedcases,
-        nothing,
         g,    
         priors.alphaprior,
         priors.M_xprior,

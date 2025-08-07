@@ -7,7 +7,7 @@ using PrettyTables: pretty_table
 using Random: AbstractRNG, default_rng
 using StatsBase: Weights, mean, ordinalrank, quantile, sample
 using Turing: @addlogprob!, @model
-using Turing: Beta, Exponential, LogNormal, Normal
+using Turing: Beta, Distribution, Exponential, LogNormal, Normal
 using Turing: arraydist, cdf, filldist, product_distribution, truncated 
 
 # re-export from `DataFrames`

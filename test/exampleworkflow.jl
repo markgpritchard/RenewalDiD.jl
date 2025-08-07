@@ -40,7 +40,7 @@ model1 = renewaldid(
     g_seir, 
     RenewalDiDPriors( ; 
         alphaprior=Normal(log(2.5), 1), 
-        sigma_delayprior=truncated(Exponential(log(5)); lower=1e-6, upper=log(14)),
+        mu_delayprior=log(5),
         sigma_thetaprior=Exponential(0.075), 
         psiprior=Beta(6, 4)
     );                          
@@ -49,7 +49,7 @@ model1 = renewaldid(
 
 priorschain = sample(rng, model1, Prior(), 10_000)
 priorsdf = DataFrame(priorschain)
-priortraceplot = trplot(priorsdf, :tau)
+priortraceplot = trplot(priorsdf; ncols=5, nplots=50, size=(1000, 1000))  # examine 50 variables
 priorsfittedoutputs = samplerenewaldidinfections(
     g_seir, priorsdf, sim; 
     gamma=0.2, sigma=0.5,
@@ -70,16 +70,17 @@ priorsoutputinitquantiles = quantilerenewaldidinfections(
 priorsinitplot = plotmodel(priorsoutputinitquantiles, sim)
 
 #priorinitparams = [[values(priorsdf[i, 3:735])...] for i in initindices]
-priorinitparams = [[values(priorsdf[i, 3:734])...] for i in initindices]
+priorinitparams = [[values(priorsdf[i, 3:733])...] for i in initindices]
 
 shortchain = sample(
-    rng, model1, NUTS(0.65; adtype=AutoReverseDiff()), MCMCThreads(), 20, 4; 
+    rng, model1, NUTS(0.65; adtype=AutoReverseDiff()), MCMCThreads(), 25, 4; 
+    #rng, model1, NUTS(0.65; adtype=AutoReverseDiff()), MCMCThreads(), 20, 4; 
     #rng, model1, NUTS(0.65; adtype=AutoReverseDiff()), MCMCThreads(), 5, 4; 
     initial_params=priorinitparams,
 ) 
 shortdf = DataFrame(shortchain)
-p1 = trplot(shortdf, :tau)
-p2 = tracerankplot(shortdf, :tau; binsize=4)
+p1 = trplot(shortdf; ncols=5, nplots=50, size=(1000, 1000))  # examine 50 variables
+p2 = tracerankplot(shortdf; binsize=5, ncols=5, nplots=50, size=(1000, 1000)) 
 
 shortfittedoutputs = samplerenewaldidinfections(
     g_seir, shortdf, sim; 
