@@ -12,6 +12,7 @@ const StringOrSymbol = Union{<:AbstractString, Symbol}
 const StringOrSymbolOrMissing = Union{<:AbstractString, Symbol, Missing} 
 
 include("makieext/keywords.jl")
+include("makieext/plotnames.jl")
 include("makieext/traceplot.jl")
 include("makieext/tracerankplot.jl")
 include("makieext/plotmodel.jl")
