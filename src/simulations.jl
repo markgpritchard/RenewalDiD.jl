@@ -9,12 +9,12 @@
 Generate simulated data.
 
 Model uses Gillespie's stochastic continuous time method with 6 compartments:
-* `s`: susceptible 
-* `e`: exposed (infected but not yet infectious)
-* `i_n`: infectious and will never be diagnosed 
-* `i_f`: infectious and will be diagnosed before recovery 
-* `i_d`: infectious and diagnosed 
-* `r`: recovered
+- `s`: susceptible 
+- `e`: exposed (infected but not yet infectious)
+- `i_n`: infectious and will never be diagnosed 
+- `i_f`: infectious and will be diagnosed before recovery 
+- `i_d`: infectious and diagnosed 
+- `r`: recovered
 
 A 7th compartment in the model records the cumulative number of diagnoses.
 
@@ -81,7 +81,7 @@ julia> runsimulation(rng, 10, u0;
 """
 function runsimulation end
 
-## Constants ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# Constants ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 const _SEIREVENTSMATRIX = [  # matrix of movements between compartments 
     # s    e    i_n  i_f  i_d  r    cumulativediagnoses
@@ -94,9 +94,9 @@ const _SEIREVENTSMATRIX = [  # matrix of movements between compartments
 ]
 
 
-## Functions ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# Functions ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-### Simulation u0
+## Simulation u0
 
 """
     simulationu0(; s, e, i_n, i_d, i_f, r, n)
@@ -105,12 +105,12 @@ Produce vector of initial conditions for simulation.
 
 # Keyword arguments 
 The following represent the model compartments, 
-* `s::Integer=0`: susceptible 
-* `e::Integer=0`: exposed (infected but not yet infectious)
-* `i_n::Integer=0`: infectious and will never be diagnosed 
-* `i_f::Integer=0`: infectious and will be diagnosed before recovery 
-* `i_d::Integer=0`: infectious and diagnosed 
-* `r::Union{<:Integer, Automatic}=automatic`: recovered
+- `s::Integer=0`: susceptible 
+- `e::Integer=0`: exposed (infected but not yet infectious)
+- `i_n::Integer=0`: infectious and will never be diagnosed 
+- `i_f::Integer=0`: infectious and will be diagnosed before recovery 
+- `i_d::Integer=0`: infectious and diagnosed 
+- `r::Union{<:Integer, Automatic}=automatic`: recovered
 
 The argument `n::Union{<:Integer, Nothing}=nothing` is the population size. If `n` is 
     provided and `r` is not then the remaining population not assigned to other compartments 
@@ -181,10 +181,15 @@ function _simulationu0(s, e, i_n, i_f, i_d, r::Integer, ::Nothing)
     return u0
 end
 
-### Parameters
+## Parameters
 
 # Model parameters may be functions or numbers. The `_parameter` function allows either to 
-# be handled. In all cases the value must be >= 0
+# be handled. In all cases the value must be >= 0. `symbol` is shown error messages when 
+# outputs are not as expected. 
+
+# generic parameter name: prefer to use a symbol that is the name of a specific parameter
+_parameter(x, t; kwargs...) = _parameter(x, t, :parameter; kwargs...)
+
 _parameter(f::Function, t, symbol; kwargs...) = _parameter(f(t), t, symbol; kwargs...)
 
 function _parameter(x::Number, t, symbol; upper=nothing)
@@ -199,34 +204,34 @@ function __parameter(x, t, symbol, upper)
     return x
 end
 
-# generic parameter name: aim to use a symbol that is the name of a specific parameter
-_parameter(x, t; kwargs...) = _parameter(x, t, :parameter; kwargs...)
+_pbeta(beta, t) = _parameter(beta, t, :beta)
+_pdelta(delta, t) = _parameter(delta, t, :delta)
+_pgamma(gamma, t) = _parameter(gamma, t, :gamma)
+_psigma(sigma, t) = _parameter(sigma, t, :sigma)
+_ptheta(theta, t) = _parameter(theta, t, :theta; upper=1)  # theta is a proportion 0 ≤ θ ≤ 1
 
-### Force of infection 
+## Force of infection 
 
-# i_n, i_f and i_d are all assumed equally infectious
-_foi(beta, i_n, i_f, i_d, n, t) = _parameter(beta, t, :beta) * (i_n + i_f + i_d) / n
+# i_n, i_f and i_d assumed to be equally infectious
+_foi(beta, i_n, i_f, i_d, n, t) = _pbeta(beta, t) * (i_n + i_f + i_d) / n
 
-### Event rates
+## Event rates
 
 _simulatedinfections(beta, s, i_n, i_f, i_d, n, t) = s * _foi(beta, i_n, i_f, i_d, n, t)
 
 function _diseaseprogression_to_i_n(x, theta, sigma, t)
-    return x * (1 - _parameter(theta, t, :theta; upper=1)) * _parameter(sigma, t, :sigma)
+    return x * (1 - _ptheta(theta, t)) * _psigma(sigma, t)
 end
 
-function _diseaseprogression_to_i_f(x, theta, sigma, t)
-    return x * _parameter(theta, t, :theta; upper=1) * _parameter(sigma, t, :sigma)
-end
-
-_diagnosis(x, delta, t) = x * _parameter(delta, t, :delta)
-_recovery(x, gamma, t) = x * _parameter(gamma, t, :gamma)
+_diseaseprogression_to_i_f(x, theta, sigma, t) = x * _ptheta(theta, t) * _psigma(sigma, t)
+_diagnosis(x, delta, t) = x * _pdelta(delta, t)
+_recovery(x, gamma, t) = x * _pgamma(gamma, t)
 
 # diagnosed individuals have already been infectious for a period represented by `1/delta`
 # so recover after a period `1/gamma - 1/delta`
 function _recovery(x, gamma, delta, t) 
-    timetodiagnosis = 1 / _parameter(delta, t, :delta)
-    timetorecovery = 1 / _parameter(gamma, t, :gamma)
+    timetodiagnosis = 1 / _pdelta(delta, t)
+    timetorecovery = 1 / _pgamma(gamma, t)
     if isinf(timetorecovery)
         # no need for error message about time taken to diagnosis if recovery never happens
         remainingtime = timetorecovery
@@ -259,22 +264,13 @@ function _seirrates(u::AbstractVector{<:Integer}, t, beta, gamma, delta, theta, 
     ]
 end
 
-### Effect the next event
+## Effect the next event
 
 _tstep(rng, rates) = -log(rand(rng)) / sum(rates)
-
-_nexteventtime(t, rates) = _nexteventtime(default_rng(), t, rates)
-
-function _nexteventtime(rng::AbstractRNG, t, rates)
-    tstep = _tstep(rng, rates)
-    return t + tstep
-end
-
-_nextevent(rates) = _nextevent(default_rng(), rates)
-_nextevent(rng::AbstractRNG, rates) = sample(rng, eachindex(rates), Weights(rates))
+_nextevent(rng, rates) = sample(rng, eachindex(rates), Weights(rates))
 _updateevent!(u, nextevent) = u .+= _SEIREVENTSMATRIX[nextevent, :]
 
-### Simulate a day
+## Simulate a day
 
 _simulateday!(args...) = _simulateday!(default_rng(), args...)
 
@@ -291,7 +287,7 @@ function _simulateday!(rng::AbstractRNG, u, t, beta, gamma, delta, theta, sigma)
     return u 
 end
 
-### Whole simulation
+## Whole simulation
 
 runsimulation(args...; kwargs...) = runsimulation(default_rng(), args...; kwargs...) 
 
@@ -399,48 +395,150 @@ end
 ## Group / pack simulations 
 
 """
-    packsimulations([rng::AbstractRNG], duration, m1_args, args...)
+    packsimulations([rng::AbstractRNG], duration, m1_args, args...; <keyword arguments>)
 
 Run a series of simulations and collate results into a `RenewalDiDData` struct to be passed 
     to `renewaldid`.
 
-`m1_args` is a `Tuple` containing `{u0, beta, gamma, delta, theta, sigma, intervention}` in 
-order for the first simulation. Subsequent arguments are equivalent Tuples for the remaining 
-simulations. `intervention` is the time of the intervention under study, or `nothing` if 
-there is no intervention.
+# Arguments
+
+- `duration`: duration of the simulation.
+- `m1_args`: a `Tuple` containing `{u0, beta, gamma, delta, theta, sigma, intervention}` in 
+    order for the first group's simulation. The function `packsimulationtuple` can be used 
+    to generate this with keyword arguments
+- `args...`: equivalent Tuples for remaining groups.
+- keyword arguments are passed to `RenewalDiDData`
+
+# Examples
+```jldoctest
+julia> using StableRNGs
+
+julia> rng = StableRNG(100);
+
+julia> u0_1 = simulationu0(; s=100_000, e=5, i_n=3, i_f=2);
+
+julia> u0_2 = simulationu0(; s=200_000, e=5, i_n=3, i_f=2);
+
+julia> gamma = 0.2; delta = 0.3; theta = 0.6; sigma = 0.5;
+
+julia> _beta1counter(t) = 0.4 + 0.1 * cos((t-20) * 2pi / 365);
+
+julia> _beta1(t) = t >= 50 ? 0.8 * _beta1counter(t) : _beta1counter(t);
+
+julia> _beta2(t) = 0.72 * _beta1counter(t);
+
+julia> s1 = packsimulationtuple( ;
+       u0=u0_1, beta=_beta1, gamma, delta, theta, sigma, intervention=50,
+       );
+
+julia> s2 = packsimulationtuple( ;
+       u0=u0_2, beta=_beta2, gamma, delta, theta, sigma, intervention=nothing,
+       );
+
+julia> packsimulations(rng, 100, s1, s2)
+RenewalDiDData{Int64, InterventionMatrix{Int64}}
+ observedcases:  [0 0; 0 0; … ; 6 1380; 9 1414]
+ interventions:  [0 0; 0 0; … ; 1 0; 1 0] {duration 100, starttimes [50, nothing]}
+ Ns:             [100010, 200010]
+ exptdseedcases: [0.0 0.46548963316975533; 0.024913053640556182 0.0; … ; \
+    0.4209971568176677 0.0; 0.5200181826119457 0.03451036683024468]
+```
 """
-function packsimulations(duration, m1_args, args...; kwargs...)
-    return packsimulations(default_rng(), duration, m1_args, args...; kwargs...)
+function packsimulations(args...; kwargs...)
+    return _packsimulations(RenewalDiDData, args...; kwargs...)
 end
 
-function packsimulations(rng::AbstractRNG, duration, m1_args, args...; kwargs...)
+"""
+    packsimulationsunlimitedpopulation([rng::AbstractRNG], duration, m1_args, args...; \
+        <keyword arguments>)
+
+Run a series of simulations and collate results into a `RenewalDiDDataUnlimitedPopn` struct 
+    to be passed to `renewaldid`.
+
+# Arguments
+
+- `duration`: duration of the simulation.
+- `m1_args`: a `Tuple` containing `{u0, beta, gamma, delta, theta, sigma, intervention}` in 
+    order for the first group's simulation. The function `packsimulationtuple` can be used 
+    to generate this with keyword arguments
+- `args...`: equivalent Tuples for remaining groups.
+- keyword arguments are passed to `RenewalDiDDataUnlimitedPopn`
+
+# Examples
+```jldoctest
+julia> using StableRNGs
+
+julia> rng = StableRNG(100);
+
+julia> u0_1 = simulationu0(; s=100_000, e=5, i_n=3, i_f=2);
+
+julia> u0_2 = simulationu0(; s=200_000, e=5, i_n=3, i_f=2);
+
+julia> gamma = 0.2; delta = 0.3; theta = 0.6; sigma = 0.5;
+
+julia> _beta1counter(t) = 0.4 + 0.1 * cos((t-20) * 2pi / 365);
+
+julia> _beta1(t) = t >= 50 ? 0.8 * _beta1counter(t) : _beta1counter(t);
+
+julia> _beta2(t) = 0.72 * _beta1counter(t);
+
+julia> s1 = packsimulationtuple( ;
+       u0=u0_1, beta=_beta1, gamma, delta, theta, sigma, intervention=50,
+       );
+
+julia> s2 = packsimulationtuple( ;
+       u0=u0_2, beta=_beta2, gamma, delta, theta, sigma, intervention=nothing,
+       );
+
+julia> packsimulationsunlimitedpopulation(rng, 100, s1, s2)
+RenewalDiDDataUnlimitedPopn{Int64, InterventionMatrix{Int64}}
+ observedcases:  [0 0; 0 0; … ; 6 1380; 9 1414]
+ interventions:  [0 0; 0 0; … ; 1 0; 1 0] {duration 100, starttimes [50, nothing]}
+ Ns:             unlimited
+ exptdseedcases: [0.0 0.46548963316975533; 0.024913053640556182 0.0; … ; \
+    0.4209971568176677 0.0; 0.5200181826119457 0.03451036683024468]
+```
+"""
+function packsimulationsunlimitedpopulation(args...; kwargs...)
+    return _packsimulations(_renewaldiddataunlimitedpopn_removens, args...; kwargs...)
+end
+
+function _renewaldiddataunlimitedpopn_removens(; Ns=nothing, kwargs...)
+    return RenewalDiDDataUnlimitedPopn(; kwargs...)
+end
+
+function _packsimulations(f, duration, m1_args, args...; kwargs...)
+    return _packsimulations(f, default_rng(), duration, m1_args, args...; kwargs...)
+end
+
+function _packsimulations(f, rng::AbstractRNG, duration, m1_args, args...; kwargs...)
     interventiontimes = Vector{Union{Int, Nothing}}(undef, 0)
     Ns = zeros(Int, 0)
     observedcases = zeros(Int, duration + 1, 0)
     interventiontimes, Ns, observedcases = _packsimulation!(
-        interventiontimes, Ns, rng, observedcases, duration, m1_args, args...
+        rng, interventiontimes, Ns, observedcases, duration, m1_args, args...
     )
     interventions = InterventionMatrix{Int}(duration, interventiontimes)
-    return RenewalDiDData(; observedcases, interventions, Ns, kwargs...)
+    return f(; observedcases, interventions, Ns, kwargs...)
 end
 
-function _packsimulation!(interventiontimes, Ns, rng, observedcases, duration, m1_args)
-    return __packsimulation!(interventiontimes, Ns, rng, observedcases, duration, m1_args)
+function _packsimulation!(rng, interventiontimes, Ns, observedcases, duration, m1_args)
+    # simulation with one set of arguments
+    return __packsimulation!(rng, interventiontimes, Ns, observedcases, duration, m1_args)
 end
 
 function _packsimulation!(
-    interventiontimes, Ns, rng, observedcases, duration, m1_args, args...
+    rng, interventiontimes, Ns, observedcases, duration, m1_args, args...
 )
     interventiontimes, Ns, observedcases = __packsimulation!(
-        interventiontimes, Ns, rng, observedcases, duration, m1_args
+        # use first set of arguments
+        rng, interventiontimes, Ns, observedcases, duration, m1_args
     )
-    # iterate through this function until only one Tuple remains, then uses version above
-    return _packsimulation!(interventiontimes, Ns, rng, observedcases, duration, args...)
+    # iterate until only one Tuple remains
+    return _packsimulation!(rng, interventiontimes, Ns, observedcases, duration, args...)
 end
 
-function __packsimulation!(
-    interventiontimes, Ns, rng::AbstractRNG, observedcases, duration, args::Tuple
-)
+function __packsimulation!(rng, interventiontimes, Ns, observedcases, duration, args::Tuple)
     u0, beta, gamma, delta, theta, sigma, intervention = args
     n = _n_seir(u0)
     cases = simulationcases(rng, duration, u0, beta, gamma, delta, theta, sigma)
@@ -450,6 +548,28 @@ function __packsimulation!(
     return (interventiontimes, Ns, observedcases)
 end
 
+"""
+    packsimulationtuple(; u0, beta, gamma, delta, theta, sigma, intervention)
+
+Return a tuple of arguments to be used with `packsimulations` or 
+    `packsimulationsunlimitedpopulation`.
+
+# Examples
+```jldoctest
+julia> u0 = simulationu0(; s=100_000, e=5, i_n=3, i_f=2);
+
+julia> gamma = 0.2; delta = 0.3; theta = 0.6; sigma = 0.5;
+
+julia> _beta1counter(t) = 0.4 + 0.1 * cos((t-20) * 2pi / 365);
+
+julia> _beta1(t) = t >= 50 ? 0.8 * _beta1counter(t) : _beta1counter(t);
+
+julia> packsimulationtuple( ;
+       u0, beta=_beta1, gamma, delta, theta, sigma, intervention=50,
+       )
+([100000, 5, 3, 2, 0, 0, 0], _beta1, 0.2, 0.3, 0.6, 0.5, 50)
+```
+"""
 function packsimulationtuple(; u0, beta, gamma, delta, theta, sigma, intervention)
     return (u0, beta, gamma, delta, theta, sigma, intervention)
 end

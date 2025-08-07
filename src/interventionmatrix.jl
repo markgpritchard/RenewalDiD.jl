@@ -1,6 +1,6 @@
 # The InterventionMatrix struct for storing times that interventions are implemented
 
-## Structs and constructors ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# Structs ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 abstract type AbstractInterventionsArray{T, N} <: AbstractArray{T, N} end
 
@@ -14,92 +14,79 @@ Matrix of intervention times.
 - `rawstarttimes::Vector{<:Union{<:Integer, Nothing}}`: times of interventions for each 
     group as entered by user
 - `starttimes::Vector{Int}`: cleaned version of `rawstarttimes` that is called when in use
-"""
-struct InterventionMatrix{T} <: AbstractInterventionsArray{T, 2}
-    duration::Int
-    rawstarttimes::Vector{<:Union{<:Integer, Nothing}}
-    starttimes::Vector{Int}
 
-    function InterventionMatrix{T}(
-        duration::Int, rawstarttimes::Vector{<:Union{<:Integer, Nothing}};
-        mutewarnings=nothing,
-    ) where T
-        starttimes = _generateinterventionstarttimes(rawstarttimes, duration)
-        minimum(starttimes) > duration && _nointerventionwarning(mutewarnings)
-        maximum(starttimes) <= duration && _allinterventionwarning(mutewarnings)
-        return new{T}(duration, rawstarttimes, starttimes)
-    end
-end
+# Constructors
 
-### Constructors
+    InterventionMatrix[{T}](duration, rawstarttimes; mutewarnings=nothing)
+    InterventionMatrix[{T}](duration, rawstarttimes...; mutewarnings=nothing)
 
-"""
-    InterventionMatrix[{T}](duration, rawstarttimes::Vector{<:Union{<:Integer, Nothing}}; \
-        mutewarnings=nothing)
-    InterventionMatrix[{T}](duration, starttime1, starttime2, starttimes...; \
-        mutewarnings=nothing)
+## Arguments
 
-Construct an `InterventionMatrix`.
-
-`T` is optional. If not supplied, defaults to `Int`.
-
-Starttimes that are entered as `nothing`, that are `≤ 1` or are `> duration`, are treated 
-    equivalently as meaning that the intervention did not occur during the study period.
+* `T`: type of the array output; optional, defaults to `Int`.
+* `duration`: must be able to convert into an `Int` 
+* `rawstarttimes`: a vector or separate arguments; each must be `nothing` or a number that
+    can convert into `Int`. Starttimes that are entered as `nothing`, a value `≤ 1` or 
+    `> duration`, are treated equivalently as meaning that the intervention did not occur 
+    during the study period.
 
 Warnings are provided if no groups have an intervention or all groups have an intervention
     before the end of duration, unless `mutewarnings==true`.
 
 # Examples
 ```jldoctest
-julia> InterventionMatrix{Bool}(100, [25, 50, 200])
-100×3 InterventionMatrix{Bool}
- time │     1      2      3 
-──────┼─────────────────────
-    1 │ false  false  false
-    ⋮ │     ⋮      ⋮      ⋮
-   25 │  true  false  false
-    ⋮ │     ⋮      ⋮      ⋮
-   50 │  true   true  false
-    ⋮ │     ⋮      ⋮      ⋮
-  100 │  true   true  false
+julia> InterventionMatrix(100, [25, 50, 200])
+100×3 InterventionMatrix{Int64}
+ time │ 1  2  3 
+──────┼─────────
+    1 │ 0  0  0
+    ⋮ │ ⋮  ⋮  ⋮
+   25 │ 1  0  0
+    ⋮ │ ⋮  ⋮  ⋮
+   50 │ 1  1  0
+    ⋮ │ ⋮  ⋮  ⋮
+  100 │ 1  1  0
 
 
-julia> InterventionMatrix(100, 50, 75, -1, nothing)
-100×4 InterventionMatrix{Int64}
- time │ 1  2  3  4 
-──────┼────────────
-    1 │ 0  0  0  0
-    ⋮ │ ⋮  ⋮  ⋮  ⋮
-   50 │ 1  0  0  0
-    ⋮ │ ⋮  ⋮  ⋮  ⋮
-   75 │ 1  1  0  0
-    ⋮ │ ⋮  ⋮  ⋮  ⋮
-  100 │ 1  1  0  0
+julia> InterventionMatrix{Bool}(100, 50, 75, -1, nothing)
+100×4 InterventionMatrix{Bool}
+ time │     1      2      3      4 
+──────┼────────────────────────────
+    1 │ false  false  false  false
+    ⋮ │     ⋮      ⋮      ⋮      ⋮
+   50 │  true  false  false  false
+    ⋮ │     ⋮      ⋮      ⋮      ⋮
+   75 │  true   true  false  false
+    ⋮ │     ⋮      ⋮      ⋮      ⋮
+  100 │  true   true  false  false
+
+
+julia> InterventionMatrix(100, [25, 50, 100]);
+┌ Warning: All groups in InterventionMatrix have intervention before end of duration
+└ @ RenewalDiD 
 ```
-"""
+""" 
+struct InterventionMatrix{T} <: AbstractInterventionsArray{T, 2}
+    duration::Int
+    rawstarttimes::Vector{<:Union{<:Integer, Nothing}}
+    starttimes::Vector{Int}
+
+    function InterventionMatrix{T}(
+        duration::Number, rawstarttimes::Vector{<:Union{<:Number, Nothing}};
+        mutewarnings=nothing,
+    ) where T
+        starttimes = _generateinterventionstarttimes(rawstarttimes, duration)
+        minimum(starttimes) > duration && _nointerventionwarning(mutewarnings)
+        maximum(starttimes) <= duration && _allinterventionwarning(mutewarnings)
+        return new{T}(convert(Int, duration), rawstarttimes, starttimes)
+    end
+end
+
+## Constructors
+
 InterventionMatrix(args...; kwargs...) = InterventionMatrix{Int}(args...; kwargs...)
 
-function InterventionMatrix{T}(duration, args...; kwargs...) where T
-    return _interventionmatrix(T, duration, args...; kwargs...)
-end
-
-function _interventionmatrix(T::DataType, duration::Integer, args...; kwargs...)
-    return _interventionmatrix(T, convert(Int, duration), args...; kwargs...)
-end
-
-function _interventionmatrix(T::DataType, duration::Int, args...; kwargs...)
-    return _interventionmatrix(T, duration, [args...]; kwargs...)
-end
-
-function _interventionmatrix(T::DataType, duration::Int, rawstarttimes::Vector; kwargs...)
-    return __interventionmatrix(T, duration, rawstarttimes; kwargs...)
-end
-
-function __interventionmatrix(
-    T::DataType, duration::Int, rawstarttimes::Vector{<:Union{<:Integer, Nothing}}; 
-    kwargs...
-)
-    return InterventionMatrix{T}(duration, rawstarttimes; kwargs...)
+function InterventionMatrix{T}(duration::Number, args...; kwargs...) where T
+    return InterventionMatrix{T}(duration, [args...]; kwargs...)
 end
 
 function _generateinterventionstarttimes(rawstarttimes, duration)
@@ -115,9 +102,9 @@ function _generateinterventionstarttimes(rawstarttimes, duration)
 end
 
 
-## Functions ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# Functions ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-## Properties
+## Properties of `InterventionMatrix`
 
 Base.size(M::InterventionMatrix) = (M.duration, length(M.starttimes))
 
@@ -127,7 +114,7 @@ function Base.getindex(M::InterventionMatrix{T}, t, x) where T
     return T(t >= M.starttimes[x])
 end
 
-_duration(M::InterventionMatrix) = M.duration
+_duration(M::AbstractInterventionsArray) = M.duration
 
 ## Intervention times for plot 
 
@@ -141,11 +128,32 @@ end  # another version of this function is in `processparameters.jl`
 
 ## Show
 
-function _showliststarttimes(M::InterventionMatrix)
+function Base.show(io::IO, ::MIME"text/plain", M::InterventionMatrix) 
+    combinedstrings = _showcombinedstrings(M)
+    return pretty_table(
+        io, combinedstrings; 
+        header=_showheader(M),
+        hlines=[1], 
+        show_row_number=false, 
+        title=summary(M), 
+        vlines=[1], 
+    )
+end
+
+# short version used when `InterventionMatrix` is in an `AbstractRenewalDiDData` 
+function Base.show(io::IO, M::InterventionMatrix) 
+    show(io, collect(M))
+    print(io, " {duration $(M.duration), starttimes [")
+    join(io, _showliststarttimes(M), ", ")
+    print(io, "]}")
+    return nothing
+end
+
+function _showliststarttimes(M)
     return [x > M.duration ? nothing : x for x in M.starttimes]
 end
 
-function _showtimes(M::InterventionMatrix)
+function _showtimes(M)
     uniquestarttimes = unique(M.starttimes)
     unsortedshowtimes = unique([uniquestarttimes; 1; _duration(M)])
     showtimes = sort(unsortedshowtimes)
@@ -198,32 +206,12 @@ end
 
 _matrixvdots(M) = _showstringmatrixrepeatedrow(M, "⋮")
 
-function _showcombinedstrings(M::InterventionMatrix)
+function _showcombinedstrings(M)
     stringtimes, stringcontents = _showstrings(M)
     return hcat(stringtimes, stringcontents)
 end
 
-_showheader(M::InterventionMatrix) = ["time"; ["$x" for x in axes(M, 2)]]
-
-function Base.show(io::IO, ::MIME"text/plain", M::InterventionMatrix) 
-    combinedstrings = _showcombinedstrings(M)
-    return pretty_table(
-        io, combinedstrings; 
-        header=_showheader(M),
-        hlines=[1], 
-        show_row_number=false, 
-        title=summary(M), 
-        vlines=[1], 
-    )
-end
-
-function Base.show(io::IO, M::InterventionMatrix) 
-    show(io, collect(M))
-    print(io, " {duration $(M.duration), starttimes [")
-    join(io, _showliststarttimes(M), ", ")
-    print(io, "]}")
-    return nothing
-end
+_showheader(M) = ["time"; ["$x" for x in axes(M, 2)]]
 
 
 ## Warnings ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

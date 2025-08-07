@@ -4,9 +4,65 @@
 
 ## data passed to `renewaldid`
 
-abstract type AbstractRenewalDiDData end
+"""
+    AbstractRenewalDiDData{S, T}
 
-@auto_hash_equals struct RenewalDiDData{S, T} <: AbstractRenewalDiDData
+Abstract type of containers for data passed to `renewaldid`.
+
+Two subtypes are defined:
+- `RenewalDiDData{S, T}`, which allows tracking of numbers susceptible
+- `RenewalDiDDataUnlimitedPopn{S, T}`, which assumes an unlimited population that is not
+    depleted by infections
+"""
+abstract type AbstractRenewalDiDData{S, T} end
+
+"""
+    RenewalDiDData{S, T}
+
+Container for data passed to `renewaldid`.
+
+# Fields
+- `observedcases::Matrix{S}`: matrix of observed cases, each group is a separate column
+- `interventions::T`: matrix of intervention times, each group is a separate column 
+- `Ns::Vector{Int}`: population size of each group
+- `exptdseedcases::Matrix{Float64}`: matrix of infections up to time `t=0` that seeds
+     subsequent infection events
+
+# Constructors
+
+    RenewalDiDData(; observedcases, interventions, Ns, exptdseedcases=nothing, <keyword \
+        arguments>)
+
+The constructor takes all arguments as keyword arguments.  
+
+The matrix `exptdseedcases` may be supplied or one is generated automatically. Remaining 
+    keyword arguments are passed to `expectedseedcases`, with that function taking its 
+    default arguments if not specified.
+
+# Examples
+```jldoctest
+julia> using StableRNGs
+
+julia> rng = StableRNG(10);
+
+julia> observedcases = rand(rng, Poisson(10), 11, 3);  # 3 groups for times 0 to 10
+
+julia> interventions = InterventionMatrix(10, 3, 7, nothing);
+
+julia> Ns = 1000 .* ones(Int, 3);
+
+julia> RenewalDiDData(; observedcases, interventions, Ns)
+RenewalDiDData{Int64, InterventionMatrix{Int64}}
+ observedcases:  [10 8 15; 20 8 11; … ; 10 6 14; 9 9 8]
+ interventions:  [0 0 0; 0 0 0; … ; 1 1 0; 1 1 0] {duration 10, starttimes [3, 7, nothing]}
+ Ns:             [1000, 1000, 1000]
+ exptdseedcases: [1.6236225474260566 1.4880770554298328 1.8607523407150066; \
+    1.7226435732203347 1.587098081224111 1.9597733665092847; … ; 2.1187276763974463 \
+    1.9831821844012225 2.3558574696863963; 2.217748702191724 2.0822032101955004 \
+    2.454878495480674]
+```
+""" 
+@auto_hash_equals struct RenewalDiDData{S, T} <: AbstractRenewalDiDData{S, T}
     observedcases::Matrix{S}
     interventions::T
     Ns::Vector{Int}
@@ -45,7 +101,61 @@ function RenewalDiDData( ;
     return RenewalDiDData(observedcases, interventions, Ns, newexptdseedcases)
 end
 
-@auto_hash_equals struct RenewalDiDDataUnlimitedPopn{S, T} <: AbstractRenewalDiDData
+"""
+    RenewalDiDDataUnlimitedPopn{S, T}
+
+Container for data passed to `renewaldid`.
+
+Differs from `RenewalDiDData` in that it tells `renewaldid` to assume an inexhaustible 
+    population so changes in susceptibility are not explicitly tracked.
+
+# Fields
+- `observedcases::Matrix{S}`: matrix of observed cases, each group is a separate column
+- `interventions::T`: matrix of intervention times, each group is a separate column 
+- `exptdseedcases::Matrix{Float64}`: matrix of infections up to time `t=0` that seeds
+     subsequent infection events
+
+# Constructors
+
+    RenewalDiDDataUnlimitedPopn(; observedcases, interventions, exptdseedcases=nothing, \
+        <keyword arguments>)
+
+The constructor takes all arguments as keyword arguments.  
+
+The matrix `exptdseedcases` may be supplied or one is generated automatically. Remaining 
+    keyword arguments are passed to `expectedseedcases`, with that function taking its 
+    default arguments if not specified.
+
+If a keyword argument `Ns` is supplied it is not used and a warning is generated.
+
+# Examples
+```jldoctest
+julia> using StableRNGs
+
+julia> rng = StableRNG(10);
+
+julia> observedcases = rand(rng, Poisson(10), 11, 3);  # 3 groups for times 0 to 10
+
+julia> interventions = InterventionMatrix(10, 3, 7, nothing);
+
+julia> RenewalDiDDataUnlimitedPopn(; observedcases, interventions)
+RenewalDiDDataUnlimitedPopn{Int64, InterventionMatrix{Int64}}
+ observedcases:  [10 8 15; 20 8 11; … ; 10 6 14; 9 9 8]
+ interventions:  [0 0 0; 0 0 0; … ; 1 1 0; 1 1 0] {duration 10, starttimes [3, 7, nothing]}
+ Ns:             unlimited
+ exptdseedcases: [1.6236225474260566 1.4880770554298328 1.8607523407150066; \
+    1.7226435732203347 1.587098081224111 1.9597733665092847; … ; 2.1187276763974463 \
+    1.9831821844012225 2.3558574696863963; 2.217748702191724 2.0822032101955004 2.454878495480674]
+
+julia> v = RenewalDiDDataUnlimitedPopn(; observedcases, interventions, Ns=(1000 .* ones(Int, 3)));
+┌ Warning: [1000, 1000, 1000]: keyword argument `Ns` not used in constructing `RenewalDiDDataUnlimitedPopn`
+└ @ RenewalDiD 
+
+julia> isnothing(v.Ns)
+true
+```
+""" 
+@auto_hash_equals struct RenewalDiDDataUnlimitedPopn{S, T} <: AbstractRenewalDiDData{S, T}
     observedcases::Matrix{S}
     interventions::T
     exptdseedcases::Matrix{Float64}
@@ -159,11 +269,51 @@ _showns(io, ::RenewalDiDDataUnlimitedPopn) = print(io, "unlimited")
 
 ## struct of prior distributions 
 
-@kwdef struct RenewalDiDPriors{Q, R, S, T, U, V, W, X, Y}
+"""
+    RenewalDiDPriors{Q, S, T, U, V, W, X, Y}
+
+Container for prior distributions passed to `renewaldid`.
+
+# Fields
+- `alphaprior::Q=Normal(0, 1)`: intercept for log basic reproduction ratio 
+- `mu_delayprior::S=log(2)`: natural logarithm of mean delay between infection and diagnosis
+    (`renewaldid` currently has `NaN` gradients when attempting to fit delays so 
+    `mu_delayprior` must be `<:Real`)
+- `sigma_delayprior::T=log(5)`: variance for lognormal-distributed delay between infection 
+    and diagnosis (`renewaldid` currently has `NaN` gradients when attempting to fit delays 
+    so `sigma_delayprior` must be `<:Real`)
+- `sigma_gammaprior::U=Exponential(1)`: variance in group-specific contributions to log 
+    basic reproduction ratio
+- `sigma_thetaprior::V=Exponential(1)`: variance in time-varying contributions to log 
+    basic reproduction ratio
+- `tauprior::W=Normal(0, 1)`: average treatment effect in the treated
+- `psiprior::X=Beta(1, 1)`: proportion of infections that are diagnosed
+- `omegaprior::Y=0`: rate of return to susceptibility after infection (not currently used)
+
+# Constructors
+
+All arguments are optional with default values as above. The constructor takes each prior as 
+    a keyword argument. 
+
+# Examples
+```jldoctest
+RenewalDiDPriors(; psiprior=Beta(6, 4))
+RenewalDiDPriors{Normal{Float64}, Float64, Float64, Exponential{Float64}, \
+    Exponential{Float64}, Normal{Float64}, Beta{Float64}, Int64}
+ alphaprior:       Normal{Float64}(μ=0.0, σ=1.0)
+ mu_delayprior:    0.6931471805599453
+ sigma_delayprior: 1.6094379124341003
+ sigma_gammaprior: Exponential{Float64}(θ=1.0)
+ sigma_thetaprior: Exponential{Float64}(θ=1.0)
+ tauprior:         Normal{Float64}(μ=0.0, σ=1.0)
+ psiprior:         Beta{Float64}(α=6.0, β=4.0)
+ omegaprior:       0
+```
+""" 
+@kwdef struct RenewalDiDPriors{Q, S, T, U, V, W, X, Y}
     # attempting to fit `mu_delay` and `sigma_delay` gives NaN gradients so currently use
     # constants. `renewaldid` will throw a MethodError if these are distributions
     alphaprior::Q=Normal(0, 1)
-    M_xprior::R=truncated(Normal(0, 1); lower=-1)
     mu_delayprior::S=log(2)  #mu_delayprior::S=Normal(0, 1)
     sigma_delayprior::T=log(5)  #sigma_delayprior::T=Exponential(1)
     sigma_gammaprior::U=Exponential(1)
@@ -174,13 +324,12 @@ _showns(io, ::RenewalDiDDataUnlimitedPopn) = print(io, "unlimited")
 end
 
 function Base.show(
-    io::IO, ::MIME"text/plain", p::RenewalDiDPriors{Q, R, S, T, U, V, W, X, Y}
-) where {Q, R, S, T, U, V, W, X, Y}
+    io::IO, ::MIME"text/plain", p::RenewalDiDPriors{Q, S, T, U, V, W, X, Y}
+) where {Q, S, T, U, V, W, X, Y}
     print(
         io,
-        "RenewalDiDPriors{$Q, $R, $S, $T, $U, $V, $W, $X, $Y}",
+        "RenewalDiDPriors{$Q, $S, $T, $U, $V, $W, $X, $Y}",
         "\n alphaprior:       ", p.alphaprior,
-        "\n M_xprior:         ", p.M_xprior,
         "\n mu_delayprior:    ", p.mu_delayprior,
         "\n sigma_delayprior: ", p.sigma_delayprior,
         "\n sigma_gammaprior: ", p.sigma_gammaprior,
@@ -195,8 +344,6 @@ end
 # Functions ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ 
 
 ## Functions called by `_renewaldid`
-
-logsumexp(args...; alpha) = log(sum([exp(alpha * x) for x in args])) / alpha
 
 _ntimes(M::AbstractMatrix) = size(M, 1)
 _ngroups(M::AbstractMatrix) = size(M, 2)
@@ -224,6 +371,51 @@ function _predictedlogR_0(alpha, gammavec, thetavec, tau, interventions)
     return logR_0
 end
 
+"""
+    expectedseedcases(observedcases, n_seeds=7; <keyword arguments>)
+
+Return a matrix of infections before time `0` to seed subsequent transmission.
+
+# Arguments 
+- `observedcases` is the matrix of observations that is used in the analysis.
+- `n_seeds=7` is the number of rows in the matrix of seed cases.
+
+# Keyword arguments 
+- `doubletime=automatic`: assumed doubling time for infections before time `0`; the default 
+    is to equal `n_seeds`
+- `sampletime=automatic`: how many rows of `observedcases` to consider when deciding on the number of
+    infections to include in the seed matrix; default is `doubletime` if provided, otherwise 
+    `n_seeds`
+- `minvalue=0.5`: minimum number of infection to include in seed matrix regardless of 
+    numbers in `observedcases`
+
+# Examples
+```jldoctest
+julia> using StableRNGs
+
+julia> rng = StableRNG(10);
+
+julia> observedcases = rand(rng, Poisson(10), 11, 3);
+
+julia> expectedseedcases(observedcases, 3)
+3×3 Matrix{Float64}:
+ 1.7346   1.42712  1.79176
+ 1.96565  1.65817  2.02281
+ 2.1967   1.88921  2.25386
+
+julia> expectedseedcases(observedcases, 3; doubletime=5)
+3×3 Matrix{Float64}:
+ 2.01186  1.70438  2.06902
+ 2.15049  1.843    2.20765
+ 2.28912  1.98163  2.34628
+
+julia> expectedseedcases(observedcases, 3; minvalue=10)
+3×3 Matrix{Float64}:
+ 5.83765  6.45262  5.72333
+ 1.96565  1.65817  2.02281
+ 2.1967   1.88921  2.25386
+```
+"""
 function expectedseedcases(
     observedcases, n_seeds=DEFAULT_SEEDMATRIX_HEIGHT; 
     doubletime=automatic, sampletime=automatic, minvalue=DEFAULT_SEEDMATRIX_MINVALUE,
@@ -415,14 +607,50 @@ function _prevpropsus(infn, t, j; kwargs...)
     return propsus
 end
 
+"""
+    renewaldid(data, g, priors; <keyword arguments>)
+
+Return a `Turing.@model` for parameter fitting.
+
+# Arguments 
+- `data`: a `RenewalDiD.AbstractRenewalDiDData`.
+- `g`: a generation interval function 
+- `priors`: a `RenewalDiDPriors`
+- keyword arguments are passed to `g`
+
+# Examples
+```jldoctest
+julia> using RenewalDiD.FittedParameterTestFunctions, StableRNGs
+
+julia> rng = StableRNG(1);
+
+julia> sim = testsimulation(rng);
+
+julia> renewaldid(sim, g_seir, RenewalDiDPriors(); gamma=0.2, sigma=0.5)
+DynamicPPL.Model{typeof(RenewalDiD._renewaldid), (:observedcases, :interventions, \
+    :expectedseedcases, :Ns, :g, :alphaprior, :mu_delayprior, :psiprior, :sigma_delayprior, \
+    :sigma_gammaprior, :sigma_thetaprior, :tauprior, :n_seeds, :omega), (:gamma, :sigma), \
+    (), Tuple{Matrix{Int64}, InterventionMatrix{Int64}, Matrix{Float64}, Vector{Int64}, \
+    typeof(g_seir), Normal{Float64}, Float64, Beta{Float64}, Float64, Exponential{Float64}, \
+    Exponential{Float64}, Normal{Float64}, Int64, Int64}, Tuple{Float64, Float64}, \
+    DynamicPPL.DefaultContext}(RenewalDiD._renewaldid, (observedcases = [0 0 0; 0 0 0; … ; \
+    0 4 1; 1 1 4], interventions = [0 0 0; 0 0 0; … ; 0 1 1; 0 1 1] {duration 10, \
+    starttimes [nothing, 4, 6]}, expectedseedcases = [0.5 0.5 0.5; 0.0 0.0 0.0; … ; 0.0 0.0 \
+    0.0; 0.0 0.0 0.0], Ns = [100, 200, 50], g = g_seir, alphaprior = Normal{Float64}(μ=0.0, \
+    σ=1.0), mu_delayprior = 0.6931471805599453, psiprior = Beta{Float64}(α=1.0, β=1.0), \
+    sigma_delayprior = 1.6094379124341003, sigma_gammaprior = Exponential{Float64}(θ=1.0), \
+    sigma_thetaprior = Exponential{Float64}(θ=1.0), tauprior = Normal{Float64}(μ=0.0, σ=1.0), \
+    n_seeds = 7, omega = 0), (gamma = 0.2, sigma = 0.5), DynamicPPL.DefaultContext())
+
+```
+"""
 function renewaldid(
-    data::AbstractRenewalDiDData, g, priors::RenewalDiDPriors{Q, R, S, T, U, V, W, X, Y}; 
+    data::AbstractRenewalDiDData, g, priors::RenewalDiDPriors{Q, S, T, U, V, W, X, Y}; 
     kwargs...
 ) where {
     Q <: Distribution, 
-    R <: Distribution, 
-    S <: Number, 
-    T <: Number, 
+    S <: Real, 
+    T <: Real, 
     U <: Distribution, 
     V <: Distribution, 
     W <: Distribution, 
@@ -437,7 +665,6 @@ function renewaldid(
         data.Ns,
         g,    
         priors.alphaprior,
-        priors.M_xprior,
         priors.mu_delayprior,
         priors.psiprior,
         priors.sigma_delayprior,
@@ -457,7 +684,6 @@ end
     Ns,
     g,    
     alphaprior,
-    M_xprior,
     mu_delayprior,
     psiprior,
     sigma_delayprior,

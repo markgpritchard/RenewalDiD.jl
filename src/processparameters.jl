@@ -22,6 +22,39 @@ nunique(vec) = length(unique(vec))
 
 ## data for tracerankplot 
 
+"""
+    rankvalues(df::DataFrame, variable; binsize=10)
+
+Return rank of values from different chains for use in a trace rank plot.
+
+# Examples
+```jldoctest
+julia> using StableRNGs
+
+julia> rng = StableRNG(100);
+
+julia> df = DataFrame(:chain => repeat([1, 2, 3]; inner=5), :iteration => repeat(1:5; \
+    outer=3), :a => rand(rng, 15));  
+
+julia> rankvalues(df, :a; binsize=3)
+15-element Vector{Float64}:
+ 1.0
+ 1.0
+ 1.0
+ 2.0
+ 2.0
+ 2.6666666666666665
+ 2.6666666666666665
+ 2.6666666666666665
+ 2.0
+ 2.0
+ 2.3333333333333335
+ 2.3333333333333335
+ 2.3333333333333335
+ 2.0
+ 2.0
+```
+"""
 function rankvalues(df::DataFrame, variable; binsize=10)
     vals = getproperty(df, variable)
     nchains = nunique(getproperty(df, :chain))
@@ -103,8 +136,50 @@ end
 
 ## take samples from DataFrame of fitted parameters and generate expected outcomes
 
+"""
+    samplerenewaldidinfections(g, df, data, indexes; <keyword arguments>)
+
+Generate expected outcomes from samples in a `DataFrame`.
+
+# Arguments 
+- `g`: generation interval.
+- `df::DataFrame`: outputs from parameter fitting.
+- `data::AbstractRenewalDiDData`: data used for parameter fitting.
+- `indexes::Union{<:AbstractVector{<:Integer}, <:Integer}=axes(df, 1)`: rows of DataFrame to 
+    be used.
+- Keyword arguments get passed to the generation interval function 
+
+
+# Examples
+```jldoctest
+julia> using RenewalDiD.FittedParameterTestFunctions, StableRNGs
+
+julia> rng = StableRNG(1000);
+
+julia> data = testsimulation(rng);
+
+julia> df = testdataframe(rng; nchains=2, niterations=5, ngroups=3, ntimes=10, nseeds=7);
+
+julia> samplerenewaldidinfections(g_seir, df, data, 1; gamma=0.2, sigma=0.5)
+11×3 Matrix{Float64}:
+ 0.0        0.0       0.0
+ 0.114199   0.114506  0.029641
+ 0.136986   0.137571  0.0285553
+ 0.186847   0.188042  0.0288459
+ 0.266959   0.477386  0.0299742
+ 0.389018   0.828994  0.0316884
+ 0.573569   1.50836   0.0600483
+ 0.852888   2.78382   0.069359
+ 1.27559    5.15169   0.0831346
+ 1.91162    9.42535   0.101564
+ 2.85361   16.5956    0.125572
+```
+"""
 function samplerenewaldidinfections(
-    g, df::DataFrame, data::AbstractRenewalDiDData, indexes::AbstractVector{<:Integer}=axes(df, 1);
+    g, 
+    df::DataFrame, 
+    data::AbstractRenewalDiDData, 
+    indexes::AbstractVector{<:Integer}=axes(df, 1);
     kwargs...
 )
     ngroups = _ngroups(data.interventions)
@@ -163,24 +238,6 @@ function _samplerenewaldidinfections!(
         kwargs...
     )
 end
-#=
-function _samplerenewaldidinfections!(
-    g::_Useablegenerationfunctions, 
-    output::AbstractArray, 
-    df, 
-    data::RenewalDiDDataUnlimitedPopn, 
-    i, 
-    ngroups, 
-    ntimes, 
-    n_seeds; 
-    kwargs...
-)
-    return _samplerenewaldidinfections!(
-        g, output::AbstractArray, df, data, i, ngroups, ntimes, n_seeds, nothing; 
-        kwargs...
-    )
-end
-=#
 
 function _samplerenewaldidinfections!(
     g::_Useablegenerationfunctions, 
@@ -228,6 +285,80 @@ end
 
 ## quantiles of sampled outputs
 
+"""
+    quantilerenewaldidinfections(A, q)
+
+Calculate quantiles from an array of simulated outputs
+
+# Arguments 
+- `A`: array of outputs.
+- `q`: vector of quantiles.
+
+It is expected that an odd number of quantiles will be supplied, symmetrical around the 
+    median (`0.5`)
+
+# Examples
+```jldoctest
+julia> using RenewalDiD.FittedParameterTestFunctions, StableRNGs
+
+julia> rng = StableRNG(1000);
+
+julia> data = testsimulation(rng);
+
+julia> df = testdataframe(rng; nchains=2, niterations=5, ngroups=3, ntimes=10, nseeds=7);
+
+julia> A = samplerenewaldidinfections(g_seir, df, data; gamma=0.2, sigma=0.5);
+
+julia> quantilerenewaldidinfections(A, [0.05, 0.5, 0.95])
+11×3×3 Array{Float64, 3}:
+[:, :, 1] =
+ 0.0        0.0        0.0
+ 0.0330109  0.0331442  0.0153384
+ 0.0424594  0.0426307  0.0159759
+ 0.0506862  0.0509582  0.0164732
+ 0.0640469  0.114019   0.0174583
+ 0.0843459  0.159901   0.018906
+ 0.113446   0.23254    0.0412647
+ 0.151611   0.334978   0.0491071
+ 0.0768479  0.108033   0.0195905
+ 0.100981   0.1344     0.0274011
+ 0.0        0.0        0.0397927
+
+[:, :, 2] =
+ 0.0        0.0        0.0
+ 0.0979914  0.0982897  0.0616108
+ 0.119181   0.119662   0.0697299
+ 0.165515   0.166476   0.0985363
+ 0.328753   0.576721   0.177187
+ 0.535071   0.949926   0.38878
+ 0.839773   1.63126    0.824038
+ 1.4096     2.84745    1.44794
+ 1.70084    5.003      1.09146
+ 2.51385    8.74408    1.62129
+ 1.8444     9.59518    1.47483
+
+[:, :, 3] =
+  0.0        0.0        0.0
+  0.289015   0.290399   0.202453
+  0.401929   0.405079   0.25646
+  0.660351   0.668552   0.371832
+  1.18571    1.61497    0.579842
+  2.27498    3.94403    0.950158
+  6.11523   19.8733     2.91164
+ 13.4612    19.676      5.75056
+ 20.3066    47.5492     8.25488
+ 32.011     75.8905    14.145
+ 20.3503    47.2522    17.3482
+
+julia> quantilerenewaldidinfections(A, [0.05, 0.5, 0.90]);
+┌ Warning: (0.05, 0.9): other functions expect that credible intervals are symmetrical
+└ @ RenewalDiD 
+
+julia> quantilerenewaldidinfections(A, [0.05, 0.90]);
+┌ Warning: [0.05, 0.9]: other functions expect an odd number of quantiles
+└ @ RenewalDiD 
+```
+"""
 function quantilerenewaldidinfections(A, q; mutewarnings=nothing)
     _quantilerenewaldidinfectionswarningset(A, q, mutewarnings)
     return _quantilerenewaldidinfections(A, q)

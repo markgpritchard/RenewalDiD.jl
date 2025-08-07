@@ -1,6 +1,6 @@
 # Estimates of generation interval 
 
-## Constants ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# Constants ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 const COVIDSERIALINTERVAL = [  # not exported but can be accessed via `g_covid`
 # result from https://github.com/mrc-ide/EpiEstim/blob/master/data/covid_deaths_2020_uk.rda
@@ -38,7 +38,7 @@ const COVIDSERIALINTERVAL = [  # not exported but can be accessed via `g_covid`
 ]
 
 
-## Functions ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# Functions ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 ## Provided generation intervals
 
@@ -55,6 +55,9 @@ Data from https://github.com/mrc-ide/EpiEstim/blob/master/data/covid_deaths_2020
 ```jldoctest
 julia> g_covid(10)
 0.0382484935
+
+julia> g_covid(0)
+0.0
 ```
 """
 function g_covid(t::Integer)
@@ -73,7 +76,7 @@ Estimate generation interval for a susceptible–exposed–infectious–recovere
 `t` is time in days since infection. `sigma` is the rate of progression from exposed to 
 infectious, and `gamma` is the recovery rate.
 
-If `gamma == sigma` you may input only `gamma` and leave `sigma=RenewalDiD.automatic`.
+If `gamma == sigma` you may input only `gamma`.
 
 Equations from D. Champredon, J. Dushoff, and D.J. Earn (2018). Equivalence of the 
 Erlang-distributed SEIR epidemic model and the renewal equation. *SIAM J Appl Math*
@@ -91,9 +94,9 @@ julia> g_seir(10; gamma=0.3, sigma=0.5)
 0.03228684102658386
 ``` 
 """
-function g_seir(t::T; gamma, sigma=automatic) where T
+function g_seir(t; gamma, sigma=automatic)
     if t < 0 
-        return zero(_g_seir(zero(T), gamma, sigma))
+        return zero(_g_seir(zero(t), gamma, sigma))
     else
         return _g_seir(t, gamma, sigma)
     end
@@ -114,14 +117,15 @@ end
 
 """
     vectorg_seir(gamma, sigma=automatic; t_max::Integer=28)
+    vectorg_seir(; gamma, sigma=automatic, t_max::Integer=28)
 
 Produce a vector of generation intervals for a susceptible–exposed–infectious–recovered 
     model.
 
-The length of the vector is `t_max + 1`, i.e. daily from time t=0 to t=t_max
+The length of the vector is `t_max + 1`, i.e. daily from `t=0` to `t=t_max`
 
 `sigma` is the rate of progression from exposed to infectious, and `gamma` is the recovery
-    rate.
+    rate. These can be entered as positional arguments or keyword arguments.
 
 Equations from D. Champredon, J. Dushoff, and D.J. Earn (2018). Equivalence of the 
 Erlang-distributed SEIR epidemic model and the renewal equation. *SIAM J Appl Math*
@@ -148,11 +152,30 @@ julia> vectorg_seir(0.4, 0.5; t_max=5)
  0.15612810352754444
  0.1331224695160854
  0.10650056922542783
+
+julia> vectorg_seir(sigma=0.5, gamma=0.4, t_max=5)
+6-element Vector{Float64}:
+ 0.0
+ 0.12757877264601186
+ 0.1628990458915585
+ 0.15612810352754444
+ 0.1331224695160854
+ 0.10650056922542783
 ``` 
 """
+vectorg_seir(; gamma, sigma=automatic, kwargs...) = vectorg_seir(gamma, sigma; kwargs...)
+
 function vectorg_seir(gamma, sigma=automatic; t_max::Integer=28)
-    return [g_seir(t; gamma, sigma) for t in 0:1:t_max]
+    v = _vectorg_seir(gamma, sigma, t_max)
+    for i in eachindex(v)  # remove values of -0.0 for cosmetic reasons 
+        if v[i] == 0.0
+            v[i] = 0.0 
+        end
+    end
+    return v
 end
+
+_vectorg_seir(gamma, sigma, t_max) = [_g_seir(t, gamma, sigma) for t in 0:1:t_max]
 
 ## Functions for user-supplied generation intervals
 
@@ -254,8 +277,8 @@ Checks that the sum of outputs will be `≤ 1` and that no outputs will be negat
     argument error if either is violated.
 
 # Keyword arguments 
-- `muteinfo=false`: whether to provide information about the output if it passes 
-- `t_max=automatic`: the maximum time that will be assessed 
+- `muteinfo=false`: whether to provide information about the output if tests passed 
+- `t_max=1000`: the maximum time that will be assessed if a function is supplied
 
 Other keyword arguments are passed to the function provided. 
 
@@ -285,15 +308,11 @@ julia> testgenerationtime(myfunc; a=0.1, t_max=3)
 """
 testgenerationtime(x; kwargs...) = _testgenerationtime(x; kwargs...)
 
-function _testgenerationtime(f::Function; t_max=automatic, kwargs...)
+function _testgenerationtime(f::Function; t_max::Integer=1000, kwargs...)
     return _testgenerationtime(f, t_max; kwargs...)
 end
 
-function _testgenerationtime(f::Function, ::Automatic; kwargs...)
-    return _testgenerationtime(f, 1000; kwargs...)
-end
-
-function _testgenerationtime(f::Function, t_max::Number; muteinfo=false, kwargs...)
+function _testgenerationtime(f::Function, t_max; muteinfo=false, kwargs...)
     v = [f(x; kwargs...) for x in 0:1:t_max]
     return _testgenerationtime(
         v; 
@@ -348,7 +367,8 @@ function _generationtimenofunctionvectorerror()
 end
 
 function _negativegenerationtimerror(mv, funclengthinfo)
-    return ArgumentError("$mv: generation interval values can never be negative$funclengthinfo")
+    m = "$mv: generation interval values can never be negative$funclengthinfo"
+    return ArgumentError(m)
 end
 
 function _toolargegenerationtimerror(sv, funclengthinfo)

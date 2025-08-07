@@ -17,10 +17,11 @@ export InterventionMatrix
 # generationinterval.jl
 export g_covid, g_seir, generationtime, testgenerationtime, vectorg_seir
 # simulations.jl
-export packsimulations, packsimulationtuple, runsimulation, simulationcases, simulationu0
+export packsimulations, packsimulationsunlimitedpopulation, packsimulationtuple
+export runsimulation, simulationcases, simulationu0
 # fittingparameters.jl
-export RenewalDiDData, RenewalDiDDataUnlimitedPopn, RenewalDiDPriors
-export expectedseedcases, logsumexp, renewaldid
+export AbstractRenewalDiDData, RenewalDiDData, RenewalDiDDataUnlimitedPopn, RenewalDiDPriors
+export expectedseedcases, renewaldid
 # processparameters.jl
 export nunique, quantilerenewaldidinfections, rankvalues, samplerenewaldidinfections
 
