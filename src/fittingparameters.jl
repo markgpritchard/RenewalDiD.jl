@@ -717,27 +717,6 @@ end
     mu_delay = log(2)
     sigma_delay = log(5)
 
-    _z = max(
-        maximum(
-            [
-                [
-                    tau, 
-                    alpha, 
-                    sigma_gamma, 
-                    sigma_theta, 
-                    psi, 
-                    mu_delay, 
-                    sigma_delay, 
-                    fittingsigma
-                ]; 
-                gammas_raw; 
-                thetas_raw
-            ]
-        ),
-        maximum(M_x),
-        maximum(predictobservedinfectionssigmamatrix)
-    ) 
-
     gammavec = _gammavec(gammas_raw, sigma_gamma)
     thetavec = _thetavec(thetas_raw, sigma_theta)
 
