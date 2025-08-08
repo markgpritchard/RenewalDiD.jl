@@ -1,7 +1,7 @@
 name = "RenewalDiD"
 uuid = "168ba0f3-27c8-4f61-a62a-678154ba4d3f"
 authors = ["Mark Pritchard <mark.pritchard@ndm.ox.ac.uk>"]
-version = "0.0.1-DEV1"
+version = "0.0.1-DEV2"
 
 [deps]
 AutoHashEquals = "15f4f7f2-30c1-5605-9d31-71845cf9641f"
