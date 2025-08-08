@@ -310,14 +310,33 @@ lineskws(; kwargs...) = _selectkws(LINEKWS; kwargs...)
 scatterkws(; kwargs...) = _selectkws(SCATTERKWS; kwargs...)
 vlineskws(; kwargs...) = _selectkws(VLINESKWS; kwargs...)
 
-function _selectkws(expectedarguments; skip=Symbol[], kwargs...)
+function _selectkws(expectedarguments; prefix=nothing, skip=Symbol[], kwargs...)
     kwkeys = Symbol[]
     kwvals = Any[]
+    prefixedarguments = _prefixedarguments(expectedarguments, prefix)
     for (k, v) in kwargs
         if k in expectedarguments && k ∉ skip
             push!(kwkeys, k)
             push!(kwvals, v)
         end
+        isnothing(prefix) && continue
+        if k in prefixedarguments && k ∉ skip
+            unprefixedkey = _unprefixkey(k, prefix)
+            push!(kwkeys, k)
+            push!(kwvals, v)
+        end
     end
     return (; (kwkeys .=> kwvals)...)
+end
+
+function _prefixedarguments(expectedarguments, prefix)
+    return [Symbol("$prefix$x") for x in expectedarguments]
+end
+
+_prefixedarguments(expectedarguments, ::Nothing) = Symbol[]
+
+function _unprefixkey(k, prefix)
+    j = length(prefix)
+    stringunprefixedkey = String(k)[j+1:end]
+    return Symbol(stringunprefixedkey)
 end

@@ -14,7 +14,7 @@ function RenewalDiD.plotmodel!(
     gl::FigOrGridLayout, modeloutputs::AbstractArray, args...; 
     kwargs...
 ) 
-    axs = _plotmodeloutputaxs(gl, modeloutputs; axiskws(; kwargs...)...)
+    axs = _plotmodeloutputaxs(gl, modeloutputs; axiskws(; prefix=:axis, kwargs...)...)
     RenewalDiD.plotmodel!(axs, modeloutputs, args...; kwargs...)
     linkaxes!(axs...)
     return axs
@@ -54,46 +54,11 @@ function _plotmodel!(
     modeloutputcolor=automatic,
     kwargs...
 ) 
-    RenewalDiD.plotmodeloutput!(
-        axs, modeloutputs, t; 
-        _plotmodel_plotoutputkws(color, modeloutputcolor; kwargs...)...
-    ) 
-    RenewalDiD.plotmodeldata!(
-        axs, observedcases, t; 
-        _plotmodel_plotdatakws(color, datacolor; kwargs...)...
-    ) 
-    RenewalDiD.plotmodelintervention!(
-        axs, interventions; 
-        _plotmodel_plotinterventionkws(color, interventioncolor; kwargs...)...
-    ) 
+    RenewalDiD.plotmodeloutput!(axs, modeloutputs, t; kwargs...)
+    RenewalDiD.plotmodeldata!(axs, observedcases, t; kwargs...)
+    RenewalDiD.plotmodelintervention!(axs, interventions; kwargs...)
     return axs
 end
-
-_plotmodel_plotoutputkws(color, ::Any; kwargs...) = (color, kwargs...)
-
-function _plotmodel_plotoutputkws(::Automatic, modeloutputcolor; kwargs...)
-    return (color=modeloutputcolor, kwargs...)
-end
-
-_plotmodel_plotoutputkws(::Automatic, ::Automatic; kwargs...) = (color=Cycled(1), kwargs...)
-
-_plotmodel_plotdatakws(color, ::Any; kwargs...) = scatterkws(; color, kwargs...)
-
-function _plotmodel_plotdatakws(::Automatic, datacolor; kwargs...)
-    return scatterkws(; color=datacolor, kwargs...)
-end
-
-_plotmodel_plotdatakws(::Automatic, ::Automatic; kwargs...) = scatterkws(; kwargs...)
-
-_plotmodel_plotinterventionkws(color, ::Any; kwargs...) = vlineskws(; color, kwargs...)
-
-function _plotmodel_plotinterventionkws(::Automatic, interventioncolor; kwargs...)
-    return vlineskws(; color=interventioncolor, kwargs...)
-end
-
-_plotmodel_plotinterventionkws(::Automatic, ::Automatic; kwargs...) = vlineskws(; kwargs...)
-
-_plotmodeloutputaxs(gl, A; kwargs...) = [Axis(gl[1, i]; kwargs...) for i in axes(A, 2)]
 
 ## Model output 
 
@@ -107,7 +72,7 @@ function RenewalDiD.plotmodeloutput!(
     gl::FigOrGridLayout, A::AbstractArray, t=automatic; 
     kwargs...
 ) 
-    axs = _plotmodeloutputaxs(gl, A; axiskws(; kwargs...)...)
+    axs = _plotmodeloutputaxs(gl, A; axiskws(; prefix=:axis, kwargs...)...)
     _plotmodeloutput!(axs, A, t; kwargs...)
     linkaxes!(axs...)
     return axs
@@ -151,7 +116,7 @@ function __plotmodeloutput!(axs, A, t, nquantiles; kwargs...)
             bandkws(; skip=[:alpha], kwargs...)...
         )
     end
-    _plotmodeloutputmedian!(axs, A, t, medquantile; lineskws(; kwargs...)...)
+    _plotmodeloutputmedian!(axs, A, t, medquantile; lineskws(; prefix=:model, kwargs...)...)
     return axs
 end
 
@@ -181,8 +146,8 @@ function RenewalDiD.plotmodeldata!(
     gl::FigOrGridLayout, A::AbstractArray, t=automatic; 
     kwargs...
 ) 
-    axs = _plotmodeloutputaxs(gl, A; axiskws(; kwargs...)...)
-    _plotmodeldata!(axs, A, t; scatterkws(; kwargs...)...)
+    axs = _plotmodeloutputaxs(gl, A; axiskws(; prefix=:axis, kwargs...)...)
+    _plotmodeldata!(axs, A, t; scatterkws(; prefix=:data, kwargs...)...)
     linkaxes!(axs...)
     return axs
 end
@@ -223,8 +188,11 @@ function RenewalDiD.plotmodelintervention!(
     gl::FigOrGridLayout, A::AbstractArray; 
     kwargs...
 ) 
-    axs = _plotmodeloutputaxs(gl, A; axiskws(; kwargs...)...)
-    RenewalDiD.plotmodelintervention!(axs, A; vlineskws(; kwargs...)...)
+    axs = _plotmodeloutputaxs(gl, A; axiskws(; prefix=:axis, kwargs...)...)
+    RenewalDiD.plotmodelintervention!(
+        axs, A; 
+        vlineskws(; prefix=:intervention, kwargs...)...
+    )
     linkaxes!(axs...)
     return axs
 end
