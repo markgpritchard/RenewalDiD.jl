@@ -2,7 +2,20 @@
 
 # Structs ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+"""
+    AbstractInterventionsArray{T, N} <: AbstractArray{T, N}
+
+Abstract type of matrix of intervention times.
+
+Two subtypes are defined:
+- `InterventionMatrix{T} <: AbstractArray{T, N}`
+- `OffsetInterventionMatrix{T} <: AbstractArray{T, N}`
+"""
 abstract type AbstractInterventionsArray{T, N} <: AbstractArray{T, N} end
+
+const AbstractInterventionMatrix{T} = AbstractInterventionsArray{T, 2}
+
+## InterventionMatrix
 
 """
     InterventionMatrix{T}
@@ -65,7 +78,7 @@ julia> InterventionMatrix(100, [25, 50, 100]);
 └ @ RenewalDiD 
 ```
 """ 
-struct InterventionMatrix{T} <: AbstractInterventionsArray{T, 2}
+struct InterventionMatrix{T} <: AbstractInterventionMatrix{T}
     duration::Int
     rawstarttimes::Vector{<:Union{<:Integer, Nothing}}
     starttimes::Vector{Int}
@@ -75,13 +88,12 @@ struct InterventionMatrix{T} <: AbstractInterventionsArray{T, 2}
         mutewarnings=nothing,
     ) where T
         starttimes = _generateinterventionstarttimes(rawstarttimes, duration)
-        minimum(starttimes) > duration && _nointerventionwarning(mutewarnings)
-        maximum(starttimes) <= duration && _allinterventionwarning(mutewarnings)
+        _interventionarrayconstructionwarnings(
+            InterventionMatrix, duration, starttimes, mutewarnings
+        )
         return new{T}(convert(Int, duration), rawstarttimes, starttimes)
     end
 end
-
-## Constructors
 
 InterventionMatrix(args...; kwargs...) = InterventionMatrix{Int}(args...; kwargs...)
 
@@ -89,13 +101,73 @@ function InterventionMatrix{T}(duration::Number, args...; kwargs...) where T
     return InterventionMatrix{T}(duration, [args...]; kwargs...)
 end
 
-function _generateinterventionstarttimes(rawstarttimes, duration)
+function InterventionMatrix{T}(::Number, v::AbstractVector; kwargs...) where T
+    # throw error and avoid a loop nesting vectors within vectors
+    throw(_interventionarrayunusablevectorerror(v))
+    return nothing
+end
+
+## OffsetInterventionMatrix
+
+struct OffsetInterventionMatrix{T} <: AbstractInterventionMatrix{T}
+    duration::Int
+    offset::Int
+    rawstarttimes::Vector{<:Union{<:Integer, Nothing}}
+    starttimes::Vector{Int}
+
+    function OffsetInterventionMatrix{T}(
+        duration::Number, offset::Number, rawstarttimes::Vector{<:Union{<:Number, Nothing}};
+        mutewarnings=nothing,
+    ) where T
+        starttimes = _generateinterventionstarttimes(rawstarttimes, duration, offset)
+        _interventionarrayconstructionwarnings(
+            OffsetInterventionMatrix, duration, starttimes, mutewarnings
+        )
+        return new{T}(
+            convert(Int, duration), convert(Int, offset), rawstarttimes, starttimes
+        )
+    end
+end
+
+function OffsetInterventionMatrix(args...; kwargs...)
+    return OffsetInterventionMatrix{Int}(args...; kwargs...)
+end
+
+function OffsetInterventionMatrix{T}(
+    duration::Number, offset::Number, args...; 
+    kwargs...
+) where T
+    return OffsetInterventionMatrix{T}(duration, offset, [args...]; kwargs...)
+end
+
+function OffsetInterventionMatrix{T}(
+    ::Number, ::Number, v::AbstractVector; 
+    kwargs...
+) where T
+    # throw error and avoid a loop nesting vectors within vectors
+    throw(_interventionarrayunusablevectorerror(v))
+    return nothing
+end
+
+function OffsetInterventionMatrix(
+    M::AbstractInterventionMatrix{T}, offset::Number; 
+    kwargs...
+) where T
+    return OffsetInterventionMatrix{T}(
+        M.duration, M.offset + offset, M.rawstarttimes; 
+        kwargs...
+    )
+end
+
+## Functions to generate AbstractInterventionsArray
+
+function _generateinterventionstarttimes(rawstarttimes, duration, offset=0)
     starttimes = zeros(Int, length(rawstarttimes))
     for (i, t) in enumerate(rawstarttimes)
-        if isnothing(t) || t <= 1 || t > duration
+        if isnothing(t) || t + offset <= 1 || t + offset > duration
             starttimes[i] = duration + 1
         else
-            starttimes[i] = convert(Int, t)
+            starttimes[i] = convert(Int, t + offset)
         end
     end
     return starttimes
@@ -104,11 +176,19 @@ end
 
 # Functions ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-## Properties of `InterventionMatrix`
+## Properties of `AbstractInterventionMatrix`
 
-Base.size(M::InterventionMatrix) = (M.duration, length(M.starttimes))
+function Base.getproperty(M::InterventionMatrix, k::Symbol)
+    if k === :offset
+        return 0 
+    else 
+        return getfield(M, k)
+    end
+end
 
-function Base.getindex(M::InterventionMatrix{T}, t, x) where T
+Base.size(M::AbstractInterventionMatrix) = (M.duration, length(M.starttimes))
+
+function Base.getindex(M::AbstractInterventionMatrix{T}, t, x) where T
     t <= _duration(M) || throw(BoundsError(M, [t, x]))
     x <= length(M.starttimes) || throw(BoundsError(M, [t, x]))
     return T(t >= M.starttimes[x])
@@ -122,13 +202,13 @@ function _interventionstarttimes(M::AbstractMatrix)
     return [_interventionstarttimes(M, i) for i in axes(M, 2)]
 end
 
-function _interventionstarttimes(M::InterventionMatrix, i)
+function _interventionstarttimes(M::AbstractInterventionMatrix, i)
     return M.starttimes[i] > _duration(M) ? nothing : M.starttimes[i]
 end  # another version of this function is in `processparameters.jl`
 
 ## Show
 
-function Base.show(io::IO, ::MIME"text/plain", M::InterventionMatrix) 
+function Base.show(io::IO, ::MIME"text/plain", M::AbstractInterventionMatrix) 
     combinedstrings = _showcombinedstrings(M)
     return pretty_table(
         io, combinedstrings; 
@@ -140,14 +220,21 @@ function Base.show(io::IO, ::MIME"text/plain", M::InterventionMatrix)
     )
 end
 
-# short version used when `InterventionMatrix` is in an `AbstractRenewalDiDData` 
-function Base.show(io::IO, M::InterventionMatrix) 
+# short version used when `AbstractInterventionMatrix` is in an `AbstractRenewalDiDData` 
+function Base.show(io::IO, M::AbstractInterventionMatrix) 
     show(io, collect(M))
     print(io, " {duration $(M.duration), starttimes [")
     join(io, _showliststarttimes(M), ", ")
     print(io, "]}")
     return nothing
 end
+
+function Base.summary(M::OffsetInterventionMatrix{T}) where T
+    _h = size(M, 1)
+    _w = size(M, 2)
+    return "$_h×$_w OffsetInterventionMatrix{$T} (offset $(M.offset))"
+end
+
 
 function _showliststarttimes(M)
     return [x > M.duration ? nothing : x for x in M.starttimes]
@@ -161,7 +248,7 @@ function _showtimes(M)
     return showtimes
 end
 
-function _showcontents(M::InterventionMatrix{T}, showtimes) where T 
+function _showcontents(M::AbstractInterventionMatrix{T}, showtimes) where T 
     C = zeros(T, length(showtimes), size(M, 2))
     for (i, t) in enumerate(showtimes), g in axes(M, 2)
         C[i, g] = M[t, g]
@@ -169,7 +256,7 @@ function _showcontents(M::InterventionMatrix{T}, showtimes) where T
     return C 
 end
 
-function _showstrings(M::InterventionMatrix{T}) where T
+function _showstrings(M::AbstractInterventionMatrix{T}) where T
     showtimes = _showtimes(M)
     contents = _showcontents(M, showtimes)
     stringtimes = ["1"]
@@ -214,30 +301,32 @@ end
 _showheader(M) = ["time"; ["$x" for x in axes(M, 2)]]
 
 
-## Warnings ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+# Warnings ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-function _nointerventionwarning(::Nothing)
-    @warn "InterventionMatrix with no intervention in any group"
-    return nothing
-end
-
-function _nointerventionwarning(mutewarnings::Bool)
+function _interventionarrayconstructionwarnings(T, duration, starttimes, mutewarnings::Bool)
     if mutewarnings 
         return nothing 
     else 
-        return _nointerventionwarning(nothing)
+        return _interventionarrayconstructionwarnings(T, duration, starttimes, nothing)
     end
 end
 
-function _allinterventionwarning(::Nothing)
-    @warn "All groups in InterventionMatrix have intervention before end of duration"
+function _interventionarrayconstructionwarnings(T, duration, starttimes, ::Nothing)
+    minimum(starttimes) > duration && _nointerventionwarning(T)
+    maximum(starttimes) <= duration && _allinterventionwarning(T)
     return nothing
 end
 
-function _allinterventionwarning(mutewarnings::Bool)
-    if mutewarnings 
-        return nothing 
-    else 
-        return _allinterventionwarning(nothing)
-    end
+_nointerventionwarning(T) = @warn "$T with no intervention in any group"
+
+function _allinterventionwarning(T)
+    @warn "All groups in $T have intervention before end of duration"
+    return nothing
+end
+
+
+# Error messages ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+function _interventionarrayunusablevectorerror(v)
+    return ArgumentError("$v, vector received that could not be used as start times")
 end

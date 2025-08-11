@@ -13,7 +13,7 @@ using Turing: arraydist, cdf, filldist, product_distribution, truncated
 # re-export from `DataFrames`
 export DataFrame
 # interventionmatrix.jl
-export InterventionMatrix
+export AbstractInterventionsArray, InterventionMatrix, OffsetInterventionMatrix
 # generationinterval.jl
 export g_covid, g_seir, generationtime, testgenerationtime, vectorg_seir
 # simulations.jl
@@ -33,30 +33,6 @@ export nunique, quantilerenewaldidinfections, rankvalues, samplerenewaldidinfect
 @compat public traceplot, traceplot!, trplot, trplot!
 @compat public tracerankplot, tracerankplot!
 
-function __init__()
-    if isdefined(Base.Experimental, :register_error_hint)
-        Base.Experimental.register_error_hint(MethodError) do io, exc, argtypes, kwargs
-            plottinghint = "\nHint: Plotting functions from `RenewalDiD` or \
-                `RenewalDiD.Plotting` are only available after `using CairoMakie`"
-            plottingfunctionslist = [
-                plotmodel, plotmodel!,
-                plotmodeldata, plotmodeldata!,
-                plotmodelintervention, plotmodelintervention!,
-                plotmodeloutput, plotmodeloutput!,
-                traceplot, traceplot!, trplot, trplot!, 
-                tracerankplot, tracerankplot!,
-            ]
-
-            if exc.f in plottingfunctionslist && 
-                isnothing(Base.get_extension(RenewalDiD, :RenewalDiDCairoMakieExt))
-
-                print(io, plottinghint)
-            end
-        end
-    end
-    return nothing
-end
-
 struct Automatic end  # not exported
 const automatic = Automatic()  # not exported
 
@@ -74,5 +50,38 @@ include("processparameters.jl")
 # submodules
 include("Plotting.jl")
 include("FittedParameterTestFunctions.jl")
+
+const RENEWALDIDPLOTTINGFUNCTIONSLIST = [
+    plotmodel, 
+    plotmodel!,
+    plotmodeldata, 
+    plotmodeldata!,
+    plotmodelintervention, 
+    plotmodelintervention!,
+    plotmodeloutput, 
+    plotmodeloutput!,
+    traceplot, 
+    traceplot!, 
+    trplot, 
+    trplot!, 
+    tracerankplot, 
+    tracerankplot!,
+]
+
+function __init__()
+    if isdefined(Base.Experimental, :register_error_hint)
+        Base.Experimental.register_error_hint(MethodError) do io, exc, argtypes, kwargs
+            RDMakieExtisnothing = isnothing(Base.get_extension(RenewalDiD, :RenewalDiDMakieExt))
+            if exc.f in RENEWALDIDPLOTTINGFUNCTIONSLIST && RDMakieExtisnothing
+                print(
+                    io, 
+                    "\nHint: Plotting functions from `RenewalDiD` or `RenewalDiD.Plotting` \
+                        are only available after `using CairoMakie`"
+                )
+            end
+        end
+    end
+    return nothing
+end
 
 end  # module RenewalDiD

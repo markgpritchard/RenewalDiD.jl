@@ -115,6 +115,8 @@ end
     # InexactError
     @test_throws InexactError InterventionMatrix(3, 2.3)
     @test_throws InexactError InterventionMatrix(3, [2.3, 2])
+    @test_throws ArgumentError InterventionMatrix(3, 1, [2, 3])
+    @test_throws ArgumentError InterventionMatrix(3, [2, 3], 4)
 end
 @testset "indexing InterventionMatrix" begin
     @test M1[1] == 0
