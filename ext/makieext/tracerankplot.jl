@@ -15,7 +15,7 @@ function RenewalDiD.tracerankplot!(
 end
 
 function RenewalDiD.tracerankplot!(fig::FigOrGridLayout, df, variable; kwargs...)
-    ax = Axis(fig[1, 1]; axiskws(; kwargs...)...)
+    ax = Axis(fig[1, 1]; axiskws(; prefix=:axis, kwargs...)...)
     RenewalDiD.tracerankplot!(ax, df, variable; kwargs...)
     _traceplotylabels!(fig, df, variable; kwargs...)
     return nothing
@@ -25,7 +25,10 @@ function RenewalDiD.tracerankplot!(
     fig::FigOrGridLayout, df, variables::AbstractVector; 
     kwargs...
 )
-    axs = [Axis(fig[i, 1]; axiskws(; kwargs...)...) for i in eachindex(variables)]
+    axs = [
+        Axis(fig[i, 1]; axiskws(; prefix=:axis, kwargs...)...) 
+        for i in eachindex(variables)
+    ]
     RenewalDiD.tracerankplot!(axs, df, variables; kwargs...)
     _traceplotylabels!(fig, df, variables; kwargs...)
     return nothing
@@ -38,7 +41,7 @@ function RenewalDiD.tracerankplot!(
     axs = [
         ismissing(variables[i, j]) ? 
             nothing : 
-            Axis(fig[i, (2 * j - 1)]; axiskws(; kwargs...)...)
+            Axis(fig[i, (2 * j - 1)]; axiskws(; prefix=:axis, kwargs...)...)
         for i in axes(variables, 1), j in axes(variables, 2)
     ]
     RenewalDiD.tracerankplot!(axs, df, variables; kwargs...)
@@ -63,7 +66,7 @@ function _tracerankplot!(ax::Axis, df, variable::StringOrSymbol; binsize=10, kwa
     rv = rankvalues(df, variable; binsize)
     for (i, chain) in enumerate(unique(df.chain))
         inds = findall(x -> x == chain, df.chain)
-        lines!(ax, df.iteration[inds], rv[inds]; lineskws(; kwargs...)...)
+        lines!(ax, df.iteration[inds], rv[inds]; lineskws(; prefix=:linr, kwargs...)...)
     end
     return nothing
 end

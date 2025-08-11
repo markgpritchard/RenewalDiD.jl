@@ -15,7 +15,7 @@ function RenewalDiD.traceplot!(
 end
 
 function RenewalDiD.traceplot!(fig::FigOrGridLayout, df, variable; kwargs...)
-    ax = Axis(fig[1, 1]; axiskws(; kwargs...)...)
+    ax = Axis(fig[1, 1]; axiskws(; prefix=:axis, kwargs...)...)
     RenewalDiD.traceplot!(ax, df, variable; kwargs...)
     _traceplotylabels!(fig, df, variable; kwargs...)
     return nothing
@@ -25,7 +25,10 @@ function RenewalDiD.traceplot!(
     fig::FigOrGridLayout, df, variables::AbstractVector; 
     kwargs...
 )
-    axs = [Axis(fig[i, 1]; axiskws(; kwargs...)...) for i in eachindex(variables)]
+    axs = [
+        Axis(fig[i, 1]; axiskws(; prefix=:axis, kwargs...)...) 
+        for i in eachindex(variables)
+    ]
     RenewalDiD.traceplot!(axs, df, variables; kwargs...)
     _traceplotylabels!(fig, df, variables; kwargs...)
     return nothing
@@ -38,7 +41,7 @@ function RenewalDiD.traceplot!(
     axs = [
         ismissing(variables[i, j]) ? 
             nothing : 
-            Axis(fig[i, (2 * j - 1)]; axiskws(; kwargs...)...)
+            Axis(fig[i, (2 * j - 1)]; axiskws(; prefix=:axis, kwargs...)...)
         for i in axes(variables, 1), j in axes(variables, 2)
     ]
     RenewalDiD.traceplot!(axs, df, variables; kwargs...)
@@ -89,7 +92,7 @@ function _traceplot!(ax::Axis, df, variable::StringOrSymbol; kwargs...)
         inds = findall(x -> x == chain, df.chain)
         lines!(
             ax, df.iteration[inds], getproperty(df, variable)[inds]; 
-            lineskws(; kwargs...)...
+            lineskws(; prefix=:line, kwargs...)...
         )
     end
     return nothing
@@ -135,9 +138,14 @@ end
 
 function _traceplotylabels!(
     fig::FigOrGridLayout, ::Any, v::AbstractString, row=1; 
-    col=0, fontsize=11.84, rotation=π/2, tellheight=false, kwargs...
+    col=0, ylabelfontsize=11.84, ylabelrotation=π/2, ylabeltellheight=false, kwargs...
 )
-    Label(fig[row, col], v; labelkws(; fontsize, rotation, tellheight, kwargs...)...)
+    Label(
+        fig[row, col], v; 
+        labelkws( ; 
+        prefix=:ylabel, ylabelfontsize, ylabelrotation, ylabeltellheight, kwargs...
+        )...
+    )
     return nothing
 end
 

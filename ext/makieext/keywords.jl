@@ -7,6 +7,8 @@
 
 # is this a good way of doing it?
 
+# constants ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 const AXISKWS = [
     :alignmode
     :aspect
@@ -303,6 +305,9 @@ const VLINESKWS = [
     :ymin
 ]
 
+
+# access constants ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 axiskws(; kwargs...) = _selectkws(AXISKWS; kwargs...)
 bandkws(; kwargs...) = _selectkws(BANDKWS; kwargs...)
 labelkws(; kwargs...) = _selectkws(LABELKWs; kwargs...)
@@ -322,7 +327,7 @@ function _selectkws(expectedarguments; prefix=nothing, skip=Symbol[], kwargs...)
         isnothing(prefix) && continue
         if k in prefixedarguments && k ∉ skip
             unprefixedkey = _unprefixkey(k, prefix)
-            push!(kwkeys, k)
+            push!(kwkeys, unprefixedkey)
             push!(kwvals, v)
         end
     end
@@ -336,7 +341,7 @@ end
 _prefixedarguments(expectedarguments, ::Nothing) = Symbol[]
 
 function _unprefixkey(k, prefix)
-    j = length(prefix)
+    j = length(String(prefix))
     stringunprefixedkey = String(k)[j+1:end]
     return Symbol(stringunprefixedkey)
 end
