@@ -577,7 +577,7 @@ function _packsimulationinterventiontimes(interventiontimes::Matrix, interventio
     return vcat(interventiontimes, permutedims(intervention))
 end
 
-function _packsimulationinterventiontimes(interventiontimes::Vector, intervention::Number)
+function _packsimulationinterventiontimes(interventiontimes::Vector, intervention)
     return vcat(interventiontimes, intervention)
 end
 
