@@ -554,10 +554,13 @@ function __packsimulation!(rng, interventiontimes, Ns, observedcases, duration, 
     n = _n_seir(u0)
     cases = simulationcases(rng, duration, u0, beta, gamma, delta, theta, sigma)
     observedcases = hcat(observedcases, cases)
-    interventiontimes = vcat(interventiontimes, permutedims(intervention))
+    interventiontimes = _packsimulationinterventiontimes(interventiontimes, intervention)
     push!(Ns, n)
     return (interventiontimes, Ns, observedcases)
 end
+
+_packsimulationinterventiontimes(interventiontimes::Matrix, intervention::Vector) = vcat(interventiontimes, permutedims(intervention))
+_packsimulationinterventiontimes(interventiontimes::Vector, intervention::Number) = vcat(interventiontimes, intervention)
 
 """
     packsimulationtuple(; u0, beta, gamma, delta, theta, sigma, intervention)
