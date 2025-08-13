@@ -12,7 +12,7 @@ using Turing: arraydist, cdf, filldist, product_distribution, truncated
 
 # re-export from `DataFrames`
 export DataFrame
-# interventionmatrix.jl
+# interventionarrays.jl
 export AbstractInterventionArray
 export AbstractInterventionVector, InterventionVector
 export AbstractInterventionMatrix, InterventionMatrix
@@ -45,7 +45,7 @@ const automatic = Automatic()  # not exported
 const DEFAULT_SEEDMATRIX_HEIGHT = 7  # not exported 
 const DEFAULT_SEEDMATRIX_MINVALUE = 0.5  # not exported
 
-include("interventionmatrix.jl")
+include("interventionarrays.jl")
 include("generationinterval.jl")
 include("simulations.jl")
 include("fittingparameters.jl")
