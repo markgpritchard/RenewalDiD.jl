@@ -525,13 +525,27 @@ function _packsimulations(f, rng::AbstractRNG, duration, m1_args, args...; kwarg
     return f(; observedcases, interventions, Ns, kwargs...)
 end
 
-_siminterventionarray(duration, interventiontimes::Vector) = InterventionMatrix{Int}(duration, interventiontimes)
-_siminterventionarray(duration, interventiontimes::Matrix) = InterventionArray{Int}(duration, interventiontimes)
+function _siminterventionarray(duration, interventiontimes::Vector)
+    return InterventionMatrix{Int}(duration, interventiontimes)
+end
 
-_packsimulationsinterventiontimesarray(m1_args) = __packsimulationsinterventiontimesarray(m1_args[7])
-__packsimulationsinterventiontimesarray(::Number) = __packsimulationsinterventiontimesarray(nothing)
+function _siminterventionarray(duration, interventiontimes::Matrix)
+    return InterventionArray{Int}(duration, interventiontimes)
+end
+
+function _packsimulationsinterventiontimesarray(m1_args)
+    return __packsimulationsinterventiontimesarray(m1_args[7])
+end
+
+function __packsimulationsinterventiontimesarray(::Number)
+    return __packsimulationsinterventiontimesarray(nothing)
+end
+
 __packsimulationsinterventiontimesarray(::Nothing) = Vector{Union{Int, Nothing}}(undef, 0)
-__packsimulationsinterventiontimesarray(v::Vector) = Matrix{Union{Int, Nothing}}(undef, 0, length(v))
+
+function __packsimulationsinterventiontimesarray(v::Vector)
+    return Matrix{Union{Int, Nothing}}(undef, 0, length(v))
+end
 
 function _packsimulation!(rng, interventiontimes, Ns, observedcases, duration, m1_args)
     # simulation with one set of arguments
@@ -559,8 +573,13 @@ function __packsimulation!(rng, interventiontimes, Ns, observedcases, duration, 
     return (interventiontimes, Ns, observedcases)
 end
 
-_packsimulationinterventiontimes(interventiontimes::Matrix, intervention::Vector) = vcat(interventiontimes, permutedims(intervention))
-_packsimulationinterventiontimes(interventiontimes::Vector, intervention::Number) = vcat(interventiontimes, intervention)
+function _packsimulationinterventiontimes(interventiontimes::Matrix, intervention::Vector)
+    return vcat(interventiontimes, permutedims(intervention))
+end
+
+function _packsimulationinterventiontimes(interventiontimes::Vector, intervention::Number)
+    return vcat(interventiontimes, intervention)
+end
 
 """
     packsimulationtuple(; u0, beta, gamma, delta, theta, sigma, intervention)
