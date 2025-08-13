@@ -24,13 +24,13 @@ sim = let
     _beta2(t) = t >= 30 ? 0.72 * _beta1counter(t) : 0.9 * _beta1counter(t)
     _beta3(t) = 1.05 * _beta1counter(t)
     s1 = packsimulationtuple( ; 
-        u0=u0_1, beta=_beta1, gamma, delta, theta, sigma, intervention=50,
+        u0=u0_1, beta=_beta1, gamma, delta, theta, sigma, intervention=[50, 70],
     )
     s2 = packsimulationtuple( ; 
-        u0=u0_2, beta=_beta2, gamma, delta, theta, sigma, intervention=30,
+        u0=u0_2, beta=_beta2, gamma, delta, theta, sigma, intervention=[30, 50],
     )
     s3 = packsimulationtuple( ; 
-        u0=u0_3, beta=_beta3, gamma, delta, theta, sigma, intervention=nothing,
+        u0=u0_3, beta=_beta3, gamma, delta, theta, sigma, intervention=[nothing, nothing],
     )
     packsimulations(rng, 100, s1, s2, s3; sampletime=14)
 end

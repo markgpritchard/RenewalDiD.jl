@@ -515,15 +515,23 @@ function _packsimulations(f, duration, m1_args, args...; kwargs...)
 end
 
 function _packsimulations(f, rng::AbstractRNG, duration, m1_args, args...; kwargs...)
-    interventiontimes = Vector{Union{Int, Nothing}}(undef, 0)
+    interventiontimes = _packsimulationsinterventiontimesarray(m1_args)
     Ns = zeros(Int, 0)
     observedcases = zeros(Int, duration + 1, 0)
     interventiontimes, Ns, observedcases = _packsimulation!(
         rng, interventiontimes, Ns, observedcases, duration, m1_args, args...
     )
-    interventions = InterventionMatrix{Int}(duration, interventiontimes)
+    interventions = _siminterventionarray(duration, interventiontimes)
     return f(; observedcases, interventions, Ns, kwargs...)
 end
+
+_siminterventionarray(duration, interventiontimes::Vector) = InterventionMatrix{Int}(duration, interventiontimes)
+_siminterventionarray(duration, interventiontimes::Matrix) = InterventionArray{Int}(duration, interventiontimes)
+
+_packsimulationsinterventiontimesarray(m1_args) = __packsimulationsinterventiontimesarray(m1_args[7])
+__packsimulationsinterventiontimesarray(::Number) = __packsimulationsinterventiontimesarray(nothing)
+__packsimulationsinterventiontimesarray(::Nothing) = Vector{Union{Int, Nothing}}(undef, 0)
+__packsimulationsinterventiontimesarray(v::Vector) = Matrix{Union{Int, Nothing}}(undef, 0, length(v))
 
 function _packsimulation!(rng, interventiontimes, Ns, observedcases, duration, m1_args)
     # simulation with one set of arguments
@@ -546,7 +554,7 @@ function __packsimulation!(rng, interventiontimes, Ns, observedcases, duration, 
     n = _n_seir(u0)
     cases = simulationcases(rng, duration, u0, beta, gamma, delta, theta, sigma)
     observedcases = hcat(observedcases, cases)
-    push!(interventiontimes, intervention)
+    interventiontimes = vcat(interventiontimes, permutedims(intervention))
     push!(Ns, n)
     return (interventiontimes, Ns, observedcases)
 end

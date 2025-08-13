@@ -10,12 +10,20 @@ using Test
         @info "starting test functions for tests"
         include("functionsfortests_test.jl")
     end
+    @testset "intervention vector" begin
+        @info "starting intervention vector tests"
+        include("interventionvector_test.jl")
+    end 
     @testset "intervention matrix" begin
         @info "starting intervention matrix tests"
         include("interventionmatrix_test.jl")
     end 
+    @testset "intervention array" begin
+        @info "starting intervention array-3 tests"
+        include("interventionarray3_test.jl")
+    end 
     @testset "generation interval" begin
-         @info "starting generation interval tests"
+        @info "starting generation interval tests"
         include("generationinterval_test.jl")
     end 
     @testset "simulations" begin

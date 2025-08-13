@@ -3,19 +3,50 @@
 # Structs ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 """
-    AbstractInterventionsArray{T, N} <: AbstractArray{T, N}
+    AbstractInterventionArray{T, N} <: AbstractArray{T, N}
 
 Abstract type of matrix of intervention times.
 
-Two subtypes are defined:
-- `InterventionMatrix{T} <: AbstractArray{T, N}`
-- `OffsetInterventionMatrix{T} <: AbstractArray{T, N}`
-"""
-abstract type AbstractInterventionsArray{T, N} <: AbstractArray{T, N} end
+Three abstract subtypes are defined:
+- `AbstractInterventionVector{T} <: AbstractInterventionArray{T, 1}`
+- `AbstractInterventionMatrix{T} <: AbstractInterventionArray{T, 2}`
+- `AbstractInterventionArray3{T} <: AbstractInterventionArray{T, 3}`
 
-const AbstractInterventionMatrix{T} = AbstractInterventionsArray{T, 2}
+One type is defined for each of these abstract subtypes 
+- `InterventionVector{T} <: AbstractInterventionVector{T}`
+- `InterventionMatrix{T} <: AbstractInterventionMatrix{T}`
+- `InterventionArray{T} <: AbstractInterventionArray3{T}`
+"""
+abstract type AbstractInterventionArray{T, N} <: AbstractArray{T, N} end
+
+abstract type AbstractInterventionVector{T} <: AbstractInterventionArray{T, 1} end
+
+struct InterventionVector{T} <: AbstractInterventionVector{T}
+    duration::Int
+    offset::Int
+    rawstarttime::Union{<:Number, Nothing}
+    starttime::Int
+
+    function InterventionVector{T}(
+        duration::Number, rawstarttime::S;
+        mutewarnings=nothing, offset=0,
+    ) where {S <: Union{<:Number, Nothing}, T <: Any}
+        starttime = _interventionstarttime(rawstarttime, duration, offset)
+        return new{T}(
+            convert(Int, duration), convert(Int, offset), rawstarttime, starttime
+        )
+    end
+end
+
+InterventionVector(args...; kwargs...) = InterventionVector{Int}(args...; kwargs...)
+
+function InterventionVector(v::AbstractInterventionVector; offset, kwargs...) 
+    return _addoffsettointerventionarray(v, offset; kwargs...)
+end
 
 ## InterventionMatrix
+
+abstract type AbstractInterventionMatrix{T} <: AbstractInterventionArray{T, 2} end
 
 """
     InterventionMatrix{T}
@@ -80,18 +111,21 @@ julia> InterventionMatrix(100, [25, 50, 100]);
 """ 
 struct InterventionMatrix{T} <: AbstractInterventionMatrix{T}
     duration::Int
+    offset::Int
     rawstarttimes::Vector{<:Union{<:Integer, Nothing}}
     starttimes::Vector{Int}
 
     function InterventionMatrix{T}(
         duration::Number, rawstarttimes::Vector{<:Union{<:Number, Nothing}};
-        mutewarnings=nothing,
+        mutewarnings=nothing, offset=0,
     ) where T
-        starttimes = _generateinterventionstarttimes(rawstarttimes, duration)
+        starttimes = _generateinterventionstarttimes(rawstarttimes, duration, offset)
         _interventionarrayconstructionwarnings(
             InterventionMatrix, duration, starttimes, mutewarnings
         )
-        return new{T}(convert(Int, duration), rawstarttimes, starttimes)
+        return new{T}(
+            convert(Int, duration), convert(Int, offset), rawstarttimes, starttimes
+        )
     end
 end
 
@@ -107,94 +141,234 @@ function InterventionMatrix{T}(::Number, v::AbstractVector; kwargs...) where T
     return nothing
 end
 
-## OffsetInterventionMatrix
+function InterventionMatrix(M::AbstractInterventionMatrix; offset, kwargs...)
+    return _addoffsettointerventionarray(M, offset; kwargs...)
+end
 
-struct OffsetInterventionMatrix{T} <: AbstractInterventionMatrix{T}
+const InterventionVecOrMat{T} = Union{
+    <:AbstractInterventionVector{T}, <:AbstractInterventionMatrix{T}
+}
+
+## Array of multiple interventions
+
+abstract type AbstractInterventionArray3{T} <: AbstractInterventionArray{T, 3} end
+
+struct InterventionArray{T} <: AbstractInterventionArray3{T}
     duration::Int
-    offset::Int
-    rawstarttimes::Vector{<:Union{<:Integer, Nothing}}
-    starttimes::Vector{Int}
+    offset::Vector{Int}
+    rawstarttimes::VecOrMat{<:Union{<:Integer, Nothing}}
+    starttimes::Matrix{Int}
 
-    function OffsetInterventionMatrix{T}(
-        duration::Number, offset::Number, rawstarttimes::Vector{<:Union{<:Number, Nothing}};
+    function InterventionArray{T}(
+        duration::Number, 
+        offset::Vector{<:Number}, 
+        rawstarttimes::Matrix{<:Union{<:Number, Nothing}};
         mutewarnings=nothing,
     ) where T
         starttimes = _generateinterventionstarttimes(rawstarttimes, duration, offset)
+        length(offset) == size(rawstarttimes, 2) || throw(ArgumentError("to do"))
         _interventionarrayconstructionwarnings(
-            OffsetInterventionMatrix, duration, starttimes, mutewarnings
+            InterventionArray, duration, starttimes, mutewarnings
         )
         return new{T}(
-            convert(Int, duration), convert(Int, offset), rawstarttimes, starttimes
+            convert(Int, duration), 
+            convert.(Int, offset), 
+            rawstarttimes, 
+            starttimes
         )
     end
 end
 
-function OffsetInterventionMatrix(args...; kwargs...)
-    return OffsetInterventionMatrix{Int}(args...; kwargs...)
+function InterventionArray(A::InterventionArray{T}; offset=0, kwargs...) where T
+    return __InterventionArray(T, A, offset; kwargs...)
 end
 
-function OffsetInterventionMatrix{T}(
-    duration::Number, offset::Number, args...; 
-    kwargs...
-) where T
-    return OffsetInterventionMatrix{T}(duration, offset, [args...]; kwargs...)
+InterventionArray(args...; kwargs...) = InterventionArray{Int}(args...; kwargs...)
+
+function InterventionArray{T}(args...; kwargs...) where T 
+    return _InterventionArray(T, args...; kwargs...)
 end
 
-function OffsetInterventionMatrix{T}(
-    ::Number, ::Number, v::AbstractVector; 
+function _InterventionArray(
+    T, duration::Number, intervention1::VecOrMat, intervention2::Vector; 
     kwargs...
-) where T
-    # throw error and avoid a loop nesting vectors within vectors
-    throw(_interventionarrayunusablevectorerror(v))
-    return nothing
+) 
+    return _InterventionArray(T, duration, hcat(intervention1, intervention2); kwargs...)
 end
 
-function OffsetInterventionMatrix(
-    M::AbstractInterventionMatrix{T}, offset::Number; 
+function _InterventionArray(
+    T, duration::Number, intervention1::VecOrMat, intervention2::Vector, args...; 
     kwargs...
-) where T
-    return OffsetInterventionMatrix{T}(
-        M.duration, M.offset + offset, M.rawstarttimes; 
+) 
+    # loop through intervention vectors until a single matrix of intervention start times 
+    return _InterventionArray(
+        T, duration, hcat(intervention1, intervention2), args...; 
         kwargs...
     )
 end
 
-## Functions to generate AbstractInterventionsArray
+function _InterventionArray(
+    T, duration::Number, v::AbstractVector{<:AbstractVector}; 
+    kwargs...
+) 
+    # splat vector of vectors so the above versions can concatenate them into a matrix
+    return _InterventionArray(T, duration, v...; kwargs...)
+end
+#=
+function InterventionArray{T}(::Number, M::AbstractMatrix; kwargs...) where T
+    # throw error and avoid a loop nesting vectors within vectors
+    throw(_interventionarrayunusablevectorerror(Mv))
+    return nothing
+end
+=#
+function _InterventionArray(
+    T, duration::Number, interventions::AbstractVector; 
+    offset=0, kwargs...
+) 
+    return __InterventionArray(T, duration, offset, interventions; kwargs...)
+end
 
-function _generateinterventionstarttimes(rawstarttimes, duration, offset=0)
-    starttimes = zeros(Int, length(rawstarttimes))
-    for (i, t) in enumerate(rawstarttimes)
-        if isnothing(t) || t + offset <= 1 || t + offset > duration
-            starttimes[i] = duration + 1
-        else
-            starttimes[i] = convert(Int, t + offset)
-        end
-    end
+function _InterventionArray(
+    T, duration::Number, interventions::AbstractMatrix; 
+    offset=0, kwargs...
+) 
+    return __InterventionArray(T, duration, offset, interventions; kwargs...)
+end
+
+function __InterventionArray(
+    T, duration::Number, offset::Number, interventions::AbstractMatrix; 
+    kwargs...
+) 
+    # one offset and many sets of interventions -- make offsets match interventions
+    v = [offset for _ in axes(interventions, 2)]
+    return InterventionArray{T}(duration, v, interventions; kwargs...)
+end
+#=
+function _InterventionArray(T, A::InterventionArray; offset=0, kwargs...) 
+    return __InterventionArray(T, A, offset; kwargs...)
+end
+=#
+function __InterventionArray(
+    T, duration::Number, offset::Number, interventions::AbstractVector; 
+    kwargs...
+) 
+    # only one offset and only one set of interventions -- essentially a 3-dimensional matrix
+    return InterventionArray{T}(duration, [offset], [interventions;; ]; kwargs...)
+end
+
+function __InterventionArray(
+    T, duration::Number, offset::Vector, interventions::AbstractVector; 
+    kwargs...
+) 
+    # multiple offsets and one set of interventions -- make interventions match offsets 
+    M = hcat([interventions for _ in eachindex(offset)]...)
+    return __InterventionArray(T, duration, offset, M; kwargs...)
+end
+
+function __InterventionArray(
+    T, duration::Number, offset::Vector, interventions::AbstractMatrix; 
+    kwargs...
+) 
+    return InterventionArray{T}(duration, offset, interventions; kwargs...)
+end
+
+function __InterventionArray(T, A::InterventionArray, offset::Number; kwargs...) 
+    v = [offset for _ in axes(A, 3)]
+    return __InterventionArray(T, A, v; kwargs...)
+end
+
+function __InterventionArray(T, A::InterventionArray, offset::Vector; kwargs...) 
+    A isa InterventionArray{T} || throw(ArgumentError("to do"))
+    return _addoffsettointerventionarray(A, offset; kwargs...)
+end
+
+## Functions to generate AbstractInterventionArray
+
+function _generateinterventionstarttimes(rawstarttimes, duration, offset)
+    starttimes = zeros(Int, size(rawstarttimes)...)
+    _generateinterventionstarttimes!(starttimes, rawstarttimes, duration, offset)
     return starttimes
+end
+
+function _generateinterventionstarttimes!(
+    starttimes::AbstractVector, rawstarttimes::AbstractVector, duration, offset::Number
+)
+    for (i, t) in enumerate(rawstarttimes)
+        starttimes[i] = _interventionstarttime(t, duration, offset)
+    end
+    return nothing
+end
+
+function _generateinterventionstarttimes!(
+    starttimes::Matrix, rawstarttimes::Matrix, duration, offset::Vector
+)
+    for k in axes(rawstarttimes, 2)
+        _generateinterventionstarttimes!(
+            (@view starttimes[:, k]), (@view rawstarttimes[:, k]), duration, offset[k]
+        )
+    end
+    return nothing
+end
+
+function _interventionstarttime(t::Number, duration, offset)
+    if t + offset <= 1 || t + offset > duration
+        return convert(Int, duration + 1)
+    else
+        return convert(Int, t + offset)
+    end
+end
+
+_interventionstarttime(::Nothing, duration, ::Any) = convert(Int, duration + 1)
+
+function _addoffsettointerventionarray(
+    A::S, offset; 
+    kwargs...
+) where S <: AbstractInterventionArray
+    totalnewoffset = A.offset .+ offset
+    return S(A.duration, A.rawstarttimes; offset=totalnewoffset, kwargs...)
 end
 
 
 # Functions ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
-## Properties of `AbstractInterventionMatrix`
+## Properties of `InterventionMatrix`
 
-function Base.getproperty(M::InterventionMatrix, k::Symbol)
-    if k === :offset
-        return 0 
+function Base.getproperty(v::AbstractInterventionVector, k::Symbol)
+    if k === :starttimes
+        return getfield(v, :starttime)
+    elseif k === :rawstarttimes
+        return getfield(v, :rawstarttime)
     else 
-        return getfield(M, k)
+        return getfield(v, k)
     end
 end
 
+Base.size(v::AbstractInterventionVector) = (v.duration, )
 Base.size(M::AbstractInterventionMatrix) = (M.duration, length(M.starttimes))
+Base.size(A::AbstractInterventionArray3) = (A.duration, size(A.starttimes)...)
+
+function Base.getindex(v::AbstractInterventionVector{T}, t) where T
+    0 < t <= _duration(v) || throw(BoundsError(v, t))
+    return T(t >= v.starttime)
+end
 
 function Base.getindex(M::AbstractInterventionMatrix{T}, t, x) where T
-    t <= _duration(M) || throw(BoundsError(M, [t, x]))
-    x <= length(M.starttimes) || throw(BoundsError(M, [t, x]))
+    0 < t <= _duration(M) || throw(BoundsError(M, [t, x]))
+    0 < x <= length(M.starttimes) || throw(BoundsError(M, [t, x]))
     return T(t >= M.starttimes[x])
 end
 
-_duration(M::AbstractInterventionsArray) = M.duration
+function Base.getindex(A::AbstractInterventionArray3{T}, t, x, z) where T
+    0 < t <= _duration(A) || throw(BoundsError(A, [t, x, z]))
+    0 < x <= size(A.starttimes, 1) || throw(BoundsError(A, [t, x, z]))
+    0 < z <= size(A.starttimes, 2) || throw(BoundsError(A, [t, x, z]))
+    return T(t >= A.starttimes[x, z])
+end
+
+_duration(A::AbstractInterventionArray) = A.duration
+_offset(A::AbstractInterventionArray) = A.offset
+_starttimes(A::AbstractInterventionVector) = A.starttime
+_starttimes(A::AbstractInterventionArray) = A.starttimes
 
 ## Intervention times for plot 
 
@@ -206,22 +380,96 @@ function _interventionstarttimes(M::AbstractInterventionMatrix, i)
     return M.starttimes[i] > _duration(M) ? nothing : M.starttimes[i]
 end  # another version of this function is in `processparameters.jl`
 
+## Concatenate 
+
+function Base.cat(A::AbstractInterventionArray, args...; dims, kwargs...)
+    return _cat(dims, A, args...; kwargs...)
+end
+
+_cat(dims::Number, args...; kwargs...) = _cat(Val(dims), args...; kwargs...)
+
+function _cat(::Val{1}, args...; kwargs...)
+    throw(ArgumentError("concatenating AbstractInterventionArrays on dimension 1 is intentionally unsupported"))
+end
+
+function _cat(::Val{2}, A::InterventionVecOrMat{T}, args...; mutewarnings=nothing) where T
+    d1 = A.duration
+    o1 = A.offset
+  #  rawstarttimes = _catstartrawstarttimes(A)
+    for a in args
+        a isa InterventionVecOrMat{T} || throw(ArgumentError("cannot concatenate a $(typeof(a)) to an InterventionMatrix{$T} on dimension 2"))
+        a.duration == d1 || throw(DimensionMismatch("mismatch in duration (expected $d1 got $(a.duration))"))
+        a.offset == o1 || throw(ArgumentError("when concatenating intevention arrays on dimension 2, all must have equal offset (expected $o1, got $(a.offset))"))
+   #     _pushrawstarttimes!(rawstarttimes, a)
+    end
+    rawstarttimes = vcat(A.rawstarttimes, [a.rawstarttimes for a in args]...)
+    return InterventionMatrix{T}(d1, rawstarttimes; offset=o1, mutewarnings)
+end
+
+function _cat(::Val{2}, A::AbstractInterventionArray3{T}, args...) where T
+    d1 = A.duration
+    for a in args
+        a isa AbstractInterventionArray3{T} || throw(ArgumentError("cannot concatenate a $(typeof(a)) to an AbstractInterventionArray3{$T} on dimension 2"))
+        a.duration == d1 || throw(DimensionMismatch("mismatch in duration (expected $d1 got $(a.duration))"))
+        #a.offset == o1 || throw(ArgumentError("when concatenating intevention arrays on dimension 2, all must have equal offset (expected $o1, got $(a.offset))"))
+    end
+    rawstarttimes = vcat(A.rawstarttimes, [a.rawstarttimes for a in args]...)
+    return InterventionArray{T}(d1, rawstarttimes; )
+end
+
+# combined type only used in the following function signature
+const _MatOrA3{T} = Union{<:AbstractInterventionMatrix{T}, <:AbstractInterventionArray3{T}}
+
+function _cat(::Val{3}, A::_MatOrA3{T}, args...; kwargs...) where T
+    d1 = A.duration
+    for a in args
+        a isa _MatOrA3{T} || throw(ArgumentError("cannot concatenate a $(typeof(a)) to an InterventionArray{$T} on dimension 3"))
+        a.duration == d1 || throw(DimensionMismatch("mismatch in duration (expected $d1 got $(a.duration))"))
+        size(a, 2) == size(A, 2) || throw(DimensionMismatch("mismatch in number of groups (expected $(size(A, 2)) got $(size(a, 2)))"))
+   #     _pushrawstarttimes!(rawstarttimes, a)
+    end
+    offset = vcat(A.offset, [a.offset for a in args]...)
+    rawstarttimes = hcat(A.rawstarttimes, [a.rawstarttimes for a in args]...)
+    return InterventionArray{T}(d1, offset, rawstarttimes; kwargs...)
+end
+
+interventioncat(args...; kwargs...) = _cat(Val{3}(), args...; kwargs...) 
+
 ## Show
 
-function Base.show(io::IO, ::MIME"text/plain", M::AbstractInterventionMatrix) 
-    combinedstrings = _showcombinedstrings(M)
+function Base.show(io::IO, ::MIME"text/plain", A::InterventionVecOrMat) 
+    combinedstrings = _showcombinedstrings(A, nothing)
     return pretty_table(
         io, combinedstrings; 
-        header=_showheader(M),
+        header=_showheader(A),
         hlines=[1], 
         show_row_number=false, 
-        title=summary(M), 
+        title=summary(A), 
         vlines=[1], 
     )
 end
 
-# short version used when `AbstractInterventionMatrix` is in an `AbstractRenewalDiDData` 
-function Base.show(io::IO, M::AbstractInterventionMatrix) 
+function Base.show(io::IO, ::MIME"text/plain", A::AbstractInterventionArray3) 
+    show(io, summary(A))
+    if size(A, 3) <= 6
+        for k in 1:6
+            _showoneintervention(io, A, k)
+        end
+    else
+        for k in 1:3
+            _showoneintervention(io, A, k)
+        end
+        print("\n;;; …\n")
+        s = size(A, 3)
+        for k in s-2:s
+            _showoneintervention(io, A, k)
+        end
+    end
+    return nothing
+end
+
+# short version used when `InterventionMatrix` is in an `AbstractRenewalDiDData` 
+function Base.show(io::IO, M::InterventionVecOrMat) 
     show(io, collect(M))
     print(io, " {duration $(M.duration), starttimes [")
     join(io, _showliststarttimes(M), ", ")
@@ -229,26 +477,35 @@ function Base.show(io::IO, M::AbstractInterventionMatrix)
     return nothing
 end
 
-function Base.summary(M::OffsetInterventionMatrix{T}) where T
-    _h = size(M, 1)
-    _w = size(M, 2)
-    return "$_h×$_w OffsetInterventionMatrix{$T} (offset $(M.offset))"
+Base.show(io::IO, A::AbstractInterventionArray3) = show(io, collect(A))
+
+function _showoneintervention(io, A, k)
+    k > size(A, 3) && return nothing 
+    print("\n[:, :, $k] =\n")
+    combinedstrings = _showcombinedstrings(A, k)
+    return pretty_table(
+        io, combinedstrings; 
+        header=_showheader(A),
+        hlines=[1], 
+        show_row_number=false, 
+        vlines=[1], 
+    )
 end
 
+_showliststarttimes(M) = [x > M.duration ? nothing : x for x in M.starttimes]
 
-function _showliststarttimes(M)
-    return [x > M.duration ? nothing : x for x in M.starttimes]
-end
-
-function _showtimes(M)
-    uniquestarttimes = unique(M.starttimes)
+function _showtimes(M, k)
+    uniquestarttimes = __uniquestarttimes(M, k)
     unsortedshowtimes = unique([uniquestarttimes; 1; _duration(M)])
     showtimes = sort(unsortedshowtimes)
     filter!(x -> x <= _duration(M), showtimes)
     return showtimes
 end
 
-function _showcontents(M::AbstractInterventionMatrix{T}, showtimes) where T 
+__uniquestarttimes(M::InterventionVecOrMat, ::Nothing) = unique(M.starttimes)
+__uniquestarttimes(M::AbstractInterventionArray3, k) = unique(@view M.starttimes[:, k])
+
+function _showcontents(M::InterventionVecOrMat{T}, showtimes, ::Nothing) where T
     C = zeros(T, length(showtimes), size(M, 2))
     for (i, t) in enumerate(showtimes), g in axes(M, 2)
         C[i, g] = M[t, g]
@@ -256,9 +513,17 @@ function _showcontents(M::AbstractInterventionMatrix{T}, showtimes) where T
     return C 
 end
 
-function _showstrings(M::AbstractInterventionMatrix{T}) where T
-    showtimes = _showtimes(M)
-    contents = _showcontents(M, showtimes)
+function _showcontents(A::AbstractInterventionArray3{T}, showtimes, k) where T 
+    C = zeros(T, length(showtimes), size(A, 2))
+    for (i, t) in enumerate(showtimes), g in axes(A, 2)
+        C[i, g] = A[t, g, k]
+    end 
+    return C 
+end
+
+function _showstrings(M::AbstractInterventionArray{T}, k) where T
+    showtimes = _showtimes(M, k)
+    contents = _showcontents(M, showtimes, k)
     stringtimes = ["1"]
     stringcontents = _showstringmatrixrepeatedrow(M, "$(zero(T))")
 
@@ -293,8 +558,8 @@ end
 
 _matrixvdots(M) = _showstringmatrixrepeatedrow(M, "⋮")
 
-function _showcombinedstrings(M)
-    stringtimes, stringcontents = _showstrings(M)
+function _showcombinedstrings(M, k)
+    stringtimes, stringcontents = _showstrings(M, k)
     return hcat(stringtimes, stringcontents)
 end
 

@@ -13,7 +13,11 @@ using Turing: arraydist, cdf, filldist, product_distribution, truncated
 # re-export from `DataFrames`
 export DataFrame
 # interventionmatrix.jl
-export AbstractInterventionsArray, InterventionMatrix, OffsetInterventionMatrix
+export AbstractInterventionArray
+export AbstractInterventionVector, InterventionVector
+export AbstractInterventionMatrix, InterventionMatrix
+export AbstractInterventionArray3, InterventionArray
+export interventioncat
 # generationinterval.jl
 export g_covid, g_seir, generationtime, testgenerationtime, vectorg_seir
 # simulations.jl

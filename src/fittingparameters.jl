@@ -345,8 +345,8 @@ end
 
 ## Functions called by `_renewaldid`
 
-_ntimes(M::AbstractMatrix) = size(M, 1)
-_ngroups(M::AbstractMatrix) = size(M, 2)
+_ntimes(M::AbstractArray) = size(M, 1)
+_ngroups(M::AbstractArray) = size(M, 2)
 
 # the mean of all gamma values is zero, ensured by setting the final value in the vector as 
 # `-sum` of other values
@@ -362,10 +362,24 @@ function _thetavec(thetas_raw::AbstractVector{S}, sigma_theta::T) where {S, T}
     return cumsum([theta_0; thetas_raw .* sigma_theta])
 end  # a second version of this function is given in `processparameters.jl`
 
-function _predictedlogR_0(alpha, gammavec, thetavec, tau, interventions)
+function _predictedlogR_0(alpha, gammavec, thetavec, tau, interventions::AbstractMatrix)
     _predictedlogR_0assertions(gammavec, thetavec, interventions)
     logR_0 = [
         alpha + gammavec[g] + thetavec[t] + tau * interventions[t, g] 
+        for t in axes(interventions, 1), g in axes(interventions, 2)
+    ]
+    return logR_0
+end
+
+function _predictedlogR_0(
+    alpha, gammavec, thetavec, tau, interventions::AbstractArray{T, 3}
+) where T
+    _predictedlogR_0assertions(gammavec, thetavec, interventions)
+    logR_0 = [
+        alpha + 
+            gammavec[g] + 
+            thetavec[t] + 
+            sum([tau[k] * interventions[t, g, k] for k in axes(interventions, 3)]) 
         for t in axes(interventions, 1), g in axes(interventions, 2)
     ]
     return logR_0
@@ -696,8 +710,9 @@ end
 )
     ngroups = _ngroups(interventions)
     ntimes = _ntimes(interventions)
+    ninterventions = size(interventions, 3)
 
-    tau ~ tauprior
+    tau ~ filldist(tauprior, ninterventions)
     alpha ~ alphaprior
     sigma_gamma ~ sigma_gammaprior
     gammas_raw ~ filldist(Normal(0, 1), ngroups - 1)

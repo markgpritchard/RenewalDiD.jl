@@ -184,20 +184,23 @@ end
     @test RenewalDiD._duration(OffsetInterventionMatrix(4, 2, [2, 3]; mutewarnings=true)) == 4
 end
 @testset "`_showtimes`" begin
-    @test RenewalDiD._showtimes(OIM1) == [1, 2, 3]
-    @test RenewalDiD._showtimes(OIM3) == [1, 4, 5, 8, 10]
-    @test RenewalDiD._showtimes(OffsetInterventionMatrix(OIM3, 5)) == [1, 9, 10]
+    @test RenewalDiD._showtimes(OIM1, nothing) == [1, 2, 3]
+    @test RenewalDiD._showtimes(OIM3, nothing) == [1, 4, 5, 8, 10]
+    @test RenewalDiD._showtimes(OffsetInterventionMatrix(OIM3, 5), nothing) == [1, 9, 10]
 end
 @testset "`_showcontents`" begin
-    @test RenewalDiD._showcontents(OIM1, RenewalDiD._showtimes(OIM1)) == M1expectedcontents
-    @test RenewalDiD._showcontents(OIM3, RenewalDiD._showtimes(OIM3)) == M3expectedcontents
-    @test RenewalDiD._showcontents(OIM5, RenewalDiD._showtimes(OIM5)) == M1expectedcontents
+    @test RenewalDiD._showcontents(OIM1, RenewalDiD._showtimes(OIM1, nothing), nothing) == 
+        M1expectedcontents
+    @test RenewalDiD._showcontents(OIM3, RenewalDiD._showtimes(OIM3, nothing), nothing) == 
+        M3expectedcontents
+    @test RenewalDiD._showcontents(OIM5, RenewalDiD._showtimes(OIM5, nothing), nothing) == 
+        M1expectedcontents
 end
 @testset "`_showstrings`" begin
-    ts1, cs1 = RenewalDiD._showstrings(OIM1)
-    ts2, cs2 = RenewalDiD._showstrings(OIM5)
-    ts3, cs3 = RenewalDiD._showstrings(OIM3)
-    ts4, cs4 = RenewalDiD._showstrings(OIM4)
+    ts1, cs1 = RenewalDiD._showstrings(OIM1, nothing)
+    ts2, cs2 = RenewalDiD._showstrings(OIM5, nothing)
+    ts3, cs3 = RenewalDiD._showstrings(OIM3, nothing)
+    ts4, cs4 = RenewalDiD._showstrings(OIM4, nothing)
     @test ts1 == M1expectedtimestring
     @test cs1 == M1expectedcontentsstring     
     @test ts2 == M1expectedtimestring
@@ -207,9 +210,9 @@ end
     @test cs4 == M4expectedcontentsstring
 end
 @testset "`_showcombinedstrings`" begin
-    @test RenewalDiD._showcombinedstrings(OIM1) == M1expectedcombinedstring
-    @test RenewalDiD._showcombinedstrings(OIM5) == M1expectedcombinedstring
-    @test RenewalDiD._showcombinedstrings(OIM4) == M4expectedcombinedstring
+    @test RenewalDiD._showcombinedstrings(OIM1, nothing) == M1expectedcombinedstring
+    @test RenewalDiD._showcombinedstrings(OIM5, nothing) == M1expectedcombinedstring
+    @test RenewalDiD._showcombinedstrings(OIM4, nothing) == M4expectedcombinedstring
 end
 @testset "`_showheader`" begin
     @test RenewalDiD._showheader(OIM1) == M1expectedheaderstring

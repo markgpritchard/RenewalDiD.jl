@@ -5,6 +5,8 @@ using Test
 
 M1 = InterventionMatrix(4, [2, 3, nothing]) 
 M2 = InterventionMatrix(5, [nothing, nothing]; mutewarnings=true) 
+A1 = InterventionArray(5, [nothing, nothing], [nothing, nothing]; mutewarnings=true)
+A2 = InterventionArray(5, [2, 3, nothing], [6, nothing])
 
 obs1 = (_obs = zeros(Int, 20, 2); _obs[1, :] .+= 1; _obs[1:5, :] .+= 1; _obs)
 obs2 = (_obs = zeros(Int, 20, 2); _obs[1, 1] += 1; _obs[1:5, :] .+= 1; _obs)
@@ -304,6 +306,17 @@ end
     @test RenewalDiD._predictedlogR_0(1, [-1, 0, 1], zeros(4), 0, M1) == R0prediction1
     @test RenewalDiD._predictedlogR_0(1, [-1, 0, 1], [-1, 0.5, 2.5, 0], 0, M1) == R0prediction2
     @test RenewalDiD._predictedlogR_0(1, [-1, 0, 1], [-1, 0.5, 2.5, 0], -1, M1) == R0prediction3
+end
+
+@testset "generate matrix of log R_0 values with multiple interventions" begin
+    @test RenewalDiD._predictedlogR_0(0, zeros(3), zeros(4), 0, A1) == zeros(4, 3)
+    @test RenewalDiD._predictedlogR_0(0, zeros(2), zeros(5), 2, A2) == zeros(5, 2)
+    @test_throws DimensionMismatch RenewalDiD._predictedlogR_0(0, zeros(2), zeros(4), 0, A1)
+    @test_throws DimensionMismatch RenewalDiD._predictedlogR_0(0, zeros(3), zeros(3), 0, A1)
+    @test RenewalDiD._predictedlogR_0(1, zeros(3), zeros(4), 0, A1) == ones(4, 3)
+    @test RenewalDiD._predictedlogR_0(1, [-1, 0, 1], zeros(4), 0, A1) == R0prediction1
+    @test RenewalDiD._predictedlogR_0(1, [-1, 0, 1], [-1, 0.5, 2.5, 0], 0, A1) == R0prediction2
+    @test RenewalDiD._predictedlogR_0(1, [-1, 0, 1], [-1, 0.5, 2.5, 0], -1, A1) == R0prediction3
 end
 
 @testset "expected seed cases" begin
