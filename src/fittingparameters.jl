@@ -23,10 +23,11 @@ Container for data passed to `renewaldid`.
 
 # Fields
 - `observedcases::Matrix{S}`: matrix of observed cases, each group is a separate column
-- `interventions::T`: matrix of intervention times, each group is a separate column 
+- `interventions::T`: array of intervention times. Time changes by row, group by column, and
+    intervention in dimension 3 (see `InterventionMatrix` and `InterventionArray`) 
 - `Ns::Vector{Int}`: population size of each group
 - `exptdseedcases::Matrix{Float64}`: matrix of infections up to time `t=0` that seeds
-     subsequent infection events
+    subsequent infection events
 
 # Constructors
 
@@ -345,8 +346,10 @@ end
 
 ## Functions called by `_renewaldid`
 
-_ntimes(M::AbstractArray) = size(M, 1)
-_ngroups(M::AbstractArray) = size(M, 2)
+_ntimes(A::AbstractArray) = size(A, 1)
+_ngroups(A::AbstractArray) = size(A, 2)
+_ninterventions(A::AbstractArray) = size(A, 3)
+
 
 # the mean of all gamma values is zero, ensured by setting the final value in the vector as 
 # `-sum` of other values
@@ -710,7 +713,7 @@ end
 )
     ngroups = _ngroups(interventions)
     ntimes = _ntimes(interventions)
-    ninterventions = size(interventions, 3)
+    ninterventions = _ninterventions(interventions)
 
     tau ~ filldist(tauprior, ninterventions)
     alpha ~ alphaprior

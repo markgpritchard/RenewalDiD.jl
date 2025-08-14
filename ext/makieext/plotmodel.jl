@@ -231,3 +231,26 @@ function _plotmodelinterventionvlines!(
     return axs
 end
 
+function _plotmodelinterventionvlines!(
+    axs, A::AbstractArray{T, 3}; 
+    interventioncolor=automatic, kwargs...
+) where T
+    return __plotmodelinterventionvlines!(axs, A, interventioncolor; kwargs...)
+end
+
+function __plotmodelinterventionvlines!(axs, A, interventioncolor; kwargs...) 
+    for k in axes(A, 3)
+        _plotmodelinterventionvlines!(axs, (@view A[:, :, k]); interventioncolor, kwargs...)
+    end
+    return axs
+end
+
+function __plotmodelinterventionvlines!(axs, A, ::Automatic; kwargs...)
+    for k in axes(A, 3)
+        _plotmodelinterventionvlines!(
+            axs, (@view A[:, :, k]); 
+            interventioncolor=Cycled(k + 1), kwargs...
+        )
+    end
+    return axs
+end

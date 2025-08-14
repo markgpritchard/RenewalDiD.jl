@@ -125,13 +125,20 @@ function _thetavec(df::DataFrame, i, ntimes)
     )
 end  
 
+function _tauvec(df, i, ninterventions)
+    return [getproperty(df, Symbol("tau[$k]"))[i] for k in 1:ninterventions]
+end  
+
 function _mxmatrix(df, i, ngroups, ntimes, n_seeds)
     totaltimes = ntimes + n_seeds
     return [getproperty(df, Symbol("M_x[$t, $j]"))[i] for t in 1:totaltimes, j in 1:ngroups]
 end
 
 function _observedsigmamatrix(df, i, ngroups, ntimes)
-    return return [getproperty(df, Symbol("predictobservedinfectionssigmamatrix[$t, $j]"))[i] for t in 1:(ntimes + 1), j in 1:ngroups]
+    return [
+        getproperty(df, Symbol("predictobservedinfectionssigmamatrix[$t, $j]"))[i] 
+        for t in 1:(ntimes + 1), j in 1:ngroups
+    ]
 end
 
 ## take samples from DataFrame of fitted parameters and generate expected outcomes
@@ -184,11 +191,12 @@ function samplerenewaldidinfections(
 )
     ngroups = _ngroups(data.interventions)
     ntimes = _ntimes(data.interventions)
+    ninterventions = _ninterventions(data.interventions)
     n_seeds = size(data.exptdseedcases, 1)
     output = zeros(ntimes + 1, ngroups, length(indexes))
     for (r, j) in enumerate(indexes)
         _samplerenewaldidinfections!(
-            g, (@view output[:, :, r]), df, data, j, ngroups, ntimes, n_seeds; 
+            g, (@view output[:, :, r]), df, data, j, ngroups, ntimes, ninterventions, n_seeds; 
             kwargs...
         )
     end
@@ -201,21 +209,30 @@ function samplerenewaldidinfections(
 )
     ngroups = _ngroups(data.interventions)
     ntimes = _ntimes(data.interventions)
+    ninterventions = _ninterventions(data.interventions)
     n_seeds = size(data.exptdseedcases, 1)
     output = zeros(ntimes + 1, ngroups)
     _samplerenewaldidinfections!(
-            g, output, df, data, i, ngroups, ntimes, n_seeds; 
+            g, output, df, data, i, ngroups, ntimes, ninterventions, n_seeds; 
             kwargs...
         )
     return output 
 end
 
 function _samplerenewaldidinfections!(
-    g, output::AbstractArray, df, data::AbstractRenewalDiDData, i, ngroups, ntimes, n_seeds; 
+    g, 
+    output::AbstractArray, 
+    df, 
+    data::AbstractRenewalDiDData, 
+    i, 
+    ngroups, 
+    ntimes, 
+    ninterventions, 
+    n_seeds; 
     kwargs...
 )
     return _samplerenewaldidinfections!(
-        generationtime, output, df, data, i, ngroups, ntimes, n_seeds; 
+        generationtime, output, df, data, i, ngroups, ntimes, ninterventions, n_seeds; 
         func=g,  # `generationtime` accepts function or vector from the keyword `func`
         kwargs...
     )
@@ -229,12 +246,13 @@ function _samplerenewaldidinfections!(
     i, 
     ngroups, 
     ntimes, 
+    ninterventions, 
     n_seeds; 
     kwargs...
 )
     Ns = data.Ns  
     return _samplerenewaldidinfections!(
-        g, output, df, data, i, ngroups, ntimes, n_seeds, Ns; 
+        g, output, df, data, i, ngroups, ntimes, ninterventions, n_seeds, Ns; 
         kwargs...
     )
 end
@@ -247,6 +265,7 @@ function _samplerenewaldidinfections!(
     i, 
     ngroups, 
     ntimes, 
+    ninterventions, 
     n_seeds, 
     Ns; 
     kwargs...
@@ -256,7 +275,7 @@ function _samplerenewaldidinfections!(
     alpha = df.alpha[i]
     gammavec = _gammavec(df, i, ngroups)
     thetavec = _thetavec(df, i, ntimes)
-    tau = df.tau[i]
+    tau = _tauvec(df, i, ninterventions)
     psi = df.psi[i]
     M_x = _mxmatrix(df, i, ngroups, ntimes, n_seeds)
     predictobservedinfectionssigmamatrix = _observedsigmamatrix(df, i, ngroups, ntimes)

@@ -266,19 +266,25 @@ zerosstruct = RenewalDiDData( ;
 end
 
 @testset "calculate ntimes" begin
+    @test RenewalDiD._ntimes(zeros(2)) == 2
     @test RenewalDiD._ntimes(zeros(2, 3)) == 2
     @test RenewalDiD._ntimes(zeros(3, 2)) == 3
     @test RenewalDiD._ntimes(M1) == 4
-    # used to test @test_throws MethodError RenewalDiD._ntimes(zeros(2))
-    # no longer throws error and unclear than an error would be desirable
 end
 
 @testset "calculate ngroups" begin
+    @test RenewalDiD._ngroups(zeros(2)) == 1
     @test RenewalDiD._ngroups(zeros(2, 3)) == 3
     @test RenewalDiD._ngroups(zeros(3, 2)) == 2
     @test RenewalDiD._ngroups(M1) == 3
-    # used to test @test_throws MethodError RenewalDiD._ngroups(zeros(2))
-    # no longer throws error and unclear than an error would be desirable
+end
+
+@testset "calculate ninterventions" begin
+    @test RenewalDiD._ninterventions(zeros(2, 3)) == 1
+    @test RenewalDiD._ninterventions(zeros(3, 2)) == 1
+    @test RenewalDiD._ninterventions(M1) == 1
+    @test RenewalDiD._ninterventions(zeros(3, 2, 6)) == 6
+    @test RenewalDiD._ninterventions(A1) == 2
 end
 
 @testset "generate vector of gamma values" begin

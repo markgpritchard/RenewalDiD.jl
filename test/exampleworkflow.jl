@@ -27,10 +27,10 @@ sim = let
         u0=u0_1, beta=_beta1, gamma, delta, theta, sigma, intervention=[50, 70],
     )
     s2 = packsimulationtuple( ; 
-        u0=u0_2, beta=_beta2, gamma, delta, theta, sigma, intervention=[30, 50],
+        u0=u0_2, beta=_beta2, gamma, delta, theta, sigma, intervention=[30, nothing],
     )
     s3 = packsimulationtuple( ; 
-        u0=u0_3, beta=_beta3, gamma, delta, theta, sigma, intervention=[nothing, nothing],
+        u0=u0_3, beta=_beta3, gamma, delta, theta, sigma, intervention=[nothing, 40],
     )
     packsimulations(rng, 100, s1, s2, s3; sampletime=14)
 end
@@ -47,7 +47,7 @@ model1 = renewaldid(
     gamma=0.2, sigma=0.5               
 )
 
-priorschain = sample(rng, model1, Prior(), 10_000)
+priorschain = sample(rng, model1, Prior(), 1_000)
 priorsdf = DataFrame(priorschain)
 priortraceplot = trplot(priorsdf; ncols=5, nplots=50, size=(1000, 1000))  # examine 50 variables
 priorsfittedoutputs = samplerenewaldidinfections(
@@ -57,7 +57,10 @@ priorsfittedoutputs = samplerenewaldidinfections(
 priorsoutputquantiles = quantilerenewaldidinfections(
     priorsfittedoutputs, [0.025, 0.05, 0.25, 0.5, 0.75, 0.95, 0.975]
 )
-priorsplot = plotmodel(priorsoutputquantiles, sim; linewidth=1)
+priorsplot = plotmodel(
+    priorsoutputquantiles, sim; 
+    linewidth=1, interventionlinestyle=(:dot, :dense)
+)
 
 initindices = findall(x -> x <= 4, ordinalrank(priorsdf.lp; rev=true)) 
 priorsfittedinitoutputs = samplerenewaldidinfections(
@@ -70,7 +73,7 @@ priorsoutputinitquantiles = quantilerenewaldidinfections(
 priorsinitplot = plotmodel(priorsoutputinitquantiles, sim)
 
 #priorinitparams = [[values(priorsdf[i, 3:735])...] for i in initindices]
-priorinitparams = [[values(priorsdf[i, 3:733])...] for i in initindices]
+priorinitparams = [[values(priorsdf[i, 3:734])...] for i in initindices]
 
 shortchain = sample(
     rng, model1, NUTS(0.65; adtype=AutoReverseDiff()), MCMCThreads(), 25, 4; 
@@ -93,7 +96,7 @@ p3 = plotmodel(shortoutputquantiles, sim)
 
 @testset "everything ran and produced expected types" begin  # to add further tests later
     @test rng isa Xoshiro
-    @test sim isa RenewalDiDData{Int64, InterventionMatrix{Int64}} 
+    @test sim isa RenewalDiDData{Int64, InterventionArray{Int64}} 
     @test shortchain isa Chains
     @test shortdf isa DataFrame 
     @test p1 isa Figure

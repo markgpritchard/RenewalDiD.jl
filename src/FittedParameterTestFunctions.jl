@@ -12,22 +12,30 @@ export testdataframe, testsimulation
 
 function testdataframe(
     rng::AbstractRNG=default_rng(); 
-    nchains, niterations, ngroups, ntimes, nseeds, kwargs...
-)
-    return testdataframe(rng, nchains, niterations, ngroups, ntimes, nseeds; kwargs...)
-end
-
-function testdataframe(nchains, niterations, ngroups, ntimes, nseeds; kwargs...)
+    nchains, niterations, ngroups, ntimes, ninterventions=1, nseeds, kwargs...
+)  
+    # default `ninterventions` given as this was not previously an option
     return testdataframe(
-        default_rng(), nchains, niterations, ngroups, ntimes, nseeds; 
+        rng, nchains, niterations, ngroups, ntimes, ninterventions, nseeds; 
         kwargs...
     )
 end
 
 function testdataframe(
-    rng::AbstractRNG, nchains, niterations, ngroups, ntimes, nseeds; 
+    nchains, niterations, ngroups, ntimes, ninterventions, nseeds; 
+    kwargs...
+)
+    return testdataframe(
+        default_rng(), nchains, niterations, ngroups, ntimes, ninterventions, nseeds; 
+        kwargs...
+    )
+end
+
+function testdataframe(
+    rng::AbstractRNG, nchains, niterations, ngroups, ntimes, ninterventions, nseeds; 
     gammadefault=automatic, 
     thetadefault=automatic, 
+    taudefault=automatic,
     mxdefault=automatic, 
     predictiondefault=automatic,
     kwargs...
@@ -37,7 +45,7 @@ function testdataframe(
         :chain => repeat(1:nchains; inner=niterations),
     )
     nrows = nchains * niterations
-    _addtotestdataframe!(df, :tau, kwargs, rand(rng, nrows))
+    _addtaustotestdataframe!(rng, df, ninterventions, nrows, kwargs, taudefault)
     _addtotestdataframe!(df, :alpha, kwargs, rand(rng, nrows))
     _addtotestdataframe!(df, :sigma_gamma, kwargs, rand(rng, nrows))
     _addgammastotestdataframe!(rng, df, ngroups, nrows, kwargs, gammadefault)
@@ -65,80 +73,86 @@ function testdataframe(
 end
 
 function _addtotestdataframe!(df, name, kws, default)
-    insertcols!(
+    return insertcols!(
         df,
         name => haskey(kws, name) ? kws[name] : default
     )
-    return nothing
+end
+
+function _addgammastotestdataframe!(rng::AbstractRNG, df, ngroups, nrows, kws, ::Automatic)
+    return _addgammastotestdataframe!(rng, df, ngroups, nrows, kws, rand(rng, nrows))
 end
 
 function _addgammastotestdataframe!(
-    rng::AbstractRNG, df, ngroups, nrows, kwargs, ::Automatic
-)
-    _addgammastotestdataframe!(rng, df, ngroups, nrows, kwargs, rand(rng, nrows))
-    return nothing
-end
-
-function _addgammastotestdataframe!(
-    ::AbstractRNG, df, ngroups, ::Int, kwargs, gammavalues::AbstractVector
+    ::AbstractRNG, df, ngroups, ::Int, kws, gammavalues::AbstractVector
 )
     for g in 1:(ngroups - 1)
-        _addtotestdataframe!(df, Symbol("gammas_raw[$g]"), kwargs, gammavalues)
+        _addtotestdataframe!(df, Symbol("gammas_raw[$g]"), kws, gammavalues)
     end
     return nothing
 end
 
-function _addthetastotestdataframe!(
-    rng::AbstractRNG, df, ntimes, nrows, kwargs, ::Automatic
-)
-    _addthetastotestdataframe!(rng, df, ntimes, nrows, kwargs, rand(rng, nrows))
-    return nothing
+function _addthetastotestdataframe!(rng::AbstractRNG, df, ntimes, nrows, kws, ::Automatic)
+    return _addthetastotestdataframe!(rng, df, ntimes, nrows, kws, rand(rng, nrows))
 end
 
 function _addthetastotestdataframe!(
-    ::AbstractRNG, df, ntimes, ::Int, kwargs, thetavalues::AbstractVector
+    ::AbstractRNG, df, ntimes, ::Int, kws, thetavalues::AbstractVector
 )
     for t in 1:(ntimes - 1)
-        _addtotestdataframe!(df, Symbol("thetas_raw[$t]"), kwargs, thetavalues)
+        _addtotestdataframe!(df, Symbol("thetas_raw[$t]"), kws, thetavalues)
+    end
+    return nothing
+end
+
+function _addtaustotestdataframe!(
+    rng::AbstractRNG, df, ninterventions, nrows, kws, ::Automatic
+)
+    return _addtaustotestdataframe!(rng, df, ninterventions, nrows, kws, rand(rng, nrows))
+end
+
+function _addtaustotestdataframe!(
+    ::AbstractRNG, df, ninterventions, ::Int, kws, tauvalues::AbstractVector
+)
+    for k in 1:ninterventions
+        _addtotestdataframe!(df, Symbol("tau[$k]"), kws, tauvalues)
     end
     return nothing
 end
 
 function _addmxtotestdataframe!(
-    rng::AbstractRNG, df, ngroups, ntimes, nseeds, nrows, kwargs, ::Automatic
+    rng::AbstractRNG, df, ngroups, ntimes, nseeds, nrows, kws, ::Automatic
 )
-    _addmxtotestdataframe!(
-        rng, df, ngroups, ntimes, nseeds, nrows, kwargs, rand(rng, nrows)
+    return _addmxtotestdataframe!(
+        rng, df, ngroups, ntimes, nseeds, nrows, kws, rand(rng, nrows)
     )
-    return nothing
 end
 
 function _addmxtotestdataframe!(
-    ::AbstractRNG, df, ngroups, ntimes, nseeds, ::Int, kwargs, mxvalues::AbstractVector
+    ::AbstractRNG, df, ngroups, ntimes, nseeds, ::Int, kws, mxvalues::AbstractVector
 )
     for g in 1:(ngroups), t in 1:(ntimes + nseeds)
-        _addtotestdataframe!(df, Symbol("M_x[$t, $g]"), kwargs, mxvalues)
+        _addtotestdataframe!(df, Symbol("M_x[$t, $g]"), kws, mxvalues)
     end
     return nothing
 end
 
 function _addpredobsinfsigmatotestdataframe!(
-    rng::AbstractRNG, df, ngroups, ntimes, nrows, kwargs, ::Automatic
+    rng::AbstractRNG, df, ngroups, ntimes, nrows, kws, ::Automatic
 )
-    _addpredobsinfsigmatotestdataframe!(
-        rng, df, ngroups, ntimes, nrows, kwargs, rand(rng, nrows)
+    return _addpredobsinfsigmatotestdataframe!(
+        rng, df, ngroups, ntimes, nrows, kws, rand(rng, nrows)
     )
-    return nothing
 end
 
 function _addpredobsinfsigmatotestdataframe!(
-    ::AbstractRNG, df, ngroups, ntimes, ::Int, kwargs, predictionvalues::AbstractVector
+    ::AbstractRNG, df, ngroups, ntimes, ::Int, kws, predictionvalues::AbstractVector
 )
     for g in 1:(ngroups), t in 1:(ntimes + 1)
         _addtotestdataframe!(
             df, 
             Symbol("predictobservedinfectionssigmamatrix[$t, $g]"), 
-            kwargs, 
+            kws, 
             predictionvalues
         )
     end
