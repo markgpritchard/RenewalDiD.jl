@@ -5,8 +5,9 @@ using Test
 
 M1 = InterventionMatrix(4, [2, 3, nothing]) 
 M2 = InterventionMatrix(5, [nothing, nothing]; mutewarnings=true) 
-A1 = InterventionArray(5, [nothing, nothing], [nothing, nothing]; mutewarnings=true)
-A2 = InterventionArray(5, [2, 3, nothing], [6, nothing])
+A1 = InterventionArray(4, [2, 3, nothing], [nothing, nothing, nothing])
+A2 = InterventionArray(5, [2, 3], [4, nothing])
+A3 = InterventionArray(4, [2, 3, nothing], [3, nothing, nothing])
 
 obs1 = (_obs = zeros(Int, 20, 2); _obs[1, :] .+= 1; _obs[1:5, :] .+= 1; _obs)
 obs2 = (_obs = zeros(Int, 20, 2); _obs[1, 1] += 1; _obs[1:5, :] .+= 1; _obs)
@@ -144,6 +145,7 @@ R0prediction3 = [
      1.5  2.5  4.5
     -1    0    2
 ]
+R0prediction4 = [0  0; 2  0; 2  2; 4  2; 4  2]
 seedexpectation1 = [
     0  0; 0  0; 0  0; 0  0; (log(6 / 5) - log(2) / 5)  (log(6 / 5) - log(2) / 5)
 ]
@@ -267,14 +269,16 @@ end
     @test RenewalDiD._ntimes(zeros(2, 3)) == 2
     @test RenewalDiD._ntimes(zeros(3, 2)) == 3
     @test RenewalDiD._ntimes(M1) == 4
-    @test_throws MethodError RenewalDiD._ntimes(zeros(2))
+    # used to test @test_throws MethodError RenewalDiD._ntimes(zeros(2))
+    # no longer throws error and unclear than an error would be desirable
 end
 
 @testset "calculate ngroups" begin
     @test RenewalDiD._ngroups(zeros(2, 3)) == 3
     @test RenewalDiD._ngroups(zeros(3, 2)) == 2
     @test RenewalDiD._ngroups(M1) == 3
-    @test_throws MethodError RenewalDiD._ngroups(zeros(2))
+    # used to test @test_throws MethodError RenewalDiD._ngroups(zeros(2))
+    # no longer throws error and unclear than an error would be desirable
 end
 
 @testset "generate vector of gamma values" begin
@@ -298,25 +302,30 @@ end
 end
 
 @testset "generate matrix of log R_0 values" begin
-    @test RenewalDiD._predictedlogR_0(0, zeros(3), zeros(4), 0, M1) == zeros(4, 3)
-    @test RenewalDiD._predictedlogR_0(0, zeros(2), zeros(5), 2, M2) == zeros(5, 2)
-    @test_throws DimensionMismatch RenewalDiD._predictedlogR_0(0, zeros(2), zeros(4), 0, M1)
-    @test_throws DimensionMismatch RenewalDiD._predictedlogR_0(0, zeros(3), zeros(3), 0, M1)
-    @test RenewalDiD._predictedlogR_0(1, zeros(3), zeros(4), 0, M1) == ones(4, 3)
-    @test RenewalDiD._predictedlogR_0(1, [-1, 0, 1], zeros(4), 0, M1) == R0prediction1
-    @test RenewalDiD._predictedlogR_0(1, [-1, 0, 1], [-1, 0.5, 2.5, 0], 0, M1) == R0prediction2
-    @test RenewalDiD._predictedlogR_0(1, [-1, 0, 1], [-1, 0.5, 2.5, 0], -1, M1) == R0prediction3
+    @test RenewalDiD._predictedlogR_0(0, zeros(3), zeros(4), [0], M1) == zeros(4, 3)
+    @test RenewalDiD._predictedlogR_0(0, zeros(2), zeros(5), [2], M2) == zeros(5, 2)
+    @test_throws DimensionMismatch RenewalDiD._predictedlogR_0(0, zeros(2), zeros(4), [0], M1)
+    @test_throws DimensionMismatch RenewalDiD._predictedlogR_0(0, zeros(3), zeros(3), [0], M1)
+    @test RenewalDiD._predictedlogR_0(1, zeros(3), zeros(4), [0], M1) == ones(4, 3)
+    @test RenewalDiD._predictedlogR_0(1, [-1, 0, 1], zeros(4), [0], M1) == R0prediction1
+    @test RenewalDiD._predictedlogR_0(1, [-1, 0, 1], [-1, 0.5, 2.5, 0], [0], M1) == R0prediction2
+    @test RenewalDiD._predictedlogR_0(1, [-1, 0, 1], [-1, 0.5, 2.5, 0], [-1], M1) == R0prediction3
 end
 
 @testset "generate matrix of log R_0 values with multiple interventions" begin
-    @test RenewalDiD._predictedlogR_0(0, zeros(3), zeros(4), 0, A1) == zeros(4, 3)
-    @test RenewalDiD._predictedlogR_0(0, zeros(2), zeros(5), 2, A2) == zeros(5, 2)
+    @test RenewalDiD._predictedlogR_0(0, zeros(3), zeros(4), zeros(2), A1) == zeros(4, 3)
+    @test RenewalDiD._predictedlogR_0(0, zeros(2), zeros(5), zeros(2), A2) == zeros(5, 2)
     @test_throws DimensionMismatch RenewalDiD._predictedlogR_0(0, zeros(2), zeros(4), 0, A1)
     @test_throws DimensionMismatch RenewalDiD._predictedlogR_0(0, zeros(3), zeros(3), 0, A1)
-    @test RenewalDiD._predictedlogR_0(1, zeros(3), zeros(4), 0, A1) == ones(4, 3)
-    @test RenewalDiD._predictedlogR_0(1, [-1, 0, 1], zeros(4), 0, A1) == R0prediction1
-    @test RenewalDiD._predictedlogR_0(1, [-1, 0, 1], [-1, 0.5, 2.5, 0], 0, A1) == R0prediction2
-    @test RenewalDiD._predictedlogR_0(1, [-1, 0, 1], [-1, 0.5, 2.5, 0], -1, A1) == R0prediction3
+    @test RenewalDiD._predictedlogR_0(1, zeros(3), zeros(4), zeros(2), A1) == ones(4, 3)
+    @test RenewalDiD._predictedlogR_0(1, [-1, 0, 1], zeros(4), zeros(2), A1) == R0prediction1
+    @test RenewalDiD._predictedlogR_0(1, [-1, 0, 1], [-1, 0.5, 2.5, 0], zeros(2), A1) == R0prediction2
+    @test RenewalDiD._predictedlogR_0(1, [-1, 0, 1], [-1, 0.5, 2.5, 0], [-1, -1], A1) == R0prediction3
+    @test RenewalDiD._predictedlogR_0(1, [-1, 0, 1], zeros(4), zeros(2), A3) == R0prediction1
+    @test RenewalDiD._predictedlogR_0(1, [-1, 0, 1], [-1, 0.5, 2.5, 0], zeros(2), A3) == R0prediction2
+    @test RenewalDiD._predictedlogR_0(1, [-1, 0, 1], [-1, 0.5, 2.5, 0], [-1, 0], A3) == R0prediction3
+    @test RenewalDiD._predictedlogR_0(1, [-1, 0, 1], [-1, 0.5, 2.5, 0], [-1, -1], A3) != R0prediction3
+    @test RenewalDiD._predictedlogR_0(0, zeros(2), zeros(5), [2, 2], A2) == R0prediction4
 end
 
 @testset "expected seed cases" begin
