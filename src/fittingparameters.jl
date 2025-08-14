@@ -365,7 +365,7 @@ end  # a second version of this function is given in `processparameters.jl`
 function _predictedlogR_0(alpha, gammavec, thetavec, tau, interventions::AbstractMatrix)
     _predictedlogR_0assertions(gammavec, thetavec, interventions)
     logR_0 = [
-        alpha + gammavec[g] + thetavec[t] + tau * interventions[t, g] 
+        alpha + gammavec[g] + thetavec[t] + tau[1] * interventions[t, g] 
         for t in axes(interventions, 1), g in axes(interventions, 2)
     ]
     return logR_0
