@@ -214,13 +214,7 @@ function _InterventionArray(
     # splat vector of vectors so the above versions can concatenate them into a matrix
     return _InterventionArray(T, duration, v...; kwargs...)
 end
-#=
-function InterventionArray{T}(::Number, M::AbstractMatrix; kwargs...) where T
-    # throw error and avoid a loop nesting vectors within vectors
-    throw(_interventionarrayunusablevectorerror(Mv))
-    return nothing
-end
-=#
+
 function _InterventionArray(
     T, duration::Number, interventions::AbstractVector; 
     offset=0, kwargs...
@@ -389,18 +383,16 @@ end
 _cat(dims::Number, args...; kwargs...) = _cat(Val(dims), args...; kwargs...)
 
 function _cat(::Val{1}, args...; kwargs...)
-    throw(ArgumentError("concatenating AbstractInterventionArrays on dimension 1 is intentionally unsupported"))
+    throw(_catd1error())
 end
 
 function _cat(::Val{2}, A::InterventionVecOrMat{T}, args...; mutewarnings=nothing) where T
     d1 = A.duration
     o1 = A.offset
-  #  rawstarttimes = _catstartrawstarttimes(A)
     for a in args
-        a isa InterventionVecOrMat{T} || throw(ArgumentError("cannot concatenate a $(typeof(a)) to an InterventionMatrix{$T} on dimension 2"))
-        a.duration == d1 || throw(DimensionMismatch("mismatch in duration (expected $d1 got $(a.duration))"))
-        a.offset == o1 || throw(ArgumentError("when concatenating intevention arrays on dimension 2, all must have equal offset (expected $o1, got $(a.offset))"))
-   #     _pushrawstarttimes!(rawstarttimes, a)
+        a isa InterventionVecOrMat{T} || throw(_cattypeerror("InterventionMatrix{$T}", a, 2))
+        a.duration == d1 || throw(_durationmismatcherror(d1, a))
+        a.offset == o1 || throw(_unequaloffseterror(o1, a))
     end
     rawstarttimes = vcat(A.rawstarttimes, [a.rawstarttimes for a in args]...)
     return InterventionMatrix{T}(d1, rawstarttimes; offset=o1, mutewarnings)
@@ -409,9 +401,9 @@ end
 function _cat(::Val{2}, A::AbstractInterventionArray3{T}, args...) where T
     d1 = A.duration
     for a in args
-        a isa AbstractInterventionArray3{T} || throw(ArgumentError("cannot concatenate a $(typeof(a)) to an AbstractInterventionArray3{$T} on dimension 2"))
-        a.duration == d1 || throw(DimensionMismatch("mismatch in duration (expected $d1 got $(a.duration))"))
-        #a.offset == o1 || throw(ArgumentError("when concatenating intevention arrays on dimension 2, all must have equal offset (expected $o1, got $(a.offset))"))
+        a isa AbstractInterventionArray3{T} || 
+            throw(_cattypeerror("AbstractInterventionArray3{$T}", a, 2))
+        a.duration == d1 || throw(_durationmismatcherror(d1, a))
     end
     rawstarttimes = vcat(A.rawstarttimes, [a.rawstarttimes for a in args]...)
     return InterventionArray{T}(d1, rawstarttimes; )
@@ -423,10 +415,9 @@ const _MatOrA3{T} = Union{<:AbstractInterventionMatrix{T}, <:AbstractInterventio
 function _cat(::Val{3}, A::_MatOrA3{T}, args...; kwargs...) where T
     d1 = A.duration
     for a in args
-        a isa _MatOrA3{T} || throw(ArgumentError("cannot concatenate a $(typeof(a)) to an InterventionArray{$T} on dimension 3"))
-        a.duration == d1 || throw(DimensionMismatch("mismatch in duration (expected $d1 got $(a.duration))"))
-        size(a, 2) == size(A, 2) || throw(DimensionMismatch("mismatch in number of groups (expected $(size(A, 2)) got $(size(a, 2)))"))
-   #     _pushrawstarttimes!(rawstarttimes, a)
+        a isa _MatOrA3{T} || throw(_cattypeerror("InterventionArray{$T}", a, 3))
+        a.duration == d1 || throw(_durationmismatcherror(d1, a))
+        size(a, 2) == size(A, 2) || throw(_groupnumbermismatch(A, a))
     end
     offset = vcat(A.offset, [a.offset for a in args]...)
     rawstarttimes = hcat(A.rawstarttimes, [a.rawstarttimes for a in args]...)
@@ -592,6 +583,32 @@ end
 
 # Error messages ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+function _catd1error()
+    m = "concatenating `AbstractInterventionArray`s on dimension 1 is intentionally \
+        unsupported"
+    return ArgumentError(m)
+end
+
+function _cattypeerror(T, a, dim)
+    m = "cannot concatenate a $(typeof(a)) to an $T on dimension $dim"
+    return ArgumentError(m)
+end
+
+function _durationmismatcherror(d1, a)
+    return DimensionMismatch("mismatch in duration (expected $d1 got $(a.duration))")
+end
+
+function _groupnumbermismatch(A, a)
+    m = "mismatch in number of groups (expected $(size(A, 2)) got $(size(a, 2)))"
+    DimensionMismatch(m)
+end
+
 function _interventionarrayunusablevectorerror(v)
     return ArgumentError("$v, vector received that could not be used as start times")
+end
+
+function _unequaloffseterror(o1, a)
+    m = "when concatenating intevention arrays on dimension 2, all must have equal offset \
+        (expected $o1, got $(a.offset))"
+    return ArgumentError(m)
 end

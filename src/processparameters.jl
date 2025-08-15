@@ -428,7 +428,7 @@ function _quantilerenewaldidinfectionswarningset(::AbstractMatrix, ::Any, ::Noth
     return _singlesamplequantilewarning()
 end
 
-function _quantilerenewaldidinfectionswarningset(A::AbstractArray{T, 3}, q, ::Nothing) where T
+function _quantilerenewaldidinfectionswarningset(A::AbstractArray{<:Any, 3}, q, ::Nothing) 
     size(A, 3) > 1 || _singlesamplequantilewarning()
     return __quantilerenewaldidinfectionswarningset(q)
 end

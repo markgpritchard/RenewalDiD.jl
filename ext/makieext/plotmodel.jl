@@ -98,7 +98,7 @@ function __plotmodeloutput!(axs, A::AbstractMatrix, t; kwargs...)
     return __plotmodeloutput!(axs, A, t, nquantiles; kwargs...)
 end
 
-function __plotmodeloutput!(axs, A::AbstractArray{T, 3}, t; kwargs...) where T
+function __plotmodeloutput!(axs, A::AbstractArray{<:Any, 3}, t; kwargs...) 
     nquantiles = size(A, 3)
     isodd(size(A, 3)) || throw(ArgumentError("to do"))
     return __plotmodeloutput!(axs, A, t, nquantiles; kwargs...)
@@ -232,9 +232,9 @@ function _plotmodelinterventionvlines!(
 end
 
 function _plotmodelinterventionvlines!(
-    axs, A::AbstractArray{T, 3}; 
+    axs, A::AbstractArray{<:Any, 3}; 
     interventioncolor=automatic, kwargs...
-) where T
+) 
     return __plotmodelinterventionvlines!(axs, A, interventioncolor; kwargs...)
 end
 

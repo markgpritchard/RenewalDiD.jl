@@ -350,7 +350,6 @@ _ntimes(A::AbstractArray) = size(A, 1)
 _ngroups(A::AbstractArray) = size(A, 2)
 _ninterventions(A::AbstractArray) = size(A, 3)
 
-
 # the mean of all gamma values is zero, ensured by setting the final value in the vector as 
 # `-sum` of other values
 _gammavec(gammas_raw, sigma_gamma) = [gammas_raw; -sum(gammas_raw)] .* sigma_gamma
@@ -365,27 +364,19 @@ function _thetavec(thetas_raw::AbstractVector{S}, sigma_theta::T) where {S, T}
     return cumsum([theta_0; thetas_raw .* sigma_theta])
 end  # a second version of this function is given in `processparameters.jl`
 
-function _predictedlogR_0(alpha, gammavec, thetavec, tau, interventions::AbstractMatrix)
+function _predictedlogR_0(alpha, gammavec, thetavec, tau, interventions)
     _predictedlogR_0assertions(gammavec, thetavec, interventions)
     logR_0 = [
-        alpha + gammavec[g] + thetavec[t] + tau[1] * interventions[t, g] 
+        alpha + gammavec[g] + thetavec[t] + _totaltau(tau, interventions, t, g) 
         for t in axes(interventions, 1), g in axes(interventions, 2)
     ]
     return logR_0
 end
 
-function _predictedlogR_0(
-    alpha, gammavec, thetavec, tau, interventions::AbstractArray{T, 3}
-) where T
-    _predictedlogR_0assertions(gammavec, thetavec, interventions)
-    logR_0 = [
-        alpha + 
-            gammavec[g] + 
-            thetavec[t] + 
-            sum([tau[k] * interventions[t, g, k] for k in axes(interventions, 3)]) 
-        for t in axes(interventions, 1), g in axes(interventions, 2)
-    ]
-    return logR_0
+_totaltau(tau, interventions::AbstractMatrix, t, g) = tau[1] * interventions[t, g]
+
+function _totaltau(tau, interventions::AbstractArray{<:Any, 3}, t, g) 
+    return sum([tau[k] * interventions[t, g, k] for k in axes(interventions, 3)])
 end
 
 """
