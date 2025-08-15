@@ -37,28 +37,28 @@ dict1 = packsimulations(rng2, 20, simtuple1, simtuple2, simtuple3)
 gensimtuple1 = packsimulationtuple( ; 
     u0=[100, 10, 50, 30, 40, 20, 0],
     beta=0, 
-    gamma=0.4, 
+    mu=0.4, 
     delta=0.5, 
-    theta=0.5, 
-    sigma=0.5, 
+    psi=0.5, 
+    kappa=0.5, 
     intervention=10,
 )
 gensimtuple2 = packsimulationtuple( ; 
     u0=[100, 10, 50, 30, 40, 20, 0],
     beta=0.5, 
-    gamma=0.4, 
+    mu=0.4, 
     delta=0.5, 
-    theta=0.5, 
-    sigma=0.5, 
+    psi=0.5, 
+    kappa=0.5, 
     intervention=12,
 )
 gensimtuple3 = packsimulationtuple( ; 
     u0=[100, 10, 50, 1, 40, 20, 0],
     beta=sim3beta, 
-    gamma=0.4, 
+    mu=0.4, 
     delta=0.5, 
-    theta=0.5, 
-    sigma=0.5, 
+    psi=0.5, 
+    kappa=0.5, 
     intervention=nothing,
 )
 dict2 = packsimulations(rng3, 20, gensimtuple1, gensimtuple2, gensimtuple3)

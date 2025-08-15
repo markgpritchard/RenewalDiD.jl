@@ -69,14 +69,14 @@ function g_covid(t::Integer)
 end
 
 """
-    g_seir(t; gamma, sigma=RenewalDiD.automatic)
+    g_seir(t; mu, kappa=RenewalDiD.automatic)
 
 Estimate generation interval for a susceptible–exposed–infectious–recovered model.
 
-`t` is time in days since infection. `sigma` is the rate of progression from exposed to 
-infectious, and `gamma` is the recovery rate.
+`t` is time in days since infection. `kappa` is the rate of progression from exposed to 
+infectious, and `mu` is the recovery rate.
 
-If `gamma == sigma` you may input only `gamma`.
+If `mu == kappa` you may input only `mu`.
 
 Equations from D. Champredon, J. Dushoff, and D.J. Earn (2018). Equivalence of the 
 Erlang-distributed SEIR epidemic model and the renewal equation. *SIAM J Appl Math*
@@ -84,47 +84,47 @@ Erlang-distributed SEIR epidemic model and the renewal equation. *SIAM J Appl Ma
 
 # Examples
 ```jldoctest
-julia> g_seir(10; gamma=0.3)
+julia> g_seir(10; mu=0.3)
 0.04480836153107755
 
-julia> g_seir(10; gamma=0.3, sigma=0.3)
+julia> g_seir(10; mu=0.3, kappa=0.3)
 0.04480836153107755
 
-julia> g_seir(10; gamma=0.3, sigma=0.5)
+julia> g_seir(10; mu=0.3, kappa=0.5)
 0.03228684102658386
 ``` 
 """
-function g_seir(t; gamma, sigma=automatic)
+function g_seir(t; mu, kappa=automatic)
     if t < 0 
-        return zero(_g_seir(zero(t), gamma, sigma))
+        return zero(_g_seir(zero(t), mu, kappa))
     else
-        return _g_seir(t, gamma, sigma)
+        return _g_seir(t, mu, kappa)
     end
 end
 
-_g_seir(t, gamma, ::Automatic) = _gseirequalgammasigma(t, gamma)
+_g_seir(t, mu, ::Automatic) = _gseirequalmukappa(t, mu)
 
-function _g_seir(t, gamma, sigma)
-    gamma == sigma && return _gseirequalgammasigma(t, gamma)
-    return _gseirunequalgammasigma(t, sigma, gamma)
+function _g_seir(t, mu, kappa)
+    mu == kappa && return _gseirequalmukappa(t, mu)
+    return _gseirunequalmukappa(t, kappa, mu)
 end
 
-_gseirequalgammasigma(t, gamma) = gamma^2 * t * exp(-gamma * t)
+_gseirequalmukappa(t, mu) = mu^2 * t * exp(-mu * t)
 
-function _gseirunequalgammasigma(t, gamma, sigma)
-    return sigma * gamma * (exp(-gamma * t) - exp(-sigma * t)) / (sigma - gamma)
+function _gseirunequalmukappa(t, mu, kappa)
+    return kappa * mu * (exp(-mu * t) - exp(-kappa * t)) / (kappa - mu)
 end
 
 """
-    vectorg_seir(gamma, sigma=automatic; t_max::Integer=28)
-    vectorg_seir(; gamma, sigma=automatic, t_max::Integer=28)
+    vectorg_seir(mu, kappa=automatic; t_max::Integer=28)
+    vectorg_seir(; mu, kappa=automatic, t_max::Integer=28)
 
 Produce a vector of generation intervals for a susceptible–exposed–infectious–recovered 
     model.
 
 The length of the vector is `t_max + 1`, i.e. daily from `t=0` to `t=t_max`
 
-`sigma` is the rate of progression from exposed to infectious, and `gamma` is the recovery
+`kappa` is the rate of progression from exposed to infectious, and `mu` is the recovery
     rate. These can be entered as positional arguments or keyword arguments.
 
 Equations from D. Champredon, J. Dushoff, and D.J. Earn (2018). Equivalence of the 
@@ -153,7 +153,7 @@ julia> vectorg_seir(0.4, 0.5; t_max=5)
  0.1331224695160854
  0.10650056922542783
 
-julia> vectorg_seir(sigma=0.5, gamma=0.4, t_max=5)
+julia> vectorg_seir(kappa=0.5, mu=0.4, t_max=5)
 6-element Vector{Float64}:
  0.0
  0.12757877264601186
@@ -163,10 +163,10 @@ julia> vectorg_seir(sigma=0.5, gamma=0.4, t_max=5)
  0.10650056922542783
 ``` 
 """
-vectorg_seir(; gamma, sigma=automatic, kwargs...) = vectorg_seir(gamma, sigma; kwargs...)
+vectorg_seir(; mu, kappa=automatic, kwargs...) = vectorg_seir(mu, kappa; kwargs...)
 
-function vectorg_seir(gamma, sigma=automatic; t_max::Integer=28)
-    v = _vectorg_seir(gamma, sigma, t_max)
+function vectorg_seir(mu, kappa=automatic; t_max::Integer=28)
+    v = _vectorg_seir(mu, kappa, t_max)
     for i in eachindex(v)  # remove values of -0.0 for cosmetic reasons 
         if v[i] == 0.0
             v[i] = 0.0 
@@ -175,7 +175,7 @@ function vectorg_seir(gamma, sigma=automatic; t_max::Integer=28)
     return v
 end
 
-_vectorg_seir(gamma, sigma, t_max) = [_g_seir(t, gamma, sigma) for t in 0:1:t_max]
+_vectorg_seir(mu, kappa, t_max) = [_g_seir(t, mu, kappa) for t in 0:1:t_max]
 
 ## Functions for user-supplied generation intervals
 
@@ -351,11 +351,6 @@ end
 
 
 # Error messages ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
-
-function _g_seirequalgammasigmaerror(gamma, sigma)
-    m = "$gamma, $sigma: if gamma==sigma only the gamma keyword argument should be provided"
-    return ArgumentError(m)
-end
 
 function _generationtimebothfunctionvectorerror()
     return ArgumentError("only one of the `func`, `vec` keyword arguments may be used")

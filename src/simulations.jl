@@ -3,8 +3,8 @@
 # `runsimulation` is the main function in this file. All parameters and compartments have
 #  the meanings described in this function's documentation.
 """
-    runsimulation([rng], duration, u0; beta, gamma, delta, theta, sigma)
-    runsimulation([rng], duration, u0, beta, gamma, delta, theta, sigma)
+    runsimulation([rng], duration, u0; beta, mu, delta, psi, kappa)
+    runsimulation([rng], duration, u0, beta, mu, delta, psi, kappa)
 
 Generate simulated data.
 
@@ -18,7 +18,7 @@ Model uses Gillespie's stochastic continuous time method with 6 compartments:
 
 A 7th compartment in the model records the cumulative number of diagnoses.
 
-Parameters `beta`, `gamma`, `delta` `theta` and `sigma` may be numbers, or may be functions 
+Parameters `beta`, `mu`, `delta` `psi` and `kappa` may be numbers, or may be functions 
 taking time as their only argument to give time-varying values. They can be entered as 
 positional arguments or keyword arguments. All parameters must be non-negative.
 
@@ -28,12 +28,12 @@ positional arguments or keyword arguments. All parameters must be non-negative.
 - `u0::AbstractVector{<:Integer}`: initial conditions, must be of length 7 describing
     compartments in the order above
 - `beta`: transmission parameter
-- `gamma`: recovery rate
+- `mu`: recovery rate
 - `delta`: diagnosis rate (i.e. for those who will be diagnosed, how quickly does it 
-    happen?); must satisfy `delta > gamma` (i.e. must be diagnosed before the end of the 
+    happen?); must satisfy `delta > mu` (i.e. must be diagnosed before the end of the 
     infectious period)
-- `theta`: proportion diagnosed; must satisfy `0 ≤ theta ≤ 1`
-- `sigma`: rate of progression from exposed to infectious
+- `psi`: proportion diagnosed; must satisfy `0 ≤ psi ≤ 1`
+- `kappa`: rate of progression from exposed to infectious
 
 # Returns
 Returns a matrix of height `duration + 1` giving numbers in each compartment at the end of 
@@ -47,7 +47,7 @@ julia> rng = StableRNG(1);
 
 julia> u0 = simulationu0(; s=100, e=5, n=200);
 
-julia> runsimulation(rng, 10, u0; beta=0.6, gamma=0.25, delta=0.33, theta=0.5, sigma=0.4)
+julia> runsimulation(rng, 10, u0; beta=0.6, mu=0.25, delta=0.33, psi=0.5, kappa=0.4)
 11×7 Matrix{Int64}:
  100  5  0  0  0  95  0
  100  5  0  0  0  95  0
@@ -64,7 +64,7 @@ julia> runsimulation(rng, 10, u0; beta=0.6, gamma=0.25, delta=0.33, theta=0.5, s
 julia> mybetafunc(t) = t <= 5 ? 1 : 0.1;
 
 julia> runsimulation(rng, 10, u0;
-       beta=mybetafunc, gamma=0.25, delta=0.33, theta=0.5, sigma=0.4)
+       beta=mybetafunc, mu=0.25, delta=0.33, psi=0.5, kappa=0.4)
 11×7 Matrix{Int64}:
  100  5  0  0  0   95  0
   98  5  0  2  0   95  0
@@ -206,9 +206,9 @@ end
 
 _pbeta(beta, t) = _parameter(beta, t, :beta)
 _pdelta(delta, t) = _parameter(delta, t, :delta)
-_pgamma(gamma, t) = _parameter(gamma, t, :gamma)
-_psigma(sigma, t) = _parameter(sigma, t, :sigma)
-_ptheta(theta, t) = _parameter(theta, t, :theta; upper=1)  # theta is a proportion 0 ≤ θ ≤ 1
+_pmu(mu, t) = _parameter(mu, t, :mu)
+_pkappa(kappa, t) = _parameter(kappa, t, :kappa)
+_ppsi(psi, t) = _parameter(psi, t, :psi; upper=1)  # psi is a proportion 0 ≤ θ ≤ 1
 
 ## Force of infection 
 
@@ -219,19 +219,19 @@ _foi(beta, i_n, i_f, i_d, n, t) = _pbeta(beta, t) * (i_n + i_f + i_d) / n
 
 _simulatedinfections(beta, s, i_n, i_f, i_d, n, t) = s * _foi(beta, i_n, i_f, i_d, n, t)
 
-function _diseaseprogression_to_i_n(x, theta, sigma, t)
-    return x * (1 - _ptheta(theta, t)) * _psigma(sigma, t)
+function _diseaseprogression_to_i_n(x, psi, kappa, t)
+    return x * (1 - _ppsi(psi, t)) * _pkappa(kappa, t)
 end
 
-_diseaseprogression_to_i_f(x, theta, sigma, t) = x * _ptheta(theta, t) * _psigma(sigma, t)
+_diseaseprogression_to_i_f(x, psi, kappa, t) = x * _ppsi(psi, t) * _pkappa(kappa, t)
 _diagnosis(x, delta, t) = x * _pdelta(delta, t)
-_recovery(x, gamma, t) = x * _pgamma(gamma, t)
+_recovery(x, mu, t) = x * _pmu(mu, t)
 
 # diagnosed individuals have already been infectious for a period represented by `1/delta`
-# so recover after a period `1/gamma - 1/delta`
-function _recovery(x, gamma, delta, t) 
+# so recover after a period `1/mu - 1/delta`
+function _recovery(x, mu, delta, t) 
     timetodiagnosis = 1 / _pdelta(delta, t)
-    timetorecovery = 1 / _pgamma(gamma, t)
+    timetorecovery = 1 / _pmu(mu, t)
     if isinf(timetorecovery)
         # no need for error message about time taken to diagnosis if recovery never happens
         remainingtime = timetorecovery
@@ -251,16 +251,16 @@ function _n_seir(u::AbstractVector{<:Integer})
     return sum(@view u[1:6])  # s, e, i_n, i_f, i_d, r 
 end
 
-function _seirrates(u::AbstractVector{<:Integer}, t, beta, gamma, delta, theta, sigma)
+function _seirrates(u::AbstractVector{<:Integer}, t, beta, mu, delta, psi, kappa)
     n = _n_seir(u)
     s, e, i_n, i_f, i_d, = u
     return [
         _simulatedinfections(beta, s, i_n, i_f, i_d, n, t),  # infections
-        _diseaseprogression_to_i_n(e, theta, sigma, t),  # disease progression, not diagnosed
-        _diseaseprogression_to_i_f(e, theta, sigma, t),  # disease progression, to be diagnosed
+        _diseaseprogression_to_i_n(e, psi, kappa, t),  # disease progression, not diagnosed
+        _diseaseprogression_to_i_f(e, psi, kappa, t),  # disease progression, to be diagnosed
         _diagnosis(i_f, delta, t),  # diagnosis
-        _recovery(i_n, gamma, t),  # recovery from i_n
-        _recovery(i_d, gamma, delta, t)  # recovery from i_d
+        _recovery(i_n, mu, t),  # recovery from i_n
+        _recovery(i_d, mu, delta, t)  # recovery from i_d
     ]
 end
 
@@ -277,10 +277,10 @@ _updateevent!(u, nextevent) = u .+= _SEIREVENTSMATRIX[nextevent, :]
 
 _simulateday!(args...) = _simulateday!(default_rng(), args...)
 
-function _simulateday!(rng::AbstractRNG, u, t, beta, gamma, delta, theta, sigma)
+function _simulateday!(rng::AbstractRNG, u, t, beta, mu, delta, psi, kappa)
     nextday = t + 1 
     while t < nextday
-        rates = _seirrates(u, t, beta, gamma, delta, theta, sigma)
+        rates = _seirrates(u, t, beta, mu, delta, psi, kappa)
         nextevent = _nextevent(rng, rates)
         t += _tstep(rng, rates)
         if t < nextday 
@@ -294,26 +294,26 @@ end
 
 runsimulation(args...; kwargs...) = runsimulation(default_rng(), args...; kwargs...) 
 
-function runsimulation(rng::AbstractRNG, duration, u0; beta, gamma, delta, theta, sigma)
-    return _runsimulation(rng, duration, u0, beta, gamma, delta, theta, sigma)
+function runsimulation(rng::AbstractRNG, duration, u0; beta, mu, delta, psi, kappa)
+    return _runsimulation(rng, duration, u0, beta, mu, delta, psi, kappa)
 end
 
-function runsimulation(rng::AbstractRNG, duration, u0, beta, gamma, delta, theta, sigma)
-    return _runsimulation(rng, duration, u0, beta, gamma, delta, theta, sigma) 
+function runsimulation(rng::AbstractRNG, duration, u0, beta, mu, delta, psi, kappa)
+    return _runsimulation(rng, duration, u0, beta, mu, delta, psi, kappa) 
 end
 
-function _runsimulation(rng, duration, u0, beta, gamma, delta, theta, sigma)
+function _runsimulation(rng, duration, u0, beta, mu, delta, psi, kappa)
     duration >= 1 || throw(_negativedurationerror(duration))
     output = zeros(Int, duration + 1, 7)
     u = deepcopy(u0)
     output[1, :] = u
-    _runsimulationdays!(rng, output, duration, u, beta, gamma, delta, theta, sigma)
+    _runsimulationdays!(rng, output, duration, u, beta, mu, delta, psi, kappa)
     return output 
 end
 
-function _runsimulationdays!(rng, output, duration, u, beta, gamma, delta, theta, sigma)
+function _runsimulationdays!(rng, output, duration, u, beta, mu, delta, psi, kappa)
     for t in 1:duration 
-        _simulateday!(rng, u, t, beta, gamma, delta, theta, sigma)
+        _simulateday!(rng, u, t, beta, mu, delta, psi, kappa)
         output[t+1, :] = u
     end
     return nothing
@@ -321,8 +321,8 @@ end
 
 """
     simulationcases(M::Matrix)
-    simulationcases([rng], duration, u0, beta, gamma, delta, theta, sigma)
-    simulationcases([rng], duration, u0; beta, gamma, delta, theta, sigma)
+    simulationcases([rng], duration, u0, beta, mu, delta, psi, kappa)
+    simulationcases([rng], duration, u0; beta, mu, delta, psi, kappa)
 
 Produce a vector of simulated diagnosed infections.
 
@@ -342,7 +342,7 @@ julia> rng2 = StableRNG(1);
 julia> u0 = simulationu0(; s=100, e=5, n=200);
 
 julia> runsimulation(rng1, 10, u0;
-       beta=0.6, gamma=0.25, delta=0.33, theta=0.5, sigma=0.4);
+       beta=0.6, mu=0.25, delta=0.33, psi=0.5, kappa=0.4);
 
 julia> simulationcases(sim)
 11-element Vector{Int64}:
@@ -358,7 +358,7 @@ julia> simulationcases(sim)
  0
  1
 
-julia> simulationcases(rng2, 10, u0; beta=0.6, gamma=0.25, delta=0.33, theta=0.5, sigma=0.4)
+julia> simulationcases(rng2, 10, u0; beta=0.6, mu=0.25, delta=0.33, psi=0.5, kappa=0.4)
 11-element Vector{Int64}:
  0
  0
@@ -406,7 +406,7 @@ Run a series of simulations and collate results into a `RenewalDiDData` struct t
 # Arguments
 
 - `duration`: duration of the simulation.
-- `m1_args`: a `Tuple` containing `{u0, beta, gamma, delta, theta, sigma, intervention}` in 
+- `m1_args`: a `Tuple` containing `{u0, beta, mu, delta, psi, kappa, intervention}` in 
     order for the first group's simulation. The function `packsimulationtuple` can be used 
     to generate this with keyword arguments
 - `args...`: equivalent Tuples for remaining groups.
@@ -422,7 +422,7 @@ julia> u0_1 = simulationu0(; s=100_000, e=5, i_n=3, i_f=2);
 
 julia> u0_2 = simulationu0(; s=200_000, e=5, i_n=3, i_f=2);
 
-julia> gamma = 0.2; delta = 0.3; theta = 0.6; sigma = 0.5;
+julia> mu = 0.2; delta = 0.3; psi = 0.6; kappa = 0.5;
 
 julia> _beta1counter(t) = 0.4 + 0.1 * cos((t-20) * 2pi / 365);
 
@@ -431,11 +431,11 @@ julia> _beta1(t) = t >= 50 ? 0.8 * _beta1counter(t) : _beta1counter(t);
 julia> _beta2(t) = 0.72 * _beta1counter(t);
 
 julia> s1 = packsimulationtuple( ;
-       u0=u0_1, beta=_beta1, gamma, delta, theta, sigma, intervention=50,
+       u0=u0_1, beta=_beta1, mu, delta, psi, kappa, intervention=50,
        );
 
 julia> s2 = packsimulationtuple( ;
-       u0=u0_2, beta=_beta2, gamma, delta, theta, sigma, intervention=nothing,
+       u0=u0_2, beta=_beta2, mu, delta, psi, kappa, intervention=nothing,
        );
 
 julia> packsimulations(rng, 100, s1, s2)
@@ -461,7 +461,7 @@ Run a series of simulations and collate results into a `RenewalDiDDataUnlimitedP
 # Arguments
 
 - `duration`: duration of the simulation.
-- `m1_args`: a `Tuple` containing `{u0, beta, gamma, delta, theta, sigma, intervention}` in 
+- `m1_args`: a `Tuple` containing `{u0, beta, mu, delta, psi, kappa, intervention}` in 
     order for the first group's simulation. The function `packsimulationtuple` can be used 
     to generate this with keyword arguments
 - `args...`: equivalent Tuples for remaining groups.
@@ -477,7 +477,7 @@ julia> u0_1 = simulationu0(; s=100_000, e=5, i_n=3, i_f=2);
 
 julia> u0_2 = simulationu0(; s=200_000, e=5, i_n=3, i_f=2);
 
-julia> gamma = 0.2; delta = 0.3; theta = 0.6; sigma = 0.5;
+julia> mu = 0.2; delta = 0.3; psi = 0.6; kappa = 0.5;
 
 julia> _beta1counter(t) = 0.4 + 0.1 * cos((t-20) * 2pi / 365);
 
@@ -486,11 +486,11 @@ julia> _beta1(t) = t >= 50 ? 0.8 * _beta1counter(t) : _beta1counter(t);
 julia> _beta2(t) = 0.72 * _beta1counter(t);
 
 julia> s1 = packsimulationtuple( ;
-       u0=u0_1, beta=_beta1, gamma, delta, theta, sigma, intervention=50,
+       u0=u0_1, beta=_beta1, mu, delta, psi, kappa, intervention=50,
        );
 
 julia> s2 = packsimulationtuple( ;
-       u0=u0_2, beta=_beta2, gamma, delta, theta, sigma, intervention=nothing,
+       u0=u0_2, beta=_beta2, mu, delta, psi, kappa, intervention=nothing,
        );
 
 julia> packsimulationsunlimitedpopulation(rng, 100, s1, s2)
@@ -564,9 +564,9 @@ function _packsimulation!(
 end
 
 function __packsimulation!(rng, interventiontimes, Ns, observedcases, duration, args::Tuple)
-    u0, beta, gamma, delta, theta, sigma, intervention = args
+    u0, beta, mu, delta, psi, kappa, intervention = args
     n = _n_seir(u0)
-    cases = simulationcases(rng, duration, u0, beta, gamma, delta, theta, sigma)
+    cases = simulationcases(rng, duration, u0, beta, mu, delta, psi, kappa)
     observedcases = hcat(observedcases, cases)
     interventiontimes = _packsimulationinterventiontimes(interventiontimes, intervention)
     push!(Ns, n)
@@ -582,7 +582,7 @@ function _packsimulationinterventiontimes(interventiontimes::Vector, interventio
 end
 
 """
-    packsimulationtuple(; u0, beta, gamma, delta, theta, sigma, intervention)
+    packsimulationtuple(; u0, beta, mu, delta, psi, kappa, intervention)
 
 Return a tuple of arguments to be used with `packsimulations` or 
     `packsimulationsunlimitedpopulation`.
@@ -591,20 +591,20 @@ Return a tuple of arguments to be used with `packsimulations` or
 ```jldoctest
 julia> u0 = simulationu0(; s=100_000, e=5, i_n=3, i_f=2);
 
-julia> gamma = 0.2; delta = 0.3; theta = 0.6; sigma = 0.5;
+julia> mu = 0.2; delta = 0.3; psi = 0.6; kappa = 0.5;
 
 julia> _beta1counter(t) = 0.4 + 0.1 * cos((t-20) * 2pi / 365);
 
 julia> _beta1(t) = t >= 50 ? 0.8 * _beta1counter(t) : _beta1counter(t);
 
 julia> packsimulationtuple( ;
-       u0, beta=_beta1, gamma, delta, theta, sigma, intervention=50,
+       u0, beta=_beta1, mu, delta, psi, kappa, intervention=50,
        )
 ([100000, 5, 3, 2, 0, 0, 0], _beta1, 0.2, 0.3, 0.6, 0.5, 50)
 ```
 """
-function packsimulationtuple(; u0, beta, gamma, delta, theta, sigma, intervention)
-    return (u0, beta, gamma, delta, theta, sigma, intervention)
+function packsimulationtuple(; u0, beta, mu, delta, psi, kappa, intervention)
+    return (u0, beta, mu, delta, psi, kappa, intervention)
 end
 
 

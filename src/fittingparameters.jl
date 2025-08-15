@@ -634,10 +634,10 @@ julia> rng = StableRNG(1);
 
 julia> sim = testsimulation(rng);
 
-julia> renewaldid(sim, g_seir, RenewalDiDPriors(); gamma=0.2, sigma=0.5)
+julia> renewaldid(sim, g_seir, RenewalDiDPriors(); mu=0.2, kappa=0.5)
 DynamicPPL.Model{typeof(RenewalDiD._renewaldid), (:observedcases, :interventions, \
     :expectedseedcases, :Ns, :g, :alphaprior, :mu_delayprior, :psiprior, :sigma_delayprior, \
-    :sigma_gammaprior, :sigma_thetaprior, :tauprior, :n_seeds, :omega), (:gamma, :sigma), \
+    :sigma_gammaprior, :sigma_thetaprior, :tauprior, :n_seeds, :omega), (:mu, :kappa), \
     (), Tuple{Matrix{Int64}, InterventionMatrix{Int64}, Matrix{Float64}, Vector{Int64}, \
     typeof(g_seir), Normal{Float64}, Float64, Beta{Float64}, Float64, Exponential{Float64}, \
     Exponential{Float64}, Normal{Float64}, Int64, Int64}, Tuple{Float64, Float64}, \
@@ -648,7 +648,7 @@ DynamicPPL.Model{typeof(RenewalDiD._renewaldid), (:observedcases, :interventions
     σ=1.0), mu_delayprior = 0.6931471805599453, psiprior = Beta{Float64}(α=1.0, β=1.0), \
     sigma_delayprior = 1.6094379124341003, sigma_gammaprior = Exponential{Float64}(θ=1.0), \
     sigma_thetaprior = Exponential{Float64}(θ=1.0), tauprior = Normal{Float64}(μ=0.0, σ=1.0), \
-    n_seeds = 7, omega = 0), (gamma = 0.2, sigma = 0.5), DynamicPPL.DefaultContext())
+    n_seeds = 7, omega = 0), (mu = 0.2, kappa = 0.5), DynamicPPL.DefaultContext())
 
 ```
 """

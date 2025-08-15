@@ -4,8 +4,8 @@ using RenewalDiD
 using Test
 
 v1 = [g_covid(x) for x in -1000:1:1000]
-v2 = [g_seir(x; gamma=0.5) for x in -1000:1:1000]
-v3 = [g_seir(x; gamma=0.4, sigma=0.5) for x in -1000:1:1000]
+v2 = [g_seir(x; mu=0.5) for x in -1000:1:1000]
+v3 = [g_seir(x; mu=0.4, kappa=0.5) for x in -1000:1:1000]
 v4 = vectorg_seir(0.4, 0.5)
 v5 = vectorg_seir(0.4, 0.5; t_max=10)
 v6 = vectorg_seir(0.4)
@@ -44,23 +44,23 @@ end
 
 @testset "function `g_seir`" begin
     @testset "`g(0) == 0" begin
-        @test g_seir(0; gamma=0.5) == 0
-        @test g_seir(0; gamma=rand()) == 0
-        @test g_seir(0; gamma=0.4, sigma=0.5) == 0
-        @test g_seir(0; gamma=rand(), sigma=rand()) == 0
+        @test g_seir(0; mu=0.5) == 0
+        @test g_seir(0; mu=rand()) == 0
+        @test g_seir(0; mu=0.4, kappa=0.5) == 0
+        @test g_seir(0; mu=rand(), kappa=rand()) == 0
     end
     @testset "check specific values" begin
-        @test g_seir(1; gamma=0.4, sigma=0.5) == 0.12757877264601186
-        @test g_seir(1; gamma=0.5, sigma=0.5) == 0.15163266492815836
-        @test g_seir(1; gamma=0.5) == 0.15163266492815836
+        @test g_seir(1; mu=0.4, kappa=0.5) == 0.12757877264601186
+        @test g_seir(1; mu=0.5, kappa=0.5) == 0.15163266492815836
+        @test g_seir(1; mu=0.5) == 0.15163266492815836
         
     end
-    @testset "cannot work without `gamma` keyword" begin
+    @testset "cannot work without `mu` keyword" begin
         @test_throws UndefKeywordError g_seir(1)
     end
     @testset "negative times" begin
-        @test g_seir(-1; gamma=0.5) == 0
-        @test g_seir(-1; gamma=0.4, sigma=0.5) == 0
+        @test g_seir(-1; mu=0.5) == 0
+        @test g_seir(-1; mu=0.4, kappa=0.5) == 0
     end
     @testset "no negative values" begin
         @test minimum(v2) >= 0
@@ -71,22 +71,22 @@ end
         @test sum(v3) <= 1
     end
     @testset "passes `testgenerationtime`" begin
-        @test isnothing(testgenerationtime(g_seir; gamma=0.4, sigma=0.5, muteinfo=true))
-        @test isnothing(testgenerationtime(g_seir; gamma=0.4, muteinfo=true))
+        @test isnothing(testgenerationtime(g_seir; mu=0.4, kappa=0.5, muteinfo=true))
+        @test isnothing(testgenerationtime(g_seir; mu=0.4, muteinfo=true))
     end
 end
 
 @testset "function `vectorg_seir`" begin
     @testset "equivalence to `g_seir`" begin
-        @test generationtime(v4, 1) == g_seir(1; gamma=0.4, sigma=0.5)
-        @test generationtime(v4, 12) == g_seir(12; gamma=0.4, sigma=0.5)
+        @test generationtime(v4, 1) == g_seir(1; mu=0.4, kappa=0.5)
+        @test generationtime(v4, 12) == g_seir(12; mu=0.4, kappa=0.5)
         @test generationtime(v4, 30) == 0
-        @test generationtime(v5, 2) == g_seir(2; gamma=0.4, sigma=0.5)
+        @test generationtime(v5, 2) == g_seir(2; mu=0.4, kappa=0.5)
         @test generationtime(v5, 12) == 0
-        @test generationtime(v6, 1) == g_seir(1; gamma=0.4)
-        @test generationtime(v6, 12) == g_seir(12; gamma=0.4, sigma=0.4)
+        @test generationtime(v6, 1) == g_seir(1; mu=0.4)
+        @test generationtime(v6, 12) == g_seir(12; mu=0.4, kappa=0.4)
         @test generationtime(v6, 30) == 0
-        @test generationtime(v7, 2) == g_seir(2; gamma=0.4)
+        @test generationtime(v7, 2) == g_seir(2; mu=0.4)
         @test generationtime(v7, 12) == 0
     end
     @testset "passes `testgenerationtime`" begin

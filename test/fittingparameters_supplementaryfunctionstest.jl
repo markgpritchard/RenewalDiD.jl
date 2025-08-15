@@ -409,23 +409,23 @@ end
     sum(RenewalDiD.COVIDSERIALINTERVAL[2:7])
     @test RenewalDiD._expectedinfections(g_covid, log(1), [0, 0, 0, 0, 0, 1]) == 0.0440204506
     @test RenewalDiD._expectedinfections(g_covid, log(1), [1, 0, 0, 0, 0, 0]) == 0.0917470443
-    @test RenewalDiD._expectedinfections(g_seir, log(0), zeros(10); gamma=0.5) == 0
-    @test RenewalDiD._expectedinfections(g_seir, log(1), [1, 0, 0, 0, 0, 0]; gamma=0.5) == 
+    @test RenewalDiD._expectedinfections(g_seir, log(0), zeros(10); mu=0.5) == 0
+    @test RenewalDiD._expectedinfections(g_seir, log(1), [1, 0, 0, 0, 0, 0]; mu=0.5) == 
         0.07468060255179591
     @test_throws UndefKeywordError RenewalDiD._expectedinfections(g_seir, log(0), zeros(10))
     # we do not need to use `generationtime` with `g_seir` but test it as though `g_seir` 
     # were a user-generated function
     @test RenewalDiD._expectedinfections(
         generationtime, log(0), zeros(10); 
-        func=g_seir, gamma=0.5,
+        func=g_seir, mu=0.5,
     ) == 0
     @test RenewalDiD._expectedinfections(
         generationtime, log(1), [1, 0, 0, 0, 0, 0]; 
-        func=g_seir, gamma=0.5,
+        func=g_seir, mu=0.5,
     ) == 0.07468060255179591
     @test RenewalDiD._expectedinfections(
         generationtime, log(1), [1, 0, 0, 0, 0, 0]; 
-        func=g_seir, gamma=0.5, t_max=5,
+        func=g_seir, mu=0.5, t_max=5,
     ) == 0
     @test RenewalDiD._expectedinfections(
         generationtime, log(1), zeros(10); 
@@ -444,7 +444,7 @@ end
     ) 
     @test_throws ArgumentError RenewalDiD._expectedinfections(
         generationtime, log(0), zeros(10);
-        func=g_seir, gamma=0.5, vec=[0, 0, 0, 0, 0, 1],
+        func=g_seir, mu=0.5, vec=[0, 0, 0, 0, 0, 1],
     ) 
 end   
         

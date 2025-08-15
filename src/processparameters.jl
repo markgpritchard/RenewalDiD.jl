@@ -167,7 +167,7 @@ julia> data = testsimulation(rng);
 
 julia> df = testdataframe(rng; nchains=2, niterations=5, ngroups=3, ntimes=10, nseeds=7);
 
-julia> samplerenewaldidinfections(g_seir, df, data, 1; gamma=0.2, sigma=0.5)
+julia> samplerenewaldidinfections(g_seir, df, data, 1; mu=0.2, kappa=0.5)
 11×3 Matrix{Float64}:
  0.0        0.0       0.0
  0.114199   0.114506  0.029641

@@ -4,4 +4,4 @@
 
 This project is aiming to apply difference-in-difference methodologies to changes in the reproduction ratio of infectious diseases.  
 
-Work is currently in progress and version numbers are only used internally to track which versions are in use.
+Work is currently in progress and development version numbers are incremented only for private use to track updating between environments.
