@@ -163,18 +163,18 @@ function testsimulation(rng::AbstractRNG=default_rng())
     u0_1 = simulationu0(; s=98, e=2)
     u0_2 = simulationu0(; s=198, e=2)
     u0_3 = simulationu0(; s=48, e=2)
-    gamma = 0.2
+    mu = 0.2
     delta = 0.3
-    theta = 0.6
-    sigma = 0.5
+    psi = 0.6
+    kappa = 0.5
     s1 = packsimulationtuple( ; 
-        u0=u0_1, beta=_beta1, gamma, delta, theta, sigma, intervention=nothing,
+        u0=u0_1, beta=_beta1, mu, delta, psi, kappa, intervention=nothing,
     )
     s2 = packsimulationtuple( ; 
-        u0=u0_2, beta=_beta2, gamma, delta, theta, sigma, intervention=4,
+        u0=u0_2, beta=_beta2, mu, delta, psi, kappa, intervention=4,
     )
     s3 = packsimulationtuple( ; 
-        u0=u0_3, beta=_beta3, gamma, delta, theta, sigma, intervention=6,
+        u0=u0_3, beta=_beta3, mu, delta, psi, kappa, intervention=6,
     )
     return packsimulations(rng, 10, s1, s2, s3)
 end
