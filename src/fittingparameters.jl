@@ -716,10 +716,10 @@ end
     #mu_delay ~ mu_delayprior
     #sigma_delay ~ sigma_delayprior
     M_x ~ filldist(truncated(Normal(0, 1); lower=-1), ntimes + n_seeds, ngroups)
-    fittingsigma ~ Exponential(1)
-    predictobservedinfectionssigmamatrix ~ filldist(
-        truncated(Normal(0, 1); lower=-1), ntimes + 1, ngroups
-    )
+    #fittingsigma ~ Exponential(1)
+    #predictobservedinfectionssigmamatrix ~ filldist(
+    #    truncated(Normal(0, 1); lower=-1), ntimes + 1, ngroups
+    #)
 
     # attempting to fit `mu_delay` and `sigma_delay` gives NaN gradients so currently use
     # constants
@@ -757,12 +757,14 @@ end
 
     if isnan(maximum(np)) 
         @addlogprob! -Inf
-        return  # exit the model evaluation early
+        return nothing  # exit the model evaluation early
     end
 
-    predictobservedinfections = max.(0, np .+ predictobservedinfectionssigmamatrix .* np .* (1 - psi))
+    #predictobservedinfections = max.(0, np .+ predictobservedinfectionssigmamatrix .* np .* (1 - psi))
 
-    observedcases ~ arraydist(Normal.(predictobservedinfections, fittingsigma))
+    #observedcases ~ arraydist(Normal.(predictobservedinfections, fittingsigma))
+    observedcases ~ arraydist(Normal.(np, np .* (1 - psi)))
+    return nothing
 end
 
 function _delayedinfections(
