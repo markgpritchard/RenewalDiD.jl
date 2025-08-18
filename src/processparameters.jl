@@ -405,6 +405,16 @@ end
 # other versions of this function are in `interventionmatrix.jl`
 _interventionstarttimes(M::AbstractMatrix, i) = findfirst(x -> x == 1, M[:, i])
 
+## DataFrame of mode estimates
+
+function map_DataFrame(result::ModeResult)
+    df = DataFrame()
+    for (n, v) in zip(coefnames(result), coef(result))
+        insertcols!(df, n => v)
+    end
+    return df
+end
+
 
 # Warnings ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 

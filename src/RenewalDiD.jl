@@ -2,13 +2,14 @@ module RenewalDiD
 
 using AutoHashEquals: @auto_hash_equals
 using Compat: @compat
-using DataFrames: DataFrame
+using DataFrames: DataFrame, insertcols!
 using PrettyTables: pretty_table
 using Random: AbstractRNG, default_rng
-using StatsBase: Weights, mean, ordinalrank, quantile, sample
+using StatsBase: Weights, coef, coefnames, mean, ordinalrank, quantile, sample
 using Turing: @addlogprob!, @model
 using Turing: Beta, Distribution, Exponential, LogNormal, Normal
-using Turing: arraydist, cdf, filldist, product_distribution, truncated 
+using Turing: arraydist, cdf, filldist, product_distribution, truncated
+using Turing.Optimisation: ModeResult
 
 # re-export from `DataFrames`
 export DataFrame
@@ -27,7 +28,8 @@ export runsimulation, simulationcases, simulationu0
 export AbstractRenewalDiDData, RenewalDiDData, RenewalDiDDataUnlimitedPopn, RenewalDiDPriors
 export expectedseedcases, renewaldid
 # processparameters.jl
-export nunique, quantilerenewaldidinfections, rankvalues, samplerenewaldidinfections
+export map_DataFrame, nunique, quantilerenewaldidinfections, rankvalues
+export samplerenewaldidinfections
 
 # Plotting.jl 
 @compat public plotmodel, plotmodel!

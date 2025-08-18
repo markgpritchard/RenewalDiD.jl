@@ -74,12 +74,40 @@ priorsoutputinitquantiles = quantilerenewaldidinfections(
 priorsinitplot = plotmodel(priorsoutputinitquantiles, sim)
 
 priorinitparams = [[values(priorsdf[i, 3:430])...] for i in initindices]
+#=
+result_multi = multipathfinder(
+    model1, 1_000; 
+    adtype=AutoReverseDiff(), nruns=4, rng
+)
+pathfinderdf = DataFrame
+pathfinderoutputs = samplerenewaldidinfections(
+    g_seir, priorsdf, sim; 
+    mu=0.2, kappa=0.5,
+)
+pathfinderquantiles = quantilerenewaldidinfections(
+    pathfinderoutputs, [0.025, 0.05, 0.25, 0.5, 0.75, 0.95, 0.975]
+)
+pathfinderplot = plotmodel(pathfinderquantiles, sim)
+=#
+
+map_estimate = maximum_likelihood(model1; adtype=AutoReverseDiff(), maxtime=60)
+map_df = map_DataFrame(map_estimate)
+map_outputs = samplerenewaldidinfections(
+    g_seir, map_df, sim; 
+    mu=0.2, kappa=0.5,
+)
+map_quantiles = quantilerenewaldidinfections(
+    map_outputs, [0.025, 0.05, 0.25, 0.5, 0.75, 0.95, 0.975]
+)
+map_plot = plotmodel(map_quantiles, sim)
+
 
 shortchain = sample(
     rng, model1, NUTS(0.65; adtype=AutoReverseDiff()), MCMCThreads(), 25, 4; 
     #rng, model1, NUTS(0.65; adtype=AutoReverseDiff()), MCMCThreads(), 20, 4; 
     #rng, model1, NUTS(0.65; adtype=AutoReverseDiff()), MCMCThreads(), 5, 4; 
-    initial_params=priorinitparams,
+    #initial_params=priorinitparams,
+    initial_params=repeat([map_estimate.values.array]; outer=4)
 ) 
 shortdf = DataFrame(shortchain)
 p1 = trplot(shortdf; ncols=5, nplots=50, size=(1000, 1000))  # examine 50 variables
