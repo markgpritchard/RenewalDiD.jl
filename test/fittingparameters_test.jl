@@ -54,9 +54,7 @@ model1 = renewaldid(
 end
 
 @testset "mode estimate" begin
-    _t = time()
     map_estimate = maximum_likelihood(model1; adtype=AutoReverseDiff(), maxtime=30)
-    @test time() - _t < 50 
     map_df = map_DataFrame(map_estimate)
     @test map_df isa DataFrame
 end

@@ -74,31 +74,14 @@ priorsoutputinitquantiles = quantilerenewaldidinfections(
 priorsinitplot = plotmodel(priorsoutputinitquantiles, sim)
 
 priorinitparams = [[values(priorsdf[i, 3:430])...] for i in initindices]
-#=
-result_multi = multipathfinder(
-    model1, 1_000; 
-    adtype=AutoReverseDiff(), nruns=4, rng
-)
-pathfinderdf = DataFrame
-pathfinderoutputs = samplerenewaldidinfections(
-    g_seir, priorsdf, sim; 
-    mu=0.2, kappa=0.5,
-)
-pathfinderquantiles = quantilerenewaldidinfections(
-    pathfinderoutputs, [0.025, 0.05, 0.25, 0.5, 0.75, 0.95, 0.975]
-)
-pathfinderplot = plotmodel(pathfinderquantiles, sim)
-=#
 
-map_estimate = maximum_likelihood(model1; adtype=AutoReverseDiff(), maxtime=60)
+map_estimate = maximum_likelihood(model1; adtype=AutoReverseDiff(), maxiters=1000,)
 map_df = map_DataFrame(map_estimate)
 map_outputs = samplerenewaldidinfections(
     g_seir, map_df, sim; 
     mu=0.2, kappa=0.5,
 )
-map_quantiles = quantilerenewaldidinfections(
-    map_outputs, [0.025, 0.05, 0.25, 0.5, 0.75, 0.95, 0.975]
-)
+map_quantiles = quantilerenewaldidinfections(map_outputs, [0.5])
 map_plot = plotmodel(map_quantiles, sim)
 
 

@@ -246,6 +246,26 @@ predictedcalcseedinfections10 = ComplexF64[3+0.94im  0+1im; 1+0.92im  2+0.98im]
 zerosstruct = RenewalDiDData( ; 
     observedcases=zeros(4, 2), interventions=zeros(3, 2), Ns=zeros(Int, 2)
 )
+namedzerosstruct = RenewalDiDData( ; 
+    observedcases=zeros(4, 2), interventions=zeros(3, 2), Ns=zeros(Int, 2), id="IHaveAName"
+)
+namedzerostructunlimitied = RenewalDiDDataUnlimitedPopn( ; 
+    observedcases=zeros(4, 2), 
+    interventions=zeros(3, 2), 
+    id="InfinitePopulation"
+)
+
+nzoutput = "RenewalDiDData{Float64, Matrix{Float64}}\n observedcases:  [0.0 0.0; 0.0 0.0; \
+    0.0 0.0; 0.0 0.0]\n interventions:  [0.0 0.0; 0.0 0.0; 0.0 0.0]\n Ns:             \
+    [0, 0]\n exptdseedcases: [0.5 0.5; 0.0 0.0; 0.0 0.0; 0.0 0.0; 0.0 0.0; 0.0 0.0; 0.0 0.0]"
+nnzoutput = "RenewalDiDData{Float64, Matrix{Float64}}, (IHaveAName)\n observedcases:  [0.0 \
+    0.0; 0.0 0.0; 0.0 0.0; 0.0 0.0]\n interventions:  [0.0 0.0; 0.0 0.0; 0.0 0.0]\n \
+    Ns:             [0, 0]\n exptdseedcases: [0.5 0.5; 0.0 0.0; 0.0 0.0; 0.0 0.0; 0.0 0.0; \
+    0.0 0.0; 0.0 0.0]"
+unnzoutput = "RenewalDiDDataUnlimitedPopn{Float64, Matrix{Float64}}, \
+    (InfinitePopulation)\n observedcases:  [0.0 0.0; 0.0 0.0; 0.0 0.0; 0.0 \
+    0.0]\n interventions:  [0.0 0.0; 0.0 0.0; 0.0 0.0]\n Ns:             \
+    unlimited\n exptdseedcases: [0.5 0.5; 0.0 0.0; 0.0 0.0; 0.0 0.0; 0.0 0.0; 0.0 0.0; 0.0 0.0]"
 
 @testset "data struct" begin
     @test (@inferred RenewalDiDData( ; 
@@ -598,4 +618,10 @@ end
         @test minimum(imag.(infn[:, g])) >= 0
         @test maximum(imag.(infn[:, g])) <= 0.99
     end
+end
+
+@testset "output from `Base.show`" begin
+    @test repr("text/plain", zerosstruct) == nzoutput 
+    @test repr("text/plain", namedzerosstruct) == nnzoutput 
+    @test repr("text/plain", namedzerostructunlimitied) == unnzoutput 
 end
