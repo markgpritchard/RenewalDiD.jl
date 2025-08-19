@@ -179,36 +179,67 @@ function samplerenewaldidinfections(g, df::DataFrame, data, indexes=axes(df, 1);
     return samplerenewaldidinfections(g, default_rng(), df, data, indexes; kwargs...)
 end
 
-function samplerenewaldidinfections(g, rng::AbstractRNG, df::DataFrame, data, indexes=axes(df, 1); kwargs...)
-    return _samplerenewaldidinfections(g, rng, df, data, indexes; kwargs...)
+function samplerenewaldidinfections(
+    g, rng::AbstractRNG, df::DataFrame, data, indexes=axes(df, 1); 
+    repeatsamples=nothing, kwargs...
+)
+    return _samplerenewaldidinfections(g, rng, df, data, indexes, repeatsamples; kwargs...)
 end
 
-function _samplerenewaldidinfections(g, rng, df, data, indexes; kwargs...)
+function _samplerenewaldidinfections(g, rng, df, data, indexes, repeatsamples; kwargs...)
     return _samplerenewaldidinfections(
-        generationtime, rng, df, data, indexes; 
+        generationtime, rng, df, data, indexes, repeatsamples; 
         func=g,  # `generationtime` accepts function or vector from the keyword `func`
         kwargs...
     )
 end
 
-function _samplerenewaldidinfections(g::_Useablegenerationfunctions, rng, df, data, indexes; kwargs...)
+function _samplerenewaldidinfections(
+    g::_Useablegenerationfunctions, rng, df, data, indexes, repeatsamples; 
+    kwargs...
+)
     ngroups = _ngroups(data.interventions)
     ntimes = _ntimes(data.interventions)
     ninterventions = _ninterventions(data.interventions)
     n_seeds = size(data.exptdseedcases, 1)
     Ns = data.Ns  
-    output = _samplerenewaldidinitialoutput(ntimes, ngroups, indexes)
+    output = _samplerenewaldidinitialoutput(ntimes, ngroups, indexes, repeatsamples)
     _samplerenewaldidinfections!(
-        g, rng, output, df, data, indexes, ngroups, ntimes, ninterventions, n_seeds, Ns; 
+        g, 
+        rng, 
+        output, 
+        df, 
+        data, 
+        indexes, 
+        ngroups, 
+        ntimes, 
+        ninterventions, 
+        repeatsamples, 
+        n_seeds, 
+        Ns; 
         kwargs...
     )
     return output 
 end
 
-_samplerenewaldidinitialoutput(ntimes, ngroups, ::Integer) = zeros(ntimes + 1, ngroups)
+function _samplerenewaldidinitialoutput(ntimes, ngroups, ::Integer, ::Nothing)
+    return zeros(ntimes + 1, ngroups)
+end
 
-function _samplerenewaldidinitialoutput(ntimes, ngroups, indexes::AbstractVector{<:Integer})
+function _samplerenewaldidinitialoutput(
+    ntimes, ngroups, indexes::AbstractVector{<:Integer}, ::Nothing
+)
     return zeros(ntimes + 1, ngroups, length(indexes))
+end
+
+function _samplerenewaldidinitialoutput(ntimes, ngroups, ::Integer, repeatsamples::Integer)
+    return zeros(ntimes + 1, ngroups, repeatsamples)
+end
+
+function _samplerenewaldidinitialoutput(
+    ntimes, ngroups, indexes::AbstractVector{<:Integer}, repeatsamples::Integer
+)
+    return zeros(ntimes + 1, ngroups, length(indexes) * repeatsamples)
 end
 
 function _samplerenewaldidinfections!(
@@ -221,6 +252,7 @@ function _samplerenewaldidinfections!(
     ngroups, 
     ntimes, 
     ninterventions, 
+    ::Nothing,
     n_seeds, 
     Ns; 
     kwargs...
@@ -236,6 +268,81 @@ function _samplerenewaldidinfections!(
             ngroups, 
             ntimes, 
             ninterventions, 
+            nothing,
+            n_seeds,
+            Ns; 
+            kwargs...
+        )
+    end
+    return nothing
+end
+
+function _samplerenewaldidinfections!(
+    g, 
+    rng,
+    output, 
+    df, 
+    data, 
+    indexes::AbstractVector{<:Integer}, 
+    ngroups, 
+    ntimes, 
+    ninterventions, 
+    repeatsamples::Number,
+    n_seeds, 
+    Ns; 
+    kwargs...
+)
+    r = 1
+    for j in indexes
+        for _ in 1:repeatsamples 
+            _samplerenewaldidinfections!(
+                g, 
+                rng, 
+                (@view output[:, :, r]), 
+                df, 
+                data, 
+                j, 
+                ngroups, 
+                ntimes, 
+                ninterventions, 
+                nothing,
+                n_seeds,
+                Ns; 
+                kwargs...
+            )
+            r += 1
+        end
+    end
+    return nothing
+end
+
+function _samplerenewaldidinfections!(
+    g, 
+    rng,
+    output, 
+    df, 
+    data, 
+    i::Integer, 
+    ngroups, 
+    ntimes, 
+    ninterventions, 
+    repeatsamples::Number,
+    n_seeds, 
+    Ns; 
+    kwargs...
+)
+    for r in 1:repeatsamples 
+        _samplerenewaldidinfections!(
+            g, 
+            rng, 
+            (@view output[:, :, r]), 
+            df, 
+            data, 
+            i, 
+            ngroups, 
+            ntimes, 
+            ninterventions, 
+            nothing,
             n_seeds,
             Ns; 
             kwargs...
@@ -254,6 +361,7 @@ function _samplerenewaldidinfections!(
     ngroups, 
     ntimes, 
     ninterventions, 
+    ::Nothing,
     n_seeds, 
     Ns; 
     kwargs...
