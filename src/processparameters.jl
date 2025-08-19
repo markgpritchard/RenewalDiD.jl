@@ -134,13 +134,6 @@ function _mxmatrix(df, i, ngroups, ntimes, n_seeds)
     return [getproperty(df, Symbol("M_x[$t, $j]"))[i] for t in 1:totaltimes, j in 1:ngroups]
 end
 
-function _observedsigmamatrix(df, i, ngroups, ntimes)
-    return [
-        getproperty(df, Symbol("predictobservedinfectionssigmamatrix[$t, $j]"))[i] 
-        for t in 1:(ntimes + 1), j in 1:ngroups
-    ]
-end
-
 ## take samples from DataFrame of fitted parameters and generate expected outcomes
 
 """
@@ -182,104 +175,204 @@ julia> samplerenewaldidinfections(g_seir, df, data, 1; mu=0.2, kappa=0.5)
  2.85361   16.5956    0.125572
 ```
 """
-function samplerenewaldidinfections(
-    g, 
-    df::DataFrame, 
-    data::AbstractRenewalDiDData, 
-    indexes::AbstractVector{<:Integer}=axes(df, 1);
-    kwargs...
-)
-    ngroups = _ngroups(data.interventions)
-    ntimes = _ntimes(data.interventions)
-    ninterventions = _ninterventions(data.interventions)
-    n_seeds = size(data.exptdseedcases, 1)
-    output = zeros(ntimes + 1, ngroups, length(indexes))
-    for (r, j) in enumerate(indexes)
-        _samplerenewaldidinfections!(
-            g, (@view output[:, :, r]), df, data, j, ngroups, ntimes, ninterventions, n_seeds; 
-            kwargs...
-        )
-    end
-    return output 
+function samplerenewaldidinfections(g, df::DataFrame, data, indexes=axes(df, 1); kwargs...)
+    return samplerenewaldidinfections(g, default_rng(), df, data, indexes; kwargs...)
 end
 
 function samplerenewaldidinfections(
-    g, df::DataFrame, data::AbstractRenewalDiDData, i::Integer;
-    kwargs...
+    g, rng::AbstractRNG, df::DataFrame, data, indexes=axes(df, 1); 
+    repeatsamples=nothing, kwargs...
 )
-    ngroups = _ngroups(data.interventions)
-    ntimes = _ntimes(data.interventions)
-    ninterventions = _ninterventions(data.interventions)
-    n_seeds = size(data.exptdseedcases, 1)
-    output = zeros(ntimes + 1, ngroups)
-    _samplerenewaldidinfections!(
-            g, output, df, data, i, ngroups, ntimes, ninterventions, n_seeds; 
-            kwargs...
-        )
-    return output 
+    return _samplerenewaldidinfections(g, rng, df, data, indexes, repeatsamples; kwargs...)
 end
 
-function _samplerenewaldidinfections!(
-    g, 
-    output::AbstractArray, 
-    df, 
-    data::AbstractRenewalDiDData, 
-    i, 
-    ngroups, 
-    ntimes, 
-    ninterventions, 
-    n_seeds; 
-    kwargs...
-)
-    return _samplerenewaldidinfections!(
-        generationtime, output, df, data, i, ngroups, ntimes, ninterventions, n_seeds; 
+function _samplerenewaldidinfections(g, rng, df, data, indexes, repeatsamples; kwargs...)
+    return _samplerenewaldidinfections(
+        generationtime, rng, df, data, indexes, repeatsamples; 
         func=g,  # `generationtime` accepts function or vector from the keyword `func`
         kwargs...
     )
 end
 
-function _samplerenewaldidinfections!(
-    g::_Useablegenerationfunctions, 
-    output::AbstractArray, 
-    df, 
-    data::AbstractRenewalDiDData, 
-    i, 
-    ngroups, 
-    ntimes, 
-    ninterventions, 
-    n_seeds; 
+function _samplerenewaldidinfections(
+    g::_Useablegenerationfunctions, rng, df, data, indexes, repeatsamples; 
     kwargs...
 )
+    ngroups = _ngroups(data.interventions)
+    ntimes = _ntimes(data.interventions)
+    ninterventions = _ninterventions(data.interventions)
+    n_seeds = size(data.exptdseedcases, 1)
     Ns = data.Ns  
-    return _samplerenewaldidinfections!(
-        g, output, df, data, i, ngroups, ntimes, ninterventions, n_seeds, Ns; 
+    output = _samplerenewaldidinitialoutput(ntimes, ngroups, indexes, repeatsamples)
+    _samplerenewaldidinfections!(
+        g, 
+        rng, 
+        output, 
+        df, 
+        data, 
+        indexes, 
+        ngroups, 
+        ntimes, 
+        ninterventions, 
+        repeatsamples, 
+        n_seeds, 
+        Ns; 
         kwargs...
     )
+    return output 
+end
+
+function _samplerenewaldidinitialoutput(ntimes, ngroups, ::Integer, ::Nothing)
+    return zeros(ntimes + 1, ngroups)
+end
+
+function _samplerenewaldidinitialoutput(
+    ntimes, ngroups, indexes::AbstractVector{<:Integer}, ::Nothing
+)
+    return zeros(ntimes + 1, ngroups, length(indexes))
+end
+
+function _samplerenewaldidinitialoutput(ntimes, ngroups, ::Integer, repeatsamples::Integer)
+    return zeros(ntimes + 1, ngroups, repeatsamples)
+end
+
+function _samplerenewaldidinitialoutput(
+    ntimes, ngroups, indexes::AbstractVector{<:Integer}, repeatsamples::Integer
+)
+    return zeros(ntimes + 1, ngroups, length(indexes) * repeatsamples)
 end
 
 function _samplerenewaldidinfections!(
-    g::_Useablegenerationfunctions, 
-    output::AbstractArray, 
+    g, 
+    rng,
+    output, 
     df, 
-    data::AbstractRenewalDiDData, 
-    i, 
+    data, 
+    indexes::AbstractVector{<:Integer}, 
     ngroups, 
     ntimes, 
     ninterventions, 
+    ::Nothing,
+    n_seeds, 
+    Ns; 
+    kwargs...
+)
+    for (r, j) in enumerate(indexes)
+        _samplerenewaldidinfections!(
+            g, 
+            rng, 
+            (@view output[:, :, r]), 
+            df, 
+            data, 
+            j, 
+            ngroups, 
+            ntimes, 
+            ninterventions, 
+            nothing,
+            n_seeds,
+            Ns; 
+            kwargs...
+        )
+    end
+    return nothing
+end
+
+function _samplerenewaldidinfections!(
+    g, 
+    rng,
+    output, 
+    df, 
+    data, 
+    indexes::AbstractVector{<:Integer}, 
+    ngroups, 
+    ntimes, 
+    ninterventions, 
+    repeatsamples::Number,
+    n_seeds, 
+    Ns; 
+    kwargs...
+)
+    r = 1
+    for j in indexes
+        for _ in 1:repeatsamples 
+            _samplerenewaldidinfections!(
+                g, 
+                rng, 
+                (@view output[:, :, r]), 
+                df, 
+                data, 
+                j, 
+                ngroups, 
+                ntimes, 
+                ninterventions, 
+                nothing,
+                n_seeds,
+                Ns; 
+                kwargs...
+            )
+            r += 1
+        end
+    end
+    return nothing
+end
+
+function _samplerenewaldidinfections!(
+    g, 
+    rng,
+    output, 
+    df, 
+    data, 
+    i::Integer, 
+    ngroups, 
+    ntimes, 
+    ninterventions, 
+    repeatsamples::Number,
+    n_seeds, 
+    Ns; 
+    kwargs...
+)
+    for r in 1:repeatsamples 
+        _samplerenewaldidinfections!(
+            g, 
+            rng, 
+            (@view output[:, :, r]), 
+            df, 
+            data, 
+            i, 
+            ngroups, 
+            ntimes, 
+            ninterventions, 
+            nothing,
+            n_seeds,
+            Ns; 
+            kwargs...
+        )
+    end
+    return nothing
+end
+
+function _samplerenewaldidinfections!(
+    g, 
+    rng,
+    output, 
+    df, 
+    data, 
+    i::Integer, 
+    ngroups, 
+    ntimes, 
+    ninterventions, 
+    ::Nothing,
     n_seeds, 
     Ns; 
     kwargs...
 )
     _samplerenewaldidinfectionsassertions(df, data.exptdseedcases, i, ngroups, ntimes)
-
     alpha = df.alpha[i]
     gammavec = _gammavec(df, i, ngroups)
     thetavec = _thetavec(df, i, ntimes)
     tau = _tauvec(df, i, ninterventions)
     psi = df.psi[i]
     M_x = _mxmatrix(df, i, ngroups, ntimes, n_seeds)
-    predictobservedinfectionssigmamatrix = _observedsigmamatrix(df, i, ngroups, ntimes)
-
     predictedlogR_0 = _predictedlogR_0(alpha, gammavec, thetavec, tau, data.interventions)
     T = Complex{typeof(predictedlogR_0[1, 1])}
     predictedinfections = _infectionsmatrix(T, predictedlogR_0, n_seeds)
@@ -289,12 +382,21 @@ function _samplerenewaldidinfections!(
     )
     np = real.(predictedinfections[n_seeds:n_seeds+ntimes, :]) .* psi
     isnan(maximum(np)) && return _halt_samplerenewaldidinfections(i)  # exit early 
-    predictobservedinfections = max.(
-        0, 
-        np .+ predictobservedinfectionssigmamatrix .* np .* (1 - psi)
-    )
-    output .= predictobservedinfections
+    output .= _predictobservedinfections(rng, np, psi)
     return nothing
+end
+
+function _predictobservedinfections(rng, np::AbstractMatrix, psi)
+    return [
+        __predictobservedinfections(rng, np[t, g], psi) 
+        for t in axes(np, 1), g in axes(np, 2)
+    ]
+end
+
+function __predictobservedinfections(rng, np::Number, psi)
+    v = rand(rng, Normal(np, np * (1 - psi)))
+    v > 0 || return zero(v)
+    return v
 end
 
 function _halt_samplerenewaldidinfections(i) 
@@ -410,6 +512,16 @@ end
 
 # other versions of this function are in `interventionmatrix.jl`
 _interventionstarttimes(M::AbstractMatrix, i) = findfirst(x -> x == 1, M[:, i])
+
+## DataFrame of mode estimates
+
+function map_DataFrame(result::ModeResult)
+    df = DataFrame()
+    for (n, v) in zip(coefnames(result), coef(result))
+        insertcols!(df, n => v)
+    end
+    return df
+end
 
 
 # Warnings ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

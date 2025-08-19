@@ -262,6 +262,15 @@ s10 = samplerenewaldidinfections(zeros(2), df10, data10)
 s3ma = samplerenewaldidinfections(zeros(2), df3, data3ma)
 s3mb = samplerenewaldidinfections([0, 1], df3, data3mb)
 s3mc = samplerenewaldidinfections([0, 1], df3, data3mb, 4:6)
+s1r1 = samplerenewaldidinfections(zeros(2), df1, data1, 2; repeatsamples=2)
+s1r2 = samplerenewaldidinfections(zeros(2), df1, data1, 2; repeatsamples=5)
+s2r1 = samplerenewaldidinfections(zeros(2), df2, data2, 2; repeatsamples=2)
+s2r2 = samplerenewaldidinfections(zeros(2), df2, data2, 2; repeatsamples=10)
+s3r = samplerenewaldidinfections([0, 1], df3, data3, 1; repeatsamples=4)
+s8r = samplerenewaldidinfections(zeros(2), df8, data8; repeatsamples=3)
+s3mar = samplerenewaldidinfections(zeros(2), df3, data3ma; repeatsamples=3)
+s3mbr = samplerenewaldidinfections([0, 1], df3, data3mb)
+s3mcr = samplerenewaldidinfections([0, 1], df3, data3mb, 4:6)
 
 rv16a = let
     _rvs = rankvalues(rankvaluedf16, :tau)
@@ -497,6 +506,17 @@ end
         @test qv[:, :, i] == M
     end
     @test_nowarn quantilerenewaldidinfections(A1, [0.25, 0.5, 0.75])
+end
+
+@testset "repeat samples" begin
+    @test samplerenewaldidinfections(zeros(2), df1, data1, 2; repeatsamples=nothing) == s1
+    @test s1r1 == zeros(11, 3, 2)
+    @test s1r2 == zeros(11, 3, 5)
+    @test s2r1 == zeros(13, 4, 2)
+    @test s2r2 == zeros(13, 4, 10)
+    @test s3r == ones(3, 2, 4)
+    @test s8r == zeros(11, 3, 48)
+    @test s3mar == repeat([_r1  _r2; 0  0; 0  0;;;]; outer=(1, 1, 30))
 end
 
 @testset "intervention starttimes" begin

@@ -68,19 +68,22 @@ RenewalDiDData{Int64, InterventionMatrix{Int64}}
     interventions::T
     Ns::Vector{Int}
     exptdseedcases::Matrix{Float64}
+    id::String
 
     function RenewalDiDData(
         observedcases::Matrix{S}, 
         interventions::T, 
         Ns::Vector{<:Number}, 
-        exptdseedcases::Matrix{<:Number}
+        exptdseedcases::Matrix{<:Number},
+        id::String=""
     ) where {S <:Number, T <:AbstractArray}
         _diddataassertions(observedcases, interventions, Ns, exptdseedcases)
         return new{S, T}(
             observedcases, 
             interventions, 
             convert.(Int, Ns), 
-            convert.(Float64, exptdseedcases)
+            convert.(Float64, exptdseedcases),
+            id
         )
     end
 end
@@ -94,12 +97,13 @@ function RenewalDiDData( ;
     doubletime=automatic, 
     sampletime=automatic, 
     minvalue=DEFAULT_SEEDMATRIX_MINVALUE,
+    id="",
 )
     newexptdseedcases = _expectedseedcasesifneeded(
         exptdseedcases, observedcases, n_seeds; 
         doubletime, sampletime, minvalue
     )
-    return RenewalDiDData(observedcases, interventions, Ns, newexptdseedcases)
+    return RenewalDiDData(observedcases, interventions, Ns, newexptdseedcases, id)
 end
 
 """
@@ -160,17 +164,20 @@ true
     observedcases::Matrix{S}
     interventions::T
     exptdseedcases::Matrix{Float64}
+    id::String
 
     function RenewalDiDDataUnlimitedPopn(
         observedcases::Matrix{S}, 
         interventions::T, 
-        exptdseedcases::Matrix{<:Number}
+        exptdseedcases::Matrix{<:Number},
+        id::String=""
     ) where {S <:Number, T <:AbstractArray}
         _diddataassertions(observedcases, interventions, exptdseedcases)
         return new{S, T}(
             observedcases, 
             interventions, 
-            convert.(Float64, exptdseedcases)
+            convert.(Float64, exptdseedcases),
+            id
         )
     end
 end
@@ -184,12 +191,14 @@ function RenewalDiDDataUnlimitedPopn( ;
     doubletime=automatic, 
     sampletime=automatic, 
     minvalue=DEFAULT_SEEDMATRIX_MINVALUE,
+    id="",
 )
     return _RenewalDiDDataUnlimitedPopn(
         observedcases, 
         interventions, 
         Ns,
         exptdseedcases,
+        id,
         n_seeds, 
         doubletime, 
         sampletime, 
@@ -202,6 +211,7 @@ function _RenewalDiDDataUnlimitedPopn(
     interventions, 
     Ns,
     exptdseedcases,
+    id,
     n_seeds, 
     doubletime, 
     sampletime, 
@@ -213,6 +223,7 @@ function _RenewalDiDDataUnlimitedPopn(
         interventions, 
         nothing,
         exptdseedcases,
+        id,
         n_seeds, 
         doubletime, 
         sampletime, 
@@ -225,6 +236,7 @@ function _RenewalDiDDataUnlimitedPopn(
     interventions, 
     ::Nothing,
     exptdseedcases,
+    id,
     n_seeds, 
     doubletime, 
     sampletime, 
@@ -234,14 +246,14 @@ function _RenewalDiDDataUnlimitedPopn(
         exptdseedcases, observedcases, n_seeds; 
         doubletime, sampletime, minvalue
     )
-    return RenewalDiDDataUnlimitedPopn(observedcases, interventions, newexptdseedcases)
+    return RenewalDiDDataUnlimitedPopn(observedcases, interventions, newexptdseedcases, id)
 end
 
-function Base.getproperty(obj::RenewalDiDDataUnlimitedPopn, name::Symbol)
-    if name === :Ns 
+function Base.getproperty(obj::RenewalDiDDataUnlimitedPopn, k::Symbol)
+    if k === :Ns 
         return nothing 
     else 
-        return getfield(obj, name)
+        return getfield(obj, k)
     end
 end
 
@@ -258,11 +270,21 @@ function Base.show(io::IO, ::MIME"text/plain", d::AbstractRenewalDiDData)
     return nothing
 end
 
-_showtitle(io, ::RenewalDiDData{S, T}) where {S, T} = print(io, "RenewalDiDData{$S, $T}")
+function _showtitle(io, d::RenewalDiDData{S, T}) where {S, T}
+    print(io, "RenewalDiDData{$S, $T}$(_printid(d))")
+end
 
-function _showtitle(io, ::RenewalDiDDataUnlimitedPopn{S, T}) where {S, T}
-    print(io, "RenewalDiDDataUnlimitedPopn{$S, $T}")
+function _showtitle(io, d::RenewalDiDDataUnlimitedPopn{S, T}) where {S, T}
+    print(io, "RenewalDiDDataUnlimitedPopn{$S, $T}$(_printid(d))")
     return nothing
+end
+
+function _printid(d)
+    if d.id == ""
+        return "" 
+    else
+        return ", ($(d.id))"
+    end
 end
 
 _showns(io, d::RenewalDiDData) = show(io, d.Ns)
@@ -716,10 +738,10 @@ end
     #mu_delay ~ mu_delayprior
     #sigma_delay ~ sigma_delayprior
     M_x ~ filldist(truncated(Normal(0, 1); lower=-1), ntimes + n_seeds, ngroups)
-    fittingsigma ~ Exponential(1)
-    predictobservedinfectionssigmamatrix ~ filldist(
-        truncated(Normal(0, 1); lower=-1), ntimes + 1, ngroups
-    )
+    #fittingsigma ~ Exponential(1)
+    #predictobservedinfectionssigmamatrix ~ filldist(
+    #    truncated(Normal(0, 1); lower=-1), ntimes + 1, ngroups
+    #)
 
     # attempting to fit `mu_delay` and `sigma_delay` gives NaN gradients so currently use
     # constants
@@ -757,12 +779,14 @@ end
 
     if isnan(maximum(np)) 
         @addlogprob! -Inf
-        return  # exit the model evaluation early
+        return nothing  # exit the model evaluation early
     end
 
-    predictobservedinfections = max.(0, np .+ predictobservedinfectionssigmamatrix .* np .* (1 - psi))
+    #predictobservedinfections = max.(0, np .+ predictobservedinfectionssigmamatrix .* np .* (1 - psi))
 
-    observedcases ~ arraydist(Normal.(predictobservedinfections, fittingsigma))
+    #observedcases ~ arraydist(Normal.(predictobservedinfections, fittingsigma))
+    observedcases ~ arraydist(Normal.(np, np .* (1 - psi)))
+    return nothing
 end
 
 function _delayedinfections(

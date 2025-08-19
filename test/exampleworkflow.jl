@@ -19,7 +19,7 @@ sim = let
     delta = 0.3
     psi = 0.6
     kappa = 0.5
-    _beta1counter(t) = 0.4 + 0.1 * cos((t-20) * 2pi / 365) 
+    _beta1counter(t) = 0.4 + 0.1 * cos((t - 20) * 2pi / 365) 
     _beta1(t) = t >= 50 ? 0.8 * _beta1counter(t) : _beta1counter(t)
     _beta2(t) = t >= 30 ? 0.72 * _beta1counter(t) : 0.9 * _beta1counter(t)
     _beta3(t) = 1.05 * _beta1counter(t)
@@ -41,6 +41,7 @@ model1 = renewaldid(
     RenewalDiDPriors( ; 
         alphaprior=Normal(log(2.5), 1), 
         mu_delayprior=log(5),
+        sigma_gammaprior=Exponential(0.2),
         sigma_thetaprior=Exponential(0.075), 
         psiprior=Beta(6, 4)
     );                          
@@ -72,14 +73,24 @@ priorsoutputinitquantiles = quantilerenewaldidinfections(
 )
 priorsinitplot = plotmodel(priorsoutputinitquantiles, sim)
 
-#priorinitparams = [[values(priorsdf[i, 3:735])...] for i in initindices]
-priorinitparams = [[values(priorsdf[i, 3:734])...] for i in initindices]
+priorinitparams = [[values(priorsdf[i, 3:430])...] for i in initindices]
+
+map_estimate = maximum_likelihood(model1; adtype=AutoReverseDiff(), maxiters=1000,)
+map_df = map_DataFrame(map_estimate)
+map_outputs = samplerenewaldidinfections(
+    g_seir, map_df, sim; 
+    mu=0.2, kappa=0.5,
+)
+map_quantiles = quantilerenewaldidinfections(map_outputs, [0.5])
+map_plot = plotmodel(map_quantiles, sim)
+
 
 shortchain = sample(
     rng, model1, NUTS(0.65; adtype=AutoReverseDiff()), MCMCThreads(), 25, 4; 
     #rng, model1, NUTS(0.65; adtype=AutoReverseDiff()), MCMCThreads(), 20, 4; 
     #rng, model1, NUTS(0.65; adtype=AutoReverseDiff()), MCMCThreads(), 5, 4; 
-    initial_params=priorinitparams,
+    #initial_params=priorinitparams,
+    initial_params=repeat([map_estimate.values.array]; outer=4)
 ) 
 shortdf = DataFrame(shortchain)
 p1 = trplot(shortdf; ncols=5, nplots=50, size=(1000, 1000))  # examine 50 variables
