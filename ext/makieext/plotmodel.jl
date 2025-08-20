@@ -21,9 +21,19 @@ function RenewalDiD.plotmodel!(
 end
 
 function RenewalDiD.plotmodel!(
+    gl::FigOrGridLayout, data::AbstractRenewalDiDData, args...; 
+    kwargs...
+) 
+    axs = _plotmodeloutputaxs(gl, data; kwargs...)
+    RenewalDiD.plotmodel!(axs, nothing, data, args...; kwargs...)
+    linkaxes!(axs...)
+    return axs
+end
+
+function RenewalDiD.plotmodel!(
     axs::AbstractVector{Axis}, 
-    modeloutputs::AbstractArray, 
-    data::RenewalDiDData, 
+    modeloutputs, 
+    data::AbstractRenewalDiDData, 
     t=automatic; 
     kwargs...
 ) 
@@ -37,7 +47,7 @@ end
 
 function RenewalDiD.plotmodel!(
     axs::AbstractVector{Axis}, 
-    modeloutputs::AbstractArray, 
+    modeloutputs, 
     observedcases::AbstractArray, 
     interventions::AbstractArray, 
     t=automatic; 
@@ -53,8 +63,15 @@ function _plotmodel!(axs, modeloutputs, observedcases, interventions, t; kwargs.
     return axs
 end
 
-function _plotmodeloutputaxs(gl, A; kwargs...)
+function _plotmodeloutputaxs(gl, A::AbstractArray; kwargs...)
     return [Axis(gl[1, i]; axiskws(; prefix=:axis, kwargs...)...) for i in axes(A, 2)]
+end
+
+function _plotmodeloutputaxs(gl, A::AbstractRenewalDiDData; kwargs...)
+    return [
+        Axis(gl[1, i]; axiskws(; prefix=:axis, kwargs...)...) 
+        for i in axes(A.interventions, 2)
+    ]
 end
 
 ## Model output 
@@ -82,6 +99,8 @@ function RenewalDiD.plotmodeloutput!(
     length(axs) == size(A, 2) || throw(ArgumentError("to do"))
     return _plotmodeloutput!(axs, A, t; kwargs...)
 end
+
+RenewalDiD.plotmodeloutput!(::Any, ::Nothing, t=automatic; kwargs...) = nothing 
 
 function _plotmodeloutput!(axs, A, ::Automatic; kwargs...)
     t = axes(A, 1)

@@ -448,73 +448,14 @@ RenewalDiDData{Int64, InterventionMatrix{Int64}}
 ```
 """
 function packsimulations(args...; kwargs...)
-    return _packsimulations(RenewalDiDData, args...; kwargs...)
+    return _packsimulations(args...; kwargs...)
 end
 
-"""
-    packsimulationsunlimitedpopulation([rng::AbstractRNG], duration, m1_args, args...; \
-        <keyword arguments>)
-
-Run a series of simulations and collate results into a `RenewalDiDDataUnlimitedPopn` struct 
-    to be passed to `renewaldid`.
-
-# Arguments
-
-- `duration`: duration of the simulation.
-- `m1_args`: a `Tuple` containing `{u0, beta, mu, delta, psi, kappa, intervention}` in 
-    order for the first group's simulation. The function `packsimulationtuple` can be used 
-    to generate this with keyword arguments
-- `args...`: equivalent Tuples for remaining groups.
-- keyword arguments are passed to `RenewalDiDDataUnlimitedPopn`
-
-# Examples
-```jldoctest
-julia> using StableRNGs
-
-julia> rng = StableRNG(100);
-
-julia> u0_1 = simulationu0(; s=100_000, e=5, i_n=3, i_f=2);
-
-julia> u0_2 = simulationu0(; s=200_000, e=5, i_n=3, i_f=2);
-
-julia> mu = 0.2; delta = 0.3; psi = 0.6; kappa = 0.5;
-
-julia> _beta1counter(t) = 0.4 + 0.1 * cos((t-20) * 2pi / 365);
-
-julia> _beta1(t) = t >= 50 ? 0.8 * _beta1counter(t) : _beta1counter(t);
-
-julia> _beta2(t) = 0.72 * _beta1counter(t);
-
-julia> s1 = packsimulationtuple( ;
-       u0=u0_1, beta=_beta1, mu, delta, psi, kappa, intervention=50,
-       );
-
-julia> s2 = packsimulationtuple( ;
-       u0=u0_2, beta=_beta2, mu, delta, psi, kappa, intervention=nothing,
-       );
-
-julia> packsimulationsunlimitedpopulation(rng, 100, s1, s2)
-RenewalDiDDataUnlimitedPopn{Int64, InterventionMatrix{Int64}}
- observedcases:  [0 0; 0 0; … ; 6 1380; 9 1414]
- interventions:  [0 0; 0 0; … ; 1 0; 1 0] {duration 100, starttimes [50, nothing]}
- Ns:             unlimited
- exptdseedcases: [0.0 0.46548963316975533; 0.024913053640556182 0.0; … ; \
-    0.4209971568176677 0.0; 0.5200181826119457 0.03451036683024468]
-```
-"""
-function packsimulationsunlimitedpopulation(args...; kwargs...)
-    return _packsimulations(_renewaldiddataunlimitedpopn_removens, args...; kwargs...)
+function _packsimulations(duration, m1_args, args...; kwargs...)
+    return _packsimulations(default_rng(), duration, m1_args, args...; kwargs...)
 end
 
-function _renewaldiddataunlimitedpopn_removens(; Ns=nothing, kwargs...)
-    return RenewalDiDDataUnlimitedPopn(; kwargs...)
-end
-
-function _packsimulations(f, duration, m1_args, args...; kwargs...)
-    return _packsimulations(f, default_rng(), duration, m1_args, args...; kwargs...)
-end
-
-function _packsimulations(f, rng::AbstractRNG, duration, m1_args, args...; kwargs...)
+function _packsimulations(rng::AbstractRNG, duration, m1_args, args...; kwargs...)
     interventiontimes = _packsimulationsinterventiontimesarray(m1_args)
     Ns = zeros(Int, 0)
     observedcases = zeros(Int, duration + 1, 0)
@@ -522,7 +463,25 @@ function _packsimulations(f, rng::AbstractRNG, duration, m1_args, args...; kwarg
         rng, interventiontimes, Ns, observedcases, duration, m1_args, args...
     )
     interventions = _siminterventionarray(duration, interventiontimes)
-    return f(; observedcases, interventions, Ns, kwargs...)
+    u0s = _simargs(:u0, m1_args, args...)
+    betas = _simargs(:beta, m1_args, args...)
+    mus = _simargs(:mu, m1_args, args...)
+    deltas = _simargs(:delta, m1_args, args...)
+    psis = _simargs(:psi, m1_args, args...)
+    kappas = _simargs(:kappa, m1_args, args...)
+    return SimulationData( ; 
+        observedcases, 
+        interventions, 
+        Ns, 
+        rng, 
+        u0s, 
+        betas, 
+        mus, 
+        deltas, 
+        psis, 
+        kappas, 
+        kwargs...
+    )
 end
 
 function _siminterventionarray(duration, interventiontimes::Vector)
@@ -580,6 +539,15 @@ end
 function _packsimulationinterventiontimes(interventiontimes::Vector, intervention)
     return vcat(interventiontimes, intervention)
 end
+
+const _SIMARGSORDER = [:u0, :beta, :mu, :delta, :psi, :kappa]
+
+function _simargs(parameter::Symbol, args...)
+    index = findfirst(x -> x == parameter, _SIMARGSORDER)
+    return _simargs(index::Int, args...)
+end
+
+_simargs(index::Int, args...) = [a[index] for a in args]
 
 """
     packsimulationtuple(; u0, beta, mu, delta, psi, kappa, intervention)

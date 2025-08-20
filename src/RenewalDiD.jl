@@ -21,12 +21,13 @@ export AbstractInterventionArray3, InterventionArray
 export interventioncat
 # generationinterval.jl
 export g_covid, g_seir, generationtime, testgenerationtime, vectorg_seir
+# abstractrenewaldiddata.jl
+export AbstractRenewalDiDData, RenewalDiDData, RenewalDiDDataUnlimitedPopn, SimulationData
 # simulations.jl
 export packsimulations, packsimulationsunlimitedpopulation, packsimulationtuple
 export runsimulation, simulationcases, simulationu0
 # fittingparameters.jl
-export AbstractRenewalDiDData, RenewalDiDData, RenewalDiDDataUnlimitedPopn, RenewalDiDPriors
-export expectedseedcases, renewaldid
+export RenewalDiDPriors, expectedseedcases, renewaldid
 # processparameters.jl
 export map_DataFrame, nunique, quantilerenewaldidinfections, rankvalues
 export samplerenewaldidinfections
@@ -49,13 +50,14 @@ const DEFAULT_SEEDMATRIX_MINVALUE = 0.5  # not exported
 
 include("interventionarrays.jl")
 include("generationinterval.jl")
+include("abstractrenewaldiddata.jl")
 include("simulations.jl")
 include("fittingparameters.jl")
 include("processparameters.jl")
 
 # submodules
-include("Plotting.jl")
-include("FittedParameterTestFunctions.jl")
+include("plotting/Plotting.jl")
+include("fittedparametertestfunctions/FittedParameterTestFunctions.jl")
 
 const RENEWALDIDPLOTTINGFUNCTIONSLIST = [
     plotmodel, 
