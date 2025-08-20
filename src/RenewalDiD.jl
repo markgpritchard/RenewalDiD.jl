@@ -24,8 +24,7 @@ export g_covid, g_seir, generationtime, testgenerationtime, vectorg_seir
 # abstractrenewaldiddata.jl
 export AbstractRenewalDiDData, RenewalDiDData, RenewalDiDDataUnlimitedPopn, SimulationData
 # simulations.jl
-export packsimulations, packsimulationsunlimitedpopulation, packsimulationtuple
-export runsimulation, simulationcases, simulationu0
+export packsimulations, packsimulationtuple, runsimulation, simulationcases, simulationu0
 # fittingparameters.jl
 export RenewalDiDPriors, expectedseedcases, renewaldid
 # processparameters.jl
