@@ -161,11 +161,11 @@ struct InterventionArray{T} <: AbstractInterventionArray3{T}
 
     function InterventionArray{T}(
         duration::Number, 
-        offset::Vector{<:Number}, 
+        offset::AbstractVector{<:Number}, 
         rawstarttimes::Matrix{<:Union{<:Number, Nothing}};
         mutewarnings=nothing,
     ) where T
-        starttimes = _generateinterventionstarttimes(rawstarttimes, duration, offset)
+        starttimes = _generateinterventionstarttimes(rawstarttimes, duration, collect(offset))
         length(offset) == size(rawstarttimes, 2) || throw(ArgumentError("to do"))
         _interventionarrayconstructionwarnings(
             InterventionArray, duration, starttimes, mutewarnings
@@ -180,6 +180,10 @@ struct InterventionArray{T} <: AbstractInterventionArray3{T}
 end
 
 function InterventionArray(A::InterventionArray{T}; offset=0, kwargs...) where T
+    return __InterventionArray(T, A, offset; kwargs...)
+end
+
+function InterventionArray(A::InterventionMatrix{T}; offset=[0], kwargs...) where T
     return __InterventionArray(T, A, offset; kwargs...)
 end
 
@@ -251,7 +255,7 @@ function __InterventionArray(
 end
 
 function __InterventionArray(
-    T, duration::Number, offset::Vector, interventions::AbstractVector; 
+    T, duration::Number, offset::AbstractVector, interventions::AbstractVector; 
     kwargs...
 ) 
     # multiple offsets and one set of interventions -- make interventions match offsets 
@@ -260,7 +264,7 @@ function __InterventionArray(
 end
 
 function __InterventionArray(
-    T, duration::Number, offset::Vector, interventions::AbstractMatrix; 
+    T, duration::Number, offset::AbstractVector, interventions::AbstractMatrix; 
     kwargs...
 ) 
     return InterventionArray{T}(duration, offset, interventions; kwargs...)
@@ -271,8 +275,13 @@ function __InterventionArray(T, A::InterventionArray, offset::Number; kwargs...)
     return __InterventionArray(T, A, v; kwargs...)
 end
 
-function __InterventionArray(T, A::InterventionArray, offset::Vector; kwargs...) 
+function __InterventionArray(T, A::InterventionArray, offset::AbstractVector; kwargs...) 
     A isa InterventionArray{T} || throw(ArgumentError("to do"))
+    return _addoffsettointerventionarray(A, offset; kwargs...)
+end
+
+function __InterventionArray(T, A::AbstractMatrix, offset::AbstractVector; kwargs...) 
+    A isa AbstractMatrix{T} || throw(ArgumentError("to do"))
     return _addoffsettointerventionarray(A, offset; kwargs...)
 end
 
@@ -320,6 +329,15 @@ function _addoffsettointerventionarray(
 ) where S <: AbstractInterventionArray
     totalnewoffset = A.offset .+ offset
     return S(A.duration, A.rawstarttimes; offset=totalnewoffset, kwargs...)
+end
+
+function _addoffsettointerventionarray(
+    A::InterventionMatrix{T}, offset::AbstractVector; 
+    kwargs...
+) where T
+    totalnewoffset = A.offset .+ offset
+    rawstarttimesmatrix = repeat([A.rawstarttimes; ]; outer=(1, length(offset)))
+    return InterventionArray{T}(A.duration, rawstarttimesmatrix; offset=totalnewoffset, kwargs...)
 end
 
 
