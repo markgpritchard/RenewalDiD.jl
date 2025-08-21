@@ -208,7 +208,7 @@ _pbeta(beta, t) = _parameter(beta, t, :beta)
 _pdelta(delta, t) = _parameter(delta, t, :delta)
 _pmu(mu, t) = _parameter(mu, t, :mu)
 _pkappa(kappa, t) = _parameter(kappa, t, :kappa)
-_ppsi(psi, t) = _parameter(psi, t, :psi; upper=1)  # psi is a proportion 0 ≤ θ ≤ 1
+_ppsi(psi, t) = _parameter(psi, t, :psi; upper=1)  # psi is a proportion 0 ≤ ψ ≤ 1
 
 ## Force of infection 
 
