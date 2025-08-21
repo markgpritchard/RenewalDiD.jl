@@ -172,3 +172,11 @@ end
     @test_throws DimensionMismatch cat(M3, A1; dims=3)
     @test_throws DimensionMismatch cat(M4, A1; dims=3)
 end
+@testset "add vector of offsets to InterventionMatrix" begin
+    M1 = InterventionMatrix(10, [5, 1, nothing])
+    A1 = InterventionMatrix(M1, offset=-10:1:10)
+    @test size(A1) == (10, 3, 21) 
+    @testset for (i, v) in enumerate(-10:1:10) 
+        @test A1[:, :, i] == InterventionMatrix(10, [5+v, 1+v, nothing]; mutewarnings=true)
+    end
+end

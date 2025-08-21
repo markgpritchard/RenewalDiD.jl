@@ -165,8 +165,8 @@ struct InterventionArray{T} <: AbstractInterventionArray3{T}
         rawstarttimes::Matrix{<:Union{<:Number, Nothing}};
         mutewarnings=nothing,
     ) where T
-        starttimes = _generateinterventionstarttimes(rawstarttimes, duration, collect(offset))
         length(offset) == size(rawstarttimes, 2) || throw(ArgumentError("to do"))
+        starttimes = _generateinterventionstarttimes(rawstarttimes, duration, offset)
         _interventionarrayconstructionwarnings(
             InterventionArray, duration, starttimes, mutewarnings
         )
@@ -303,7 +303,7 @@ function _generateinterventionstarttimes!(
 end
 
 function _generateinterventionstarttimes!(
-    starttimes::Matrix, rawstarttimes::Matrix, duration, offset::Vector
+    starttimes::Matrix, rawstarttimes::Matrix, duration, offset::AbstractVector
 )
     for k in axes(rawstarttimes, 2)
         _generateinterventionstarttimes!(
@@ -337,7 +337,10 @@ function _addoffsettointerventionarray(
 ) where T
     totalnewoffset = A.offset .+ offset
     rawstarttimesmatrix = repeat([A.rawstarttimes; ]; outer=(1, length(offset)))
-    return InterventionArray{T}(A.duration, rawstarttimesmatrix; offset=totalnewoffset, kwargs...)
+    return InterventionArray{T}(
+        A.duration, rawstarttimesmatrix; 
+        offset=totalnewoffset, kwargs...
+    )
 end
 
 
@@ -359,18 +362,22 @@ Base.size(v::AbstractInterventionVector) = (v.duration, )
 Base.size(M::AbstractInterventionMatrix) = (M.duration, length(M.starttimes))
 Base.size(A::AbstractInterventionArray3) = (A.duration, size(A.starttimes)...)
 
-function Base.getindex(v::AbstractInterventionVector{T}, t) where T
+# `Base.getindex` defined for Cartesian Integer indexes; for all other indexing, functions 
+# in `Base` are used until a tuple of integers are passed 
+function Base.getindex(v::AbstractInterventionVector{T}, t::Integer) where T
     0 < t <= _duration(v) || throw(BoundsError(v, t))
     return T(t >= v.starttime)
 end
 
-function Base.getindex(M::AbstractInterventionMatrix{T}, t, x) where T
+function Base.getindex(M::AbstractInterventionMatrix{T}, t::Integer, x::Integer) where T
     0 < t <= _duration(M) || throw(BoundsError(M, [t, x]))
     0 < x <= length(M.starttimes) || throw(BoundsError(M, [t, x]))
     return T(t >= M.starttimes[x])
 end
 
-function Base.getindex(A::AbstractInterventionArray3{T}, t, x, z) where T
+function Base.getindex(
+    A::AbstractInterventionArray3{T}, t::Integer, x::Integer, z::Integer
+) where T
     0 < t <= _duration(A) || throw(BoundsError(A, [t, x, z]))
     0 < x <= size(A.starttimes, 1) || throw(BoundsError(A, [t, x, z]))
     0 < z <= size(A.starttimes, 2) || throw(BoundsError(A, [t, x, z]))
