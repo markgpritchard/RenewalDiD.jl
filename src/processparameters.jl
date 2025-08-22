@@ -203,11 +203,13 @@ function _samplerenewaldidinfections(
     ninterventions = _ninterventions(data.interventions)
     n_seeds = size(data.exptdseedcases, 1)
     Ns = data.Ns  
+    R0s = _samplerenewaldidinitialoutput(ntimes - 1, ngroups, indexes, repeatsamples)
     output = _samplerenewaldidinitialoutput(ntimes, ngroups, indexes, repeatsamples)
     _samplerenewaldidinfections!(
         g, 
         rng, 
         output, 
+        R0s, 
         df, 
         data, 
         indexes, 
@@ -219,7 +221,7 @@ function _samplerenewaldidinfections(
         Ns; 
         kwargs...
     )
-    return output 
+    return NamedTuple{(:output, :R0s)}((output, R0s))
 end
 
 function _samplerenewaldidinitialoutput(ntimes, ngroups, ::Integer, ::Nothing)
@@ -246,6 +248,7 @@ function _samplerenewaldidinfections!(
     g, 
     rng,
     output, 
+    R0s,
     df, 
     data, 
     indexes::AbstractVector{<:Integer}, 
@@ -262,6 +265,7 @@ function _samplerenewaldidinfections!(
             g, 
             rng, 
             (@view output[:, :, r]), 
+            (@view R0s[:, :, r]), 
             df, 
             data, 
             j, 
@@ -281,6 +285,7 @@ function _samplerenewaldidinfections!(
     g, 
     rng,
     output, 
+    R0s,
     df, 
     data, 
     indexes::AbstractVector{<:Integer}, 
@@ -299,6 +304,7 @@ function _samplerenewaldidinfections!(
                 g, 
                 rng, 
                 (@view output[:, :, r]), 
+                (@view R0s[:, :, r]), 
                 df, 
                 data, 
                 j, 
@@ -320,6 +326,7 @@ function _samplerenewaldidinfections!(
     g, 
     rng,
     output, 
+    R0s,
     df, 
     data, 
     i::Integer, 
@@ -336,6 +343,7 @@ function _samplerenewaldidinfections!(
             g, 
             rng, 
             (@view output[:, :, r]), 
+            (@view R0s[:, :, r]), 
             df, 
             data, 
             i, 
@@ -355,6 +363,7 @@ function _samplerenewaldidinfections!(
     g, 
     rng,
     output, 
+    R0s,
     df, 
     data, 
     i::Integer, 
@@ -373,11 +382,11 @@ function _samplerenewaldidinfections!(
     tau = _tauvec(df, i, ninterventions)
     psi = df.psi[i]
     M_x = _mxmatrix(df, i, ngroups, ntimes, n_seeds)
-    predictedlogR_0 = _predictedlogR_0(alpha, gammavec, thetavec, tau, data.interventions)
-    T = Complex{typeof(predictedlogR_0[1, 1])}
-    predictedinfections = _infectionsmatrix(T, predictedlogR_0, n_seeds)
+    R0s .= _predictedlogR_0(alpha, gammavec, thetavec, tau, data.interventions)
+    T = Complex{typeof(R0s[1, 1])}
+    predictedinfections = _infectionsmatrix(T, R0s, n_seeds)
     _infections!(
-        g, predictedinfections, M_x, predictedlogR_0, data.exptdseedcases, Ns, n_seeds; 
+        g, predictedinfections, M_x, R0s, data.exptdseedcases, Ns, n_seeds; 
         kwargs...
     )
     np = real.(predictedinfections[n_seeds:n_seeds+ntimes, :]) .* psi
@@ -480,7 +489,12 @@ julia> quantilerenewaldidinfections(A, [0.05, 0.90]);
 └ @ RenewalDiD 
 ```
 """
-function quantilerenewaldidinfections(A, q; mutewarnings=nothing)
+function quantilerenewaldidinfections(nt::NamedTuple, q; mutewarnings=nothing)
+    result = [quantilerenewaldidinfections(v, q; mutewarnings) for v in values(nt)]
+    return NamedTuple{keys(nt)}((result..., ))
+end
+
+function quantilerenewaldidinfections(A::AbstractArray, q; mutewarnings=nothing)
     _quantilerenewaldidinfectionswarningset(A, q, mutewarnings)
     return _quantilerenewaldidinfections(A, q)
 end

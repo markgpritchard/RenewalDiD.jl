@@ -36,6 +36,7 @@ export samplerenewaldidinfections
 @compat public plotmodeldata, plotmodeldata!
 @compat public plotmodelintervention, plotmodelintervention!
 @compat public plotmodeloutput, plotmodeloutput!
+@compat public plotmodelR0, plotmodelR0!
 @compat public traceplot, traceplot!, trplot, trplot!
 @compat public tracerankplot, tracerankplot!
 
@@ -67,6 +68,8 @@ const RENEWALDIDPLOTTINGFUNCTIONSLIST = [
     plotmodelintervention!,
     plotmodeloutput, 
     plotmodeloutput!,
+    plotmodelR0,
+    plotmodelR0!,
     traceplot, 
     traceplot!, 
     trplot, 

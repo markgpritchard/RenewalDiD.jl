@@ -1,18 +1,14 @@
 #package tests
 
 using RenewalDiD
-using Documenter
 using Test
-
-@info "test docstrings"
-#Documenter.doctest(RenewalDiD)
 
 @testset "RenewalDiD.jl" begin
     @testset "documentation tests" begin
-        
+        @info "test docstrings"
+        include("documenterdoctest.jl")
     end
     @testset "test functions for tests" begin
-        @info "starting test functions for tests"
         include("functionsfortests_test.jl")
     end
     @testset "intervention vector" begin

@@ -21,6 +21,18 @@ function RenewalDiD.plotmodel!(
 end
 
 function RenewalDiD.plotmodel!(
+    gl::FigOrGridLayout, modeloutputs::NamedTuple, args...; 
+    kwargs...
+) 
+    r0axs = _plotmodeloutputaxs(gl, modeloutputs.output; kwargs...)
+    outputaxs = _plotmodeloutputaxs(gl, modeloutputs.R0s; row=2, kwargs...)
+    RenewalDiD.plotmodel!(r0axs, outputaxs, modeloutputs, args...; kwargs...)
+    linkaxes!(r0axs...)
+    linkaxes!(outputaxs...)
+    return nothing
+end
+
+function RenewalDiD.plotmodel!(
     gl::FigOrGridLayout, data::AbstractRenewalDiDData, args...; 
     kwargs...
 ) 
@@ -56,6 +68,37 @@ function RenewalDiD.plotmodel!(
     return _plotmodel!(axs, modeloutputs, observedcases, interventions, t; kwargs...)
 end
 
+function RenewalDiD.plotmodel!(
+    r0axs::AbstractVector{Axis}, 
+    outputaxs::AbstractVector{Axis}, 
+    modeloutputs, 
+    data,#::AbstractRenewalDiDData, 
+    t=automatic; 
+    kwargs...
+) 
+    observedcases = data.observedcases
+    interventions = data.interventions
+    return RenewalDiD.plotmodel!(
+        r0axs, outputaxs, modeloutputs, observedcases, interventions, t; 
+        kwargs...
+    ) 
+end
+
+function RenewalDiD.plotmodel!(
+    r0axs::AbstractVector{Axis}, 
+    outputaxs::AbstractVector{Axis}, 
+    modeloutputs, 
+    observedcases::AbstractArray, 
+    interventions::AbstractArray, 
+    t=automatic; 
+    kwargs...
+) 
+    return _plotmodel!(
+        r0axs, outputaxs, modeloutputs, observedcases, interventions, t; 
+        kwargs...
+    )
+end
+
 function _plotmodel!(axs, modeloutputs, observedcases, interventions, t; kwargs...) 
     RenewalDiD.plotmodeloutput!(axs, modeloutputs, t; kwargs...)
     RenewalDiD.plotmodeldata!(axs, observedcases, t; kwargs...)
@@ -63,13 +106,20 @@ function _plotmodel!(axs, modeloutputs, observedcases, interventions, t; kwargs.
     return axs
 end
 
-function _plotmodeloutputaxs(gl, A::AbstractArray; kwargs...)
-    return [Axis(gl[1, i]; axiskws(; prefix=:axis, kwargs...)...) for i in axes(A, 2)]
+function _plotmodel!(r0axs, outputaxs, modeloutputs::NamedTuple, observedcases, interventions, t; kwargs...) 
+    RenewalDiD.plotmodelR0!(r0axs, modeloutputs.R0s; kwargs...)
+    RenewalDiD.plotmodelintervention!(r0axs, interventions; kwargs...)
+    _plotmodel!(outputaxs, modeloutputs.output, observedcases, interventions, t; kwargs...) 
+    return nothing
 end
 
-function _plotmodeloutputaxs(gl, A::AbstractRenewalDiDData; kwargs...)
+function _plotmodeloutputaxs(gl, A::AbstractArray; row=1, kwargs...)
+    return [Axis(gl[row, i]; axiskws(; prefix=:axis, kwargs...)...) for i in axes(A, 2)]
+end
+
+function _plotmodeloutputaxs(gl, A::AbstractRenewalDiDData; row=1, kwargs...)
     return [
-        Axis(gl[1, i]; axiskws(; prefix=:axis, kwargs...)...) 
+        Axis(gl[row, i]; axiskws(; prefix=:axis, kwargs...)...) 
         for i in axes(A.interventions, 2)
     ]
 end
@@ -141,7 +191,11 @@ function __plotmodeloutput!(axs, A, t, nquantiles; modelcolor=Cycled(1), kwargs.
     return axs
 end
 
-function _plotmodeloutputband!(axs, A, t, qlow, qhigh, alpha; kwargs...)
+function _plotmodeloutputband!(axs, A, t, qlow, qhigh, alpha; ceiling=nothing, kwargs...)
+    return _plotmodeloutputband!(axs, A, t, qlow, qhigh, alpha, ceiling; kwargs...)
+end
+
+function _plotmodeloutputband!(axs, A, t, qlow, qhigh, alpha, ::Nothing; kwargs...)
     for (j, ax) in enumerate(axs)
         band!(
             ax, t, A[:, j, qlow], A[:, j, qhigh]; 
@@ -151,9 +205,33 @@ function _plotmodeloutputband!(axs, A, t, qlow, qhigh, alpha; kwargs...)
     return axs
 end
 
-function _plotmodeloutputmedian!(axs, A, t, medquantile; kwargs...)
+function _plotmodeloutputband!(axs, A, t, qlow, qhigh, alpha, ceiling; kwargs...)
+    for (j, ax) in enumerate(axs)
+        band!(
+            ax, t, min.(ceiling, A[:, j, qlow]), min.(ceiling, A[:, j, qhigh]); 
+            alpha, bandkws(; prefix=:model, skip=[:alpha], kwargs...)...
+        )
+    end
+    return axs
+end
+
+function _plotmodeloutputmedian!(axs, A, t, medquantile; ceiling=nothing, kwargs...)
+    return _plotmodeloutputmedian!(axs, A, t, medquantile, ceiling; kwargs...)
+end
+
+function _plotmodeloutputmedian!(axs, A, t, medquantile, ::Nothing; kwargs...)
     for (j, ax) in enumerate(axs)
         lines!(ax, t, A[:, j, medquantile]; lineskws(; prefix=:model, kwargs...)...)
+    end
+    return axs
+end
+
+function _plotmodeloutputmedian!(axs, A, t, medquantile, ceiling; kwargs...)
+    for (j, ax) in enumerate(axs)
+        lines!(
+            ax, t, min.(ceiling, A[:, j, medquantile]); 
+            lineskws(; prefix=:model, kwargs...)...
+        )
     end
     return axs
 end
@@ -187,6 +265,95 @@ end
 function _plotmodeldata!(axs, A, ::Automatic; kwargs...)
     t = axes(A, 1)
     return _plotmodeldata!(axs, A, t; kwargs...)
+end
+
+function _plotmodeldata!(axs, A, t::AbstractVector; kwargs...)
+    return _plotmodeldatascatter!(axs, A, t; kwargs...)
+end
+
+function _plotmodeldatascatter!(
+    axs, A, t; 
+    datacolor=:black, datamarker=:x, datamarkersize=3, kwargs...
+)
+    for (j, ax) in enumerate(axs)
+        scatter!(
+            ax, t, A[:, j]; 
+            scatterkws(; prefix=:data, datacolor, datamarker, datamarkersize, kwargs...)...
+        )
+    end
+    return axs
+end
+
+## R0 
+
+function RenewalDiD.plotmodelR0(args...; kwargs...)
+    fig = Figure(; kwargs...)
+    RenewalDiD.plotmodelR0!(fig, args...; kwargs...)
+    return fig
+end
+
+function RenewalDiD.plotmodelR0!(
+    gl::FigOrGridLayout, A::AbstractArray, t=automatic; 
+    kwargs...
+) 
+    axs = _plotmodeloutputaxs(gl, A; kwargs...)
+    plotmodelR0!(axs, A, t; kwargs...)
+    linkaxes!(axs...)
+    return axs
+end
+
+function RenewalDiD.plotmodelR0!(
+    axs::AbstractVector{Axis}, A::AbstractArray, t=automatic; 
+    kwargs...
+) 
+    length(axs) == size(A, 2) || throw(ArgumentError("to do"))
+    return _plotmodelR0!(axs, A, t; kwargs...)
+end
+
+function _plotmodelR0!(axs, A, ::Automatic; kwargs...)
+    t = axes(A, 1)
+    return _plotmodelR0!(axs, A, t; kwargs...)
+end
+
+function _plotmodelR0!(axs, A, ::Automatic; kwargs...)
+    t = axes(A, 1)
+    return _plotmodelR0!(axs, A, t; kwargs...)
+end
+
+function _plotmodelR0!(axs, A, t::AbstractVector; color=Cycled(1), kwargs...)
+    # set colour so the median line and credible interval bands have the same colour
+    return __plotmodelR0!(axs, A, t; color, kwargs...)
+end
+
+function __plotmodelR0!(axs, A::AbstractMatrix, t; kwargs...) 
+    nquantiles = 1  # Matrix so only one dataset to plot (i.e. median only)
+    return __plotmodelR0!(axs, A, t, nquantiles; kwargs...)
+end
+
+function __plotmodelR0!(axs, A::AbstractArray{<:Any, 3}, t; kwargs...) 
+    nquantiles = size(A, 3)
+    isodd(size(A, 3)) || throw(ArgumentError("to do"))
+    return __plotmodelR0!(axs, A, t, nquantiles; kwargs...)
+end
+
+function __plotmodelR0!(axs, A, t, nquantiles; ceiling=20, modelcolor=Cycled(1), kwargs...)
+    medquantile = convert(Int, nquantiles / 2 + 0.5)
+    for i in medquantile:-1:1
+        i >= medquantile && continue 
+        _plotmodeloutputband!(
+            axs, 
+            exp.(A), 
+            t, 
+            i,  # qlow
+            nquantiles + 1 - i,  # qhigh
+            2 * i / nquantiles;  # alpha calculated here, not passed as keyword argument
+            ceiling,
+            modelcolor, 
+            kwargs...
+        )
+    end
+    _plotmodeloutputmedian!(axs, exp.(A), t, medquantile; ceiling, modelcolor, kwargs...)
+    return axs
 end
 
 function _plotmodeldata!(axs, A, t::AbstractVector; kwargs...)

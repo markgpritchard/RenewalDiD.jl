@@ -13,6 +13,8 @@ function plotmodelintervention end
 function plotmodelintervention! end
 function plotmodeloutput end 
 function plotmodeloutput! end
+function plotmodelR0 end 
+function plotmodelR0! end
 function traceplot end
 function traceplot! end
 function tracerankplot end
@@ -28,6 +30,7 @@ using RenewalDiD: plotmodel, plotmodel!
 using RenewalDiD: plotmodeldata, plotmodeldata!
 using RenewalDiD: plotmodelintervention, plotmodelintervention!
 using RenewalDiD: plotmodeloutput, plotmodeloutput!
+using RenewalDiD: plotmodelR0, plotmodelR0!
 using RenewalDiD: traceplot, traceplot!, trplot, trplot!
 using RenewalDiD: tracerankplot, tracerankplot!
 
@@ -35,6 +38,7 @@ export plotmodel, plotmodel!
 export plotmodeldata, plotmodeldata!
 export plotmodelintervention, plotmodelintervention!
 export plotmodeloutput, plotmodeloutput!
+export plotmodelR0, plotmodelR0!
 export traceplot, traceplot!, trplot, trplot!
 export tracerankplot, tracerankplot!
 
