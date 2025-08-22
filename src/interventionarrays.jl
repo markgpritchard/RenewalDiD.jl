@@ -5,7 +5,7 @@
 """
     AbstractInterventionArray{T, N} <: AbstractArray{T, N}
 
-Abstract type of matrix of intervention times.
+Abstract type of array of intervention times.
 
 Three abstract subtypes are defined:
 - `AbstractInterventionVector{T} <: AbstractInterventionArray{T, 1}`
@@ -19,8 +19,77 @@ One type is defined for each of these abstract subtypes
 """
 abstract type AbstractInterventionArray{T, N} <: AbstractArray{T, N} end
 
+
+"""
+    AbstractInterventionVector{T} <: AbstractInterventionArray{T, 1}
+
+Abstract type of vector of intervention times.
+
+One type is defined: 
+- `InterventionVector{T}`
+"""
 abstract type AbstractInterventionVector{T} <: AbstractInterventionArray{T, 1} end
 
+"""
+    InterventionVector{T}
+
+Vector of intervention times.
+
+# Fields
+- `duration::Int`: duration of the analysis
+- `offset::Int`: how much `rawstarttime` has been shifted
+- `rawstarttime::Union{<:Number, Nothing}`: time of intervention
+- `starttime::Int`: cleaned version of `rawstarttime` that is called when in use
+
+# Constructor
+
+    InterventionVector[{T}](duration, rawstarttime; offset=0)
+
+## Arguments
+
+* `T`: type of the array output; optional, defaults to `Int`.
+* `duration`: must be able to convert into an `Int` 
+* `rawstarttime`:  `nothing`, a value `≤ 1` or `> duration`, are treated equivalently as 
+    meaning that the intervention did not occur during the study period.
+
+# Examples
+```jldoctest
+julia> InterventionVector(100, 25)
+100-element InterventionVector{Int64}
+ time │ 1 
+──────┼───
+    1 │ 0
+    ⋮ │ ⋮
+   25 │ 1
+    ⋮ │ ⋮
+  100 │ 1
+
+
+julia> InterventionVector{Float64}(100, nothing)
+100-element InterventionVector{Float64}
+ time │   1 
+──────┼─────
+    1 │ 0.0
+    ⋮ │   ⋮
+  100 │ 0.0
+
+
+julia> InterventionVector(100, nothing) ==
+       InterventionVector(100, 1) ==
+       InterventionVector(100, 101)
+true
+
+julia> InterventionVector(100, 25; offset=50)
+100-element InterventionVector{Int64}
+ time │ 1 
+──────┼───
+    1 │ 0
+    ⋮ │ ⋮
+   75 │ 1
+    ⋮ │ ⋮
+  100 │ 1
+```
+""" 
 struct InterventionVector{T} <: AbstractInterventionVector{T}
     duration::Int
     offset::Int
@@ -29,7 +98,8 @@ struct InterventionVector{T} <: AbstractInterventionVector{T}
 
     function InterventionVector{T}(
         duration::Number, rawstarttime::S;
-        mutewarnings=nothing, offset=0,
+        offset=0,
+        mutewarnings=nothing,  # has no effect but allowed for consistency with InterventionMatrix
     ) where {S <: Union{<:Number, Nothing}, T <: Any}
         starttime = _interventionstarttime(rawstarttime, duration, offset)
         return new{T}(
@@ -40,12 +110,49 @@ end
 
 InterventionVector(args...; kwargs...) = InterventionVector{Int}(args...; kwargs...)
 
+"""
+    InterventionVector(v::AbstractInterventionVector; offset)
+
+Add an offset to an `InterventionVector`
+
+# Examples
+```jldoctest
+julia> v1 = InterventionVector(100, 25)
+100-element InterventionVector{Int64}
+ time │ 1 
+──────┼───
+    1 │ 0
+    ⋮ │ ⋮
+   25 │ 1
+    ⋮ │ ⋮
+  100 │ 1
+
+
+julia> v2 = InterventionVector(v1; offset=50)
+100-element InterventionVector{Int64}
+ time │ 1 
+──────┼───
+    1 │ 0
+    ⋮ │ ⋮
+   75 │ 1
+    ⋮ │ ⋮
+  100 │ 1
+```
+"""
 function InterventionVector(v::AbstractInterventionVector; offset, kwargs...) 
     return _addoffsettointerventionarray(v, offset; kwargs...)
 end
 
 ## InterventionMatrix
 
+"""
+    AbstractInterventionMatrix{T} <: AbstractInterventionArray{T, 2}
+
+Abstract type of matrix of intervention times.
+
+One type is defined: 
+- `InterventionMatrix{T}`
+"""
 abstract type AbstractInterventionMatrix{T} <: AbstractInterventionArray{T, 2} end
 
 """
@@ -55,6 +162,7 @@ Matrix of intervention times.
 
 # Fields
 - `duration::Int`: duration of the analysis
+- `offset::Int`: how much the `rawstarttime` have been shifted
 - `rawstarttimes::Vector{<:Union{<:Integer, Nothing}}`: times of interventions for each 
     group as entered by user
 - `starttimes::Vector{Int}`: cleaned version of `rawstarttimes` that is called when in use
@@ -66,9 +174,9 @@ Matrix of intervention times.
 
 ## Arguments
 
-* `T`: type of the array output; optional, defaults to `Int`.
-* `duration`: must be able to convert into an `Int` 
-* `rawstarttimes`: a vector or separate arguments; each must be `nothing` or a number that
+- `T`: type of the array output; optional, defaults to `Int`.
+- `duration`: must be able to convert into an `Int` 
+- `rawstarttimes`: a vector or separate arguments; each must be `nothing` or a number that
     can convert into `Int`. Starttimes that are entered as `nothing`, a value `≤ 1` or 
     `> duration`, are treated equivalently as meaning that the intervention did not occur 
     during the study period.
@@ -103,6 +211,21 @@ julia> InterventionMatrix{Bool}(100, 50, 75, -1, nothing)
     ⋮ │     ⋮      ⋮      ⋮      ⋮
   100 │  true   true  false  false
 
+
+julia> InterventionMatrix{Float64}(100, 50, 75, -1, nothing; offset=10)
+100×4 InterventionMatrix{Float64}
+ time │   1    2    3    4 
+──────┼────────────────────
+    1 │ 0.0  0.0  0.0  0.0
+    ⋮ │   ⋮    ⋮    ⋮    ⋮
+    9 │ 0.0  0.0  1.0  0.0
+    ⋮ │   ⋮    ⋮    ⋮    ⋮
+   60 │ 1.0  0.0  1.0  0.0
+    ⋮ │   ⋮    ⋮    ⋮    ⋮
+   85 │ 1.0  1.0  1.0  0.0
+    ⋮ │   ⋮    ⋮    ⋮    ⋮
+  100 │ 1.0  1.0  1.0  0.0
+  
 
 julia> InterventionMatrix(100, [25, 50, 100]);
 ┌ Warning: All groups in InterventionMatrix have intervention before end of duration
@@ -151,8 +274,117 @@ const InterventionVecOrMat{T} = Union{
 
 ## Array of multiple interventions
 
+"""
+    AbstractInterventionArray3{T} <: AbstractInterventionArray{T, 3}
+
+Abstract type of 3-dimensional array of intervention times.
+
+One type is defined: 
+- `InterventionArray{T}`
+"""
 abstract type AbstractInterventionArray3{T} <: AbstractInterventionArray{T, 3} end
 
+"""
+    InterventionArray{T}
+
+Array of intervention times.
+
+The third dimension represents different interventions. These can either be alternative
+    interventions that were used, or offset times from the primary intervention.
+
+# Fields
+- `duration::Int`: duration of the analysis
+- `offset::Vector{Int}`: how much the `rawstarttime` have been shifted for each type of intervention
+- `rawstarttimes::VecOrMat{<:Union{<:Integer, Nothing}}`: times of interventions for each 
+    group as entered by user
+- `starttimes::Matrix{Int}`: cleaned version of `rawstarttimes` that is called when in use
+
+# Constructors
+
+    InterventionArray[{T}](duration::Number, intervention1::Vector, intervention2::Vector)
+    InterventionArray[{T}](duration::Number, rawstarttimes::Matrix{<:Union{<:Number, Nothing}})
+    InterventionArray[{T}](duration::Number, interventions::AbstractVector{<:AbstractVector})
+    InterventionArray(A::InterventionMatrix{T}; offset=[0])
+
+## Arguments
+
+- `T`: type of the array output; optional, defaults to `Int`.
+- `duration`: must be able to convert into an `Int` 
+- `rawstarttimes`: a vector for each type of intervention or a matrix or a vector of vectors 
+
+If an `InterventionMatrix` is supplied, this is used a the basis for a series of offset 
+    placebo interventions, one for each `offset`
+
+## Keyword arguments
+
+- `offset::AbstractVector{<:Number}`: the offset for each intervention type
+
+Warnings are provided if no groups have an intervention or all groups have an intervention
+    before the end of duration, unless `mutewarnings==true`.
+
+# Examples
+```jldoctest
+julia> InterventionArray(10, [2, 3, nothing], [6, nothing, nothing])
+"10×3×2 InterventionArray{Int64}"
+[:, :, 1] =
+ time │ 1  2  3 
+──────┼─────────
+    1 │ 0  0  0
+    2 │ 1  0  0
+    3 │ 1  1  0
+    ⋮ │ ⋮  ⋮  ⋮
+   10 │ 1  1  0
+
+[:, :, 2] =
+ time │ 1  2  3 
+──────┼─────────
+    1 │ 0  0  0
+    ⋮ │ ⋮  ⋮  ⋮
+    6 │ 1  0  0
+    ⋮ │ ⋮  ⋮  ⋮
+   10 │ 1  0  0
+
+
+julia> M = InterventionMatrix(100, [10, 50, 90, nothing]);
+
+julia> InterventionArray(M; offset=-20:20:20)
+"100×4×3 InterventionArray{Int64}"
+[:, :, 1] =
+ time │ 1  2  3  4 
+──────┼────────────
+    1 │ 0  0  0  0
+    ⋮ │ ⋮  ⋮  ⋮  ⋮
+   30 │ 0  1  0  0
+    ⋮ │ ⋮  ⋮  ⋮  ⋮
+   70 │ 0  1  1  0
+    ⋮ │ ⋮  ⋮  ⋮  ⋮
+  100 │ 0  1  1  0
+
+[:, :, 2] =
+ time │ 1  2  3  4 
+──────┼────────────
+    1 │ 0  0  0  0
+    ⋮ │ ⋮  ⋮  ⋮  ⋮
+   10 │ 1  0  0  0
+    ⋮ │ ⋮  ⋮  ⋮  ⋮
+   50 │ 1  1  0  0
+    ⋮ │ ⋮  ⋮  ⋮  ⋮
+   90 │ 1  1  1  0
+    ⋮ │ ⋮  ⋮  ⋮  ⋮
+  100 │ 1  1  1  0
+
+[:, :, 3] =
+ time │ 1  2  3  4 
+──────┼────────────
+    1 │ 0  0  0  0
+    ⋮ │ ⋮  ⋮  ⋮  ⋮
+   30 │ 1  0  0  0
+    ⋮ │ ⋮  ⋮  ⋮  ⋮
+   70 │ 1  1  0  0
+    ⋮ │ ⋮  ⋮  ⋮  ⋮
+  100 │ 1  1  0  0
+```
+""" 
 struct InterventionArray{T} <: AbstractInterventionArray3{T}
     duration::Int
     offset::Vector{Int}

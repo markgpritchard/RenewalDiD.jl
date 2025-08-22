@@ -1,11 +1,16 @@
 #package tests
 
-# note that there are not yet tests of the `renewaldid` function itself
-
 using RenewalDiD
+using Documenter
 using Test
 
+@info "test docstrings"
+#Documenter.doctest(RenewalDiD)
+
 @testset "RenewalDiD.jl" begin
+    @testset "documentation tests" begin
+        
+    end
     @testset "test functions for tests" begin
         @info "starting test functions for tests"
         include("functionsfortests_test.jl")
