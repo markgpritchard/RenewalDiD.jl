@@ -32,9 +32,10 @@ All arguments are optional with default values as above. The constructor takes e
 
 # Examples
 ```jldoctest
-RenewalDiDPriors(; psiprior=Beta(6, 4))
-RenewalDiDPriors{Normal{Float64}, Float64, Float64, Exponential{Float64}, \
-    Exponential{Float64}, Normal{Float64}, Beta{Float64}, Int64}
+julia> using Turing
+
+julia> RenewalDiDPriors(; psiprior=Beta(6, 4))
+RenewalDiDPriors{Normal{Float64}, Float64, Float64, Exponential{Float64}, Exponential{Float64}, Normal{Float64}, Beta{Float64}, Int64}
  alphaprior:       Normal{Float64}(μ=0.0, σ=1.0)
  mu_delayprior:    0.6931471805599453
  sigma_delayprior: 1.6094379124341003

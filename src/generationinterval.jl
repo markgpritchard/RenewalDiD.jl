@@ -87,8 +87,8 @@ Erlang-distributed SEIR epidemic model and the renewal equation. *SIAM J Appl Ma
 julia> g_seir(10; mu=0.3)
 0.04480836153107755
 
-julia> g_seir(10; mu=0.3, kappa=0.3)
-0.04480836153107755
+julia> g_seir(10; mu=0.3) == g_seir(10; mu=0.3, kappa=0.3)
+true
 
 julia> g_seir(10; mu=0.3, kappa=0.5)
 0.03228684102658386
