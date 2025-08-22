@@ -247,18 +247,14 @@ end
 
 ## simulation data
 
-@auto_hash_equals struct SimulationData{S, T, U, V, W, X, Y, Z} <: AbstractRenewalDiDData{S, T}
+@auto_hash_equals struct SimulationData{S, T, U} <: AbstractRenewalDiDData{S, T}
     observedcases::Matrix{S}
     interventions::T
     Ns::Vector{Int}
     exptdseedcases::Matrix{Float64}
     rng::U
     u0s::Vector{Vector{Int}}
-    betas::Vector{V}
-    mus::Vector{W} 
-    deltas::Vector{X}
-    psis::Vector{Y}
-    kappas::Vector{Z}
+    # allowing functions here led to errors loading simulations
     id::String
 
     function SimulationData(
@@ -268,35 +264,16 @@ end
         exptdseedcases::Matrix{<:Number}, 
         rng::U, 
         u0s::Vector{Vector{Int}}, 
-        betas::Vector{V}, 
-        mus::Vector{W} , 
-        deltas::Vector{X}, 
-        psis::Vector{Y}, 
-        kappas::Vector{Z}, 
         id::String=""
-    ) where {
-        S <: Number, 
-        T <: AbstractArray, 
-        U <: AbstractRNG, 
-        V <: Any, 
-        W <: Any, 
-        X <: Any, 
-        Y <: Any, 
-        Z <: Any
-    }
+    ) where {S <: Number, T <: AbstractArray, U <: AbstractRNG}
         _diddataassertions(observedcases, interventions, Ns, exptdseedcases)
-        return new{S, T, U, V, W, X, Y, Z}(
+        return new{S, T, U}(
             observedcases, 
             interventions, 
             Ns, 
             convert.(Float64, exptdseedcases),
             rng,
             u0s,
-            betas,
-            mus,
-            deltas,
-            psis,
-            kappas,
             id
         )
     end
@@ -308,11 +285,6 @@ function SimulationData( ;
     Ns, 
     rng, 
     u0s, 
-    betas, 
-    mus, 
-    deltas, 
-    psis, 
-    kappas,
     exptdseedcases=nothing,
     n_seeds=DEFAULT_SEEDMATRIX_HEIGHT, 
     doubletime=automatic, 
@@ -324,20 +296,7 @@ function SimulationData( ;
         exptdseedcases, observedcases, n_seeds; 
         doubletime, sampletime, minvalue
     )
-    return SimulationData(
-        observedcases, 
-        interventions, 
-        Ns, 
-        newexptdseedcases, 
-        rng, 
-        u0s, 
-        betas, 
-        mus, 
-        deltas, 
-        psis, 
-        kappas, 
-        id
-    )
+    return SimulationData(observedcases, interventions, Ns, newexptdseedcases, rng, u0s, id)
 end
 
 function Base.getproperty(obj::RenewalDiDDataUnlimitedPopn, k::Symbol)

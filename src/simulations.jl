@@ -469,19 +469,7 @@ function _packsimulations(rng::AbstractRNG, duration, m1_args, args...; kwargs..
     deltas = _simargs(:delta, m1_args, args...)
     psis = _simargs(:psi, m1_args, args...)
     kappas = _simargs(:kappa, m1_args, args...)
-    return SimulationData( ; 
-        observedcases, 
-        interventions, 
-        Ns, 
-        rng, 
-        u0s, 
-        betas, 
-        mus, 
-        deltas, 
-        psis, 
-        kappas, 
-        kwargs...
-    )
+    return SimulationData(; observedcases, interventions, Ns, rng, u0s, kwargs...)
 end
 
 function _siminterventionarray(duration, interventiontimes::Vector)
