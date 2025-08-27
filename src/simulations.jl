@@ -455,7 +455,10 @@ function _packsimulations(duration, m1_args, args...; kwargs...)
     return _packsimulations(default_rng(), duration, m1_args, args...; kwargs...)
 end
 
-function _packsimulations(rng::AbstractRNG, duration, m1_args, args...; kwargs...)
+function _packsimulations(
+    rng::AbstractRNG, duration, m1_args, args...; 
+    unlimitedpop=false, kwargs...
+)
     interventiontimes = _packsimulationsinterventiontimesarray(m1_args)
     Ns = zeros(Int, 0)
     observedcases = zeros(Int, duration + 1, 0)
@@ -464,12 +467,11 @@ function _packsimulations(rng::AbstractRNG, duration, m1_args, args...; kwargs..
     )
     interventions = _siminterventionarray(duration, interventiontimes)
     u0s = _simargs(:u0, m1_args, args...)
-    betas = _simargs(:beta, m1_args, args...)
-    mus = _simargs(:mu, m1_args, args...)
-    deltas = _simargs(:delta, m1_args, args...)
-    psis = _simargs(:psi, m1_args, args...)
-    kappas = _simargs(:kappa, m1_args, args...)
-    return SimulationData(; observedcases, interventions, Ns, rng, u0s, kwargs...)
+    if unlimitedpop 
+        return SimulationData(; observedcases, interventions, nothing, rng, u0s, kwargs...)
+    else 
+        return SimulationData(; observedcases, interventions, Ns, rng, u0s, kwargs...)
+    end
 end
 
 function _siminterventionarray(duration, interventiontimes::Vector)

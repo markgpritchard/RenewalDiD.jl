@@ -252,7 +252,7 @@ zerosstruct = RenewalDiDData( ;
 namedzerosstruct = RenewalDiDData( ; 
     observedcases=zeros(4, 2), interventions=zeros(3, 2), Ns=zeros(Int, 2), id="IHaveAName"
 )
-namedzerostructunlimitied = RenewalDiDDataUnlimitedPopn( ; 
+namedzerostructunlimitied = RenewalDiDData( ; 
     observedcases=zeros(4, 2), 
     interventions=zeros(3, 2), 
     id="InfinitePopulation"
@@ -265,7 +265,7 @@ nnzoutput = "RenewalDiDData{Float64, Matrix{Float64}}, (IHaveAName)\n observedca
     0.0; 0.0 0.0; 0.0 0.0; 0.0 0.0]\n interventions:  [0.0 0.0; 0.0 0.0; 0.0 0.0]\n \
     Ns:             [0, 0]\n exptdseedcases: [0.5 0.5; 0.0 0.0; 0.0 0.0; 0.0 0.0; 0.0 0.0; \
     0.0 0.0; 0.0 0.0]"
-unnzoutput = "RenewalDiDDataUnlimitedPopn{Float64, Matrix{Float64}}, \
+unnzoutput = "RenewalDiDData{Float64, Matrix{Float64}}, \
     (InfinitePopulation)\n observedcases:  [0.0 0.0; 0.0 0.0; 0.0 0.0; 0.0 \
     0.0]\n interventions:  [0.0 0.0; 0.0 0.0; 0.0 0.0]\n Ns:             \
     unlimited\n exptdseedcases: [0.5 0.5; 0.0 0.0; 0.0 0.0; 0.0 0.0; 0.0 0.0; 0.0 0.0; 0.0 0.0]"

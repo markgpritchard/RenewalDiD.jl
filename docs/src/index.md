@@ -46,7 +46,6 @@ Structures for passing data to the function `renewaldid`.
 ```@docs
 AbstractRenewalDiDData
 RenewalDiDData
-RenewalDiDDataUnlimitedPopn
 ```
 need to add `SimulationData`
 

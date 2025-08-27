@@ -214,37 +214,37 @@ df10 = testdataframe( ;
     thetadefault=zeros(16), 
     mxdefault=zeros(16),
 )
-data1 = RenewalDiDDataUnlimitedPopn( ; 
+data1 = RenewalDiDData( ; 
     observedcases=zeros(11, 3), 
     interventions=zeros(10, 3), 
     exptdseedcases=zeros(7, 3),
 )
-data2 = RenewalDiDDataUnlimitedPopn( ; 
+data2 = RenewalDiDData( ; 
     observedcases=zeros(13, 4), 
     interventions=zeros(12, 4), 
     exptdseedcases=zeros(7, 4), 
 )
-data3 = RenewalDiDDataUnlimitedPopn( ; 
+data3 = RenewalDiDData( ; 
     observedcases=zeros(3, 2), 
     interventions=zeros(2, 2), 
     exptdseedcases=[0  0; 1  1],
 )
-data8 = RenewalDiDDataUnlimitedPopn( ; 
+data8 = RenewalDiDData( ; 
     observedcases=zeros(11, 3), 
     interventions=zeros(10, 3), 
     exptdseedcases=zeros(2, 3),
 )
-data10 = RenewalDiDDataUnlimitedPopn( ; 
+data10 = RenewalDiDData( ; 
     observedcases=zeros(21, 4), 
     interventions=zeros(20, 4), 
     exptdseedcases=zeros(2, 4),
 )
-data3ma = RenewalDiDDataUnlimitedPopn( ; 
+data3ma = RenewalDiDData( ; 
     observedcases=zeros(3, 2), 
     interventions=zeros(2, 2), 
     exptdseedcases=[0  0; _r1  _r2],
 )
-data3mb = RenewalDiDDataUnlimitedPopn( ; 
+data3mb = RenewalDiDData( ; 
     observedcases=zeros(3, 2), 
     interventions=zeros(2, 2), 
     exptdseedcases=[0  0; 1  1],

@@ -234,7 +234,7 @@ function _expectedinfections(
     return sum(exp(logR_0) .* propsus .* [hx[x] * g(t - x; kwargs...) for x in eachindex(hx)])
 end
 
-_approxcasescalc(x, sigma) = x < 0 ? _approxcasescalc(0, sigma) : x + sigma * sqrt(x)
+_approxcasescalc(x, sigma) = x < 0 ? _approxcasescalc(zero(x), sigma) : x + sigma * sqrt(x)
 _approxcases(x, sigma) = __approxcases(_approxcasescalc(x, sigma))
 _approxcases(x, sigma, ceiling) = __approxcases(_approxcasescalc(x, sigma), ceiling)
 
