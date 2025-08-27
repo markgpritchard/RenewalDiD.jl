@@ -1,5 +1,14 @@
 # run simulation with fitted parameters 
 
+@auto_hash_equals struct SampledOutput{T, N} 
+    output::Array{T, N}
+    R0s::Array{T, N}
+
+    function SampledOutput(output::Array{T, N}, R0s::Array{T, N}) where {T, N}
+        return new{T, N}(output, R0s)
+    end
+end
+
 # Functions ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 ## number unique
@@ -221,7 +230,7 @@ function _samplerenewaldidinfections(
         Ns; 
         kwargs...
     )
-    return NamedTuple{(:output, :R0s)}((output, R0s))
+    return SampledOutput(output, R0s)
 end
 
 function _samplerenewaldidinitialoutput(ntimes, ngroups, ::Integer, ::Nothing)
@@ -489,10 +498,19 @@ julia> quantilerenewaldidinfections(A, [0.05, 0.90]);
 └ @ RenewalDiD 
 ```
 """
+function quantilerenewaldidinfections(SO::SampledOutput, q; mutewarnings=nothing)
+    return SampledOutput(
+        quantilerenewaldidinfections(SO.output, q; mutewarnings),
+        quantilerenewaldidinfections(SO.R0s, q; mutewarnings)
+    )
+end
+
+#=
 function quantilerenewaldidinfections(nt::NamedTuple, q; mutewarnings=nothing)
     result = [quantilerenewaldidinfections(v, q; mutewarnings) for v in values(nt)]
     return NamedTuple{keys(nt)}((result..., ))
 end
+=#
 
 function quantilerenewaldidinfections(A::AbstractArray, q; mutewarnings=nothing)
     _quantilerenewaldidinfectionswarningset(A, q, mutewarnings)

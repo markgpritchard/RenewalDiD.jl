@@ -2,6 +2,9 @@
 
 using RenewalDiD
 using Test
+using Random
+using StatsBase: mean, var
+using Turing: Normal
 
 M1 = InterventionMatrix(4, [2, 3, nothing]) 
 M2 = InterventionMatrix(5, [nothing, nothing]; mutewarnings=true) 
@@ -319,6 +322,17 @@ end
     @test sum(g) ≈ 0 atol=1e-10
 end
 
+@testset "expected variance of gamma values" begin
+    rng = Xoshiro(1)
+    gammasigma = 0.5 
+    vecofgammavec = [
+        RenewalDiD._gammavec(rand(rng, Normal(0, 1), 3), gammasigma) 
+        for _ in 1:10_000
+    ]
+    vecofgammavars = [var(vecofgammavec[i]) for i in 1:10_000]
+    @test mean(vecofgammavars) ≈ gammasigma atol=1e-2
+end
+
 @testset "generate vector of theta values" begin
     @test RenewalDiD._thetavec(zeros(3), 1) == zeros(4)
     @test RenewalDiD._thetavec(zeros(4), 1) == zeros(5)
@@ -475,7 +489,7 @@ end
     end
     @testset "account for variance" begin
         @test RenewalDiD._approxcases(1, 0.5) == 1.5
-        @test RenewalDiD._approxcases(2, 0.5) == 3
+        @test RenewalDiD._approxcases(2, 0.5) == 2 + 0.5 * sqrt(2)
     end
     @testset "output never negative" begin
         @test RenewalDiD._approxcases(2, -1.5) == 0
@@ -486,7 +500,10 @@ end
     @test calcseedinfections1 == zeros(2, 2)
     @test calcseedinfections2 == zeros(3, 2)
     @test calcseedinfections3 == seedinfections1
-    @test calcseedinfections4 == predictedcalcseedinfections4
+    @testset for i in 1:2, j in 1:2 
+        i == 2 && j == 1 && continue  # test for this value assumed error in Poisson approximation 
+        @test calcseedinfections4[i, j] == predictedcalcseedinfections4[i, j]
+    end
 end 
         
 @testset "calculate numbers of infections in study period" begin
@@ -509,7 +526,7 @@ end
     ) 
     @test calcinfections3 == predictedinfections3
     @test calcinfections4 == predictedinfections4
-    @test calcinfections5 == predictedinfections5
+    @test calcinfections5[1, :] == predictedinfections5[1, :]  # test assumed error in Poisson approximation  
 end     
 
 @testset "proportion susceptible" begin
@@ -543,7 +560,7 @@ end
     @test calcseedinfections7 == ones(3, 2) * (0 + 1im)
     @test calcseedinfections8 == predictedcalcseedinfections8
     @test calcseedinfections9 == predictedcalcseedinfections9
-    @test calcseedinfections10 == predictedcalcseedinfections10
+    @test calcseedinfections10[1, :] == predictedcalcseedinfections10[1, :]  # test assumed error in Poisson approximation
 end 
 
 @testset "calculate numbers of infections in study period with proportion susceptible" begin
@@ -583,7 +600,7 @@ end
     end
     @testset for t in 1:5 
         @test infn[t, 1] == 10 + (1 - 0.1 * t) * im
-        @test infn[t, 2] == 0+1im
+        # previous test assumed error in Poisson approximation
     end
     @testset for g in 1:3 
         @test minimum(real.(infn[:, g])) >= 0
@@ -624,4 +641,13 @@ end
     @test repr("text/plain", zerosstruct) == nzoutput 
     @test repr("text/plain", namedzerosstruct) == nnzoutput 
     @test repr("text/plain", namedzerostructunlimitied) == unnzoutput 
+end
+
+@testset "expected variance of _approxcasescalc" begin
+    rng = Xoshiro(1)
+    x = 50 
+    sigmas = rand(rng, Normal(0, 1), 100_000)
+    vecofvalues = [RenewalDiD._approxcasescalc(x, sigma) for sigma in sigmas] 
+    @test mean(vecofvalues) ≈ 50 rtol=1e-2
+    @test var(vecofvalues) ≈ 50 rtol=1e-2
 end

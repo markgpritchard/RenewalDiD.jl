@@ -234,7 +234,7 @@ function _expectedinfections(
     return sum(exp(logR_0) .* propsus .* [hx[x] * g(t - x; kwargs...) for x in eachindex(hx)])
 end
 
-_approxcasescalc(x, sigma) = x * (1 + sigma)
+_approxcasescalc(x, sigma) = x < 0 ? _approxcasescalc(0, sigma) : x + sigma * sqrt(x)
 _approxcases(x, sigma) = __approxcases(_approxcasescalc(x, sigma))
 _approxcases(x, sigma, ceiling) = __approxcases(_approxcasescalc(x, sigma), ceiling)
 
@@ -450,7 +450,7 @@ end
     psi ~ psiprior
     #mu_delay ~ mu_delayprior
     #sigma_delay ~ sigma_delayprior
-    M_x ~ filldist(truncated(Normal(0, 1); lower=-1), ntimes + n_seeds, ngroups)
+    M_x ~ filldist(Normal(0, 1), ntimes + n_seeds, ngroups)
     #fittingsigma ~ Exponential(1)
     #predictobservedinfectionssigmamatrix ~ filldist(
     #    truncated(Normal(0, 1); lower=-1), ntimes + 1, ngroups

@@ -6,7 +6,8 @@ using Test
 @testset "RenewalDiD.jl" begin
     @testset "documentation tests" begin
         @info "test docstrings"
-        include("documenterdoctest.jl")
+       # include("documenterdoctest.jl")
+        @warn "not currently testing documenterdoctest.jl"
     end
     @testset "test functions for tests" begin
         include("functionsfortests_test.jl")

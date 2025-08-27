@@ -291,11 +291,11 @@ end
 
 function _plotmodeldatascatter!(
     axs, A, t; 
-    datacolor=:black, datamarker=:x, datamarkersize=3, kwargs...
+    datacolor=:black, datamarker=:x, datamarkersize=3, denoms, kwargs...
 )
     for (j, ax) in enumerate(axs)
         scatter!(
-            ax, t, A[:, j]; 
+            ax, t, A[:, j] ./ denoms[j]; 
             scatterkws(; prefix=:data, datacolor, datamarker, datamarkersize, kwargs...)...
         )
     end
@@ -370,19 +370,6 @@ function __plotmodelR0!(axs, A, t, nquantiles; ceiling=20, modelcolor=Cycled(1),
         axs, exp.(A), t, medquantile; 
         ceiling, modelcolor, denoms=ones(Int, length(axs)), kwargs...
     )
-    return axs
-end
-
-function _plotmodeldatascatter!(
-    axs, A, t; 
-    datacolor=:black, datamarker=:x, datamarkersize=3, denoms, kwargs...
-)
-    for (j, ax) in enumerate(axs)
-        scatter!(
-            ax, t, A[:, j] ./ denoms[j]; 
-            scatterkws(; prefix=:data, datacolor, datamarker, datamarkersize, kwargs...)...
-        )
-    end
     return axs
 end
 
@@ -472,5 +459,4 @@ function _plottingdenominator_true(::Nothing, naxes)
 end 
 
 _plottingdenominator_false(Ns::Vector{T}, naxes) where T = ones(T, naxes) 
-
-_plottingdenominator_true(::Nothing, naxes) = ones(Int, naxes) 
+_plottingdenominator_false(::Nothing, naxes) = ones(Int, naxes) 

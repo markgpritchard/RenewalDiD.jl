@@ -249,28 +249,28 @@ data3mb = RenewalDiDDataUnlimitedPopn( ;
     interventions=zeros(2, 2), 
     exptdseedcases=[0  0; 1  1],
 )
-s1 = samplerenewaldidinfections(zeros(2), df1, data1, 2)
-s2 = samplerenewaldidinfections(zeros(2), df2, data2, 2)
-s3 = samplerenewaldidinfections([0, 1], df3, data3, 1)
-s4 = samplerenewaldidinfections([0, 1], df4, data3, 1)
-s5 = samplerenewaldidinfections([0, 1], df5, data3, 1)
-s6 = samplerenewaldidinfections([0, 1], df6, data3, 1)
-s7 = samplerenewaldidinfections([0, 1], df7, data3, 1)
-s8 = samplerenewaldidinfections(zeros(2), df8, data8)
-s9 = samplerenewaldidinfections(zeros(2), df9, data8)
-s10 = samplerenewaldidinfections(zeros(2), df10, data10)
-s3ma = samplerenewaldidinfections(zeros(2), df3, data3ma)
-s3mb = samplerenewaldidinfections([0, 1], df3, data3mb)
-s3mc = samplerenewaldidinfections([0, 1], df3, data3mb, 4:6)
-s1r1 = samplerenewaldidinfections(zeros(2), df1, data1, 2; repeatsamples=2)
-s1r2 = samplerenewaldidinfections(zeros(2), df1, data1, 2; repeatsamples=5)
-s2r1 = samplerenewaldidinfections(zeros(2), df2, data2, 2; repeatsamples=2)
-s2r2 = samplerenewaldidinfections(zeros(2), df2, data2, 2; repeatsamples=10)
-s3r = samplerenewaldidinfections([0, 1], df3, data3, 1; repeatsamples=4)
-s8r = samplerenewaldidinfections(zeros(2), df8, data8; repeatsamples=3)
-s3mar = samplerenewaldidinfections(zeros(2), df3, data3ma; repeatsamples=3)
-s3mbr = samplerenewaldidinfections([0, 1], df3, data3mb)
-s3mcr = samplerenewaldidinfections([0, 1], df3, data3mb, 4:6)
+s1 = samplerenewaldidinfections(zeros(2), df1, data1, 2).output
+s2 = samplerenewaldidinfections(zeros(2), df2, data2, 2).output
+s3 = samplerenewaldidinfections([0, 1], df3, data3, 1).output
+s4 = samplerenewaldidinfections([0, 1], df4, data3, 1).output
+s5 = samplerenewaldidinfections([0, 1], df5, data3, 1).output
+s6 = samplerenewaldidinfections([0, 1], df6, data3, 1).output
+s7 = samplerenewaldidinfections([0, 1], df7, data3, 1).output
+s8 = samplerenewaldidinfections(zeros(2), df8, data8).output
+s9 = samplerenewaldidinfections(zeros(2), df9, data8).output
+s10 = samplerenewaldidinfections(zeros(2), df10, data10).output
+s3ma = samplerenewaldidinfections(zeros(2), df3, data3ma).output
+s3mb = samplerenewaldidinfections([0, 1], df3, data3mb).output
+s3mc = samplerenewaldidinfections([0, 1], df3, data3mb, 4:6).output
+s1r1 = samplerenewaldidinfections(zeros(2), df1, data1, 2; repeatsamples=2).output
+s1r2 = samplerenewaldidinfections(zeros(2), df1, data1, 2; repeatsamples=5).output
+s2r1 = samplerenewaldidinfections(zeros(2), df2, data2, 2; repeatsamples=2).output
+s2r2 = samplerenewaldidinfections(zeros(2), df2, data2, 2; repeatsamples=10).output
+s3r = samplerenewaldidinfections([0, 1], df3, data3, 1; repeatsamples=4).output
+s8r = samplerenewaldidinfections(zeros(2), df8, data8; repeatsamples=3).output
+s3mar = samplerenewaldidinfections(zeros(2), df3, data3ma; repeatsamples=3).output
+s3mbr = samplerenewaldidinfections([0, 1], df3, data3mb).output
+s3mcr = samplerenewaldidinfections([0, 1], df3, data3mb, 4:6).output
 
 rv16a = let
     _rvs = rankvalues(rankvaluedf16, :tau)
@@ -509,7 +509,7 @@ end
 end
 
 @testset "repeat samples" begin
-    @test samplerenewaldidinfections(zeros(2), df1, data1, 2; repeatsamples=nothing) == s1
+    @test samplerenewaldidinfections(zeros(2), df1, data1, 2; repeatsamples=nothing).output == s1
     @test s1r1 == zeros(11, 3, 2)
     @test s1r2 == zeros(11, 3, 5)
     @test s2r1 == zeros(13, 4, 2)

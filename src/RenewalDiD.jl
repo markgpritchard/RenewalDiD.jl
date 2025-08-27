@@ -28,7 +28,7 @@ export packsimulations, packsimulationtuple, runsimulation, simulationcases, sim
 # fittingparameters.jl
 export RenewalDiDPriors, expectedseedcases, renewaldid
 # processparameters.jl
-export map_DataFrame, nunique, quantilerenewaldidinfections, rankvalues
+export SampledOutput, map_DataFrame, nunique, quantilerenewaldidinfections, rankvalues
 export samplerenewaldidinfections
 
 # Plotting.jl 
