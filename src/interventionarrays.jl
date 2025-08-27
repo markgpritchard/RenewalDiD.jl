@@ -2,6 +2,13 @@
 
 # Structs ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+function modifiedduration(A::T, duration; kwargs...) where T <: AbstractInterventionArray 
+    offset = A.offset 
+    rawstarttimes = A.rawstarttimes
+    return T(duration, rawstarttimes; offset)
+end
+
+
 """
     AbstractInterventionArray{T, N} <: AbstractArray{T, N}
 

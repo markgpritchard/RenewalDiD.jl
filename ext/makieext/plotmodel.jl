@@ -51,9 +51,10 @@ function RenewalDiD.plotmodel!(
 ) 
     observedcases = data.observedcases
     interventions = data.interventions
+    Ns = data.Ns
     return RenewalDiD.plotmodel!(
         axs, modeloutputs, observedcases, interventions, t; 
-        kwargs...
+        Ns, kwargs...
     ) 
 end
 
@@ -78,9 +79,10 @@ function RenewalDiD.plotmodel!(
 ) 
     observedcases = data.observedcases
     interventions = data.interventions
+    Ns = data.Ns
     return RenewalDiD.plotmodel!(
         r0axs, outputaxs, modeloutputs, observedcases, interventions, t; 
-        kwargs...
+        Ns, kwargs...
     ) 
 end
 
@@ -106,7 +108,10 @@ function _plotmodel!(axs, modeloutputs, observedcases, interventions, t; kwargs.
     return axs
 end
 
-function _plotmodel!(r0axs, outputaxs, modeloutputs::NamedTuple, observedcases, interventions, t; kwargs...) 
+function _plotmodel!(
+    r0axs, outputaxs, modeloutputs::NamedTuple, observedcases, interventions, t; 
+    kwargs...
+) 
     RenewalDiD.plotmodelR0!(r0axs, modeloutputs.R0s; kwargs...)
     RenewalDiD.plotmodelintervention!(r0axs, interventions; kwargs...)
     _plotmodel!(outputaxs, modeloutputs.output, observedcases, interventions, t; kwargs...) 
@@ -117,11 +122,8 @@ function _plotmodeloutputaxs(gl, A::AbstractArray; row=1, kwargs...)
     return [Axis(gl[row, i]; axiskws(; prefix=:axis, kwargs...)...) for i in axes(A, 2)]
 end
 
-function _plotmodeloutputaxs(gl, A::AbstractRenewalDiDData; row=1, kwargs...)
-    return [
-        Axis(gl[row, i]; axiskws(; prefix=:axis, kwargs...)...) 
-        for i in axes(A.interventions, 2)
-    ]
+function _plotmodeloutputaxs(gl, A::AbstractRenewalDiDData; kwargs...)
+    return _plotmodeloutputaxs(gl, A.interventions; kwargs...)
 end
 
 ## Model output 
@@ -157,9 +159,14 @@ function _plotmodeloutput!(axs, A, ::Automatic; kwargs...)
     return _plotmodeloutput!(axs, A, t; kwargs...)
 end
 
-function _plotmodeloutput!(axs, A, t::AbstractVector; color=Cycled(1), kwargs...)
+function _plotmodeloutput!(
+    axs, A, t::AbstractVector; 
+    color=Cycled(1), Ns=nothing, plotproportions=false, kwargs...
+)
+    naxes = length(axs)
+    denoms = _plottingdenominator(Ns, naxes, plotproportions)
     # set colour so the median line and credible interval bands have the same colour
-    return __plotmodeloutput!(axs, A, t; color, kwargs...)
+    return __plotmodeloutput!(axs, A, t; color, denoms, kwargs...)
 end
 
 function __plotmodeloutput!(axs, A::AbstractMatrix, t; kwargs...) 
@@ -195,20 +202,23 @@ function _plotmodeloutputband!(axs, A, t, qlow, qhigh, alpha; ceiling=nothing, k
     return _plotmodeloutputband!(axs, A, t, qlow, qhigh, alpha, ceiling; kwargs...)
 end
 
-function _plotmodeloutputband!(axs, A, t, qlow, qhigh, alpha, ::Nothing; kwargs...)
+function _plotmodeloutputband!(axs, A, t, qlow, qhigh, alpha, ::Nothing; denoms, kwargs...)
     for (j, ax) in enumerate(axs)
         band!(
-            ax, t, A[:, j, qlow], A[:, j, qhigh]; 
+            ax, t, A[:, j, qlow] ./ denoms[j], A[:, j, qhigh] ./ denoms[j]; 
             alpha, bandkws(; prefix=:model, skip=[:alpha], kwargs...)...
         )
     end
     return axs
 end
 
-function _plotmodeloutputband!(axs, A, t, qlow, qhigh, alpha, ceiling; kwargs...)
+function _plotmodeloutputband!(axs, A, t, qlow, qhigh, alpha, ceiling; denoms, kwargs...)
     for (j, ax) in enumerate(axs)
         band!(
-            ax, t, min.(ceiling, A[:, j, qlow]), min.(ceiling, A[:, j, qhigh]); 
+            ax, 
+            t, 
+            min.(ceiling, A[:, j, qlow] ./ denoms[j]), 
+            min.(ceiling, A[:, j, qhigh] ./ denoms[j]); 
             alpha, bandkws(; prefix=:model, skip=[:alpha], kwargs...)...
         )
     end
@@ -219,17 +229,20 @@ function _plotmodeloutputmedian!(axs, A, t, medquantile; ceiling=nothing, kwargs
     return _plotmodeloutputmedian!(axs, A, t, medquantile, ceiling; kwargs...)
 end
 
-function _plotmodeloutputmedian!(axs, A, t, medquantile, ::Nothing; kwargs...)
+function _plotmodeloutputmedian!(axs, A, t, medquantile, ::Nothing; denoms, kwargs...)
     for (j, ax) in enumerate(axs)
-        lines!(ax, t, A[:, j, medquantile]; lineskws(; prefix=:model, kwargs...)...)
+        lines!(
+            ax, t, A[:, j, medquantile] ./ denoms[j]; 
+            lineskws(; prefix=:model, kwargs...)...
+        )
     end
     return axs
 end
 
-function _plotmodeloutputmedian!(axs, A, t, medquantile, ceiling; kwargs...)
+function _plotmodeloutputmedian!(axs, A, t, medquantile, ceiling; denoms, kwargs...)
     for (j, ax) in enumerate(axs)
         lines!(
-            ax, t, min.(ceiling, A[:, j, medquantile]); 
+            ax, t, min.(ceiling, A[:, j, medquantile] ./ denoms[j]); 
             lineskws(; prefix=:model, kwargs...)...
         )
     end
@@ -267,8 +280,13 @@ function _plotmodeldata!(axs, A, ::Automatic; kwargs...)
     return _plotmodeldata!(axs, A, t; kwargs...)
 end
 
-function _plotmodeldata!(axs, A, t::AbstractVector; kwargs...)
-    return _plotmodeldatascatter!(axs, A, t; kwargs...)
+function _plotmodeldata!(
+    axs, A, t::AbstractVector; 
+    Ns=nothing, plotproportions=false, kwargs...
+)
+    naxes = length(axs)
+    denoms = _plottingdenominator(Ns, naxes, plotproportions)
+    return _plotmodeldatascatter!(axs, A, t; denoms, kwargs...)
 end
 
 function _plotmodeldatascatter!(
@@ -315,11 +333,6 @@ function _plotmodelR0!(axs, A, ::Automatic; kwargs...)
     return _plotmodelR0!(axs, A, t; kwargs...)
 end
 
-function _plotmodelR0!(axs, A, ::Automatic; kwargs...)
-    t = axes(A, 1)
-    return _plotmodelR0!(axs, A, t; kwargs...)
-end
-
 function _plotmodelR0!(axs, A, t::AbstractVector; color=Cycled(1), kwargs...)
     # set colour so the median line and credible interval bands have the same colour
     return __plotmodelR0!(axs, A, t; color, kwargs...)
@@ -349,24 +362,24 @@ function __plotmodelR0!(axs, A, t, nquantiles; ceiling=20, modelcolor=Cycled(1),
             2 * i / nquantiles;  # alpha calculated here, not passed as keyword argument
             ceiling,
             modelcolor, 
+            denoms=ones(Int, length(axs)),
             kwargs...
         )
     end
-    _plotmodeloutputmedian!(axs, exp.(A), t, medquantile; ceiling, modelcolor, kwargs...)
+    _plotmodeloutputmedian!(
+        axs, exp.(A), t, medquantile; 
+        ceiling, modelcolor, denoms=ones(Int, length(axs)), kwargs...
+    )
     return axs
-end
-
-function _plotmodeldata!(axs, A, t::AbstractVector; kwargs...)
-    return _plotmodeldatascatter!(axs, A, t; kwargs...)
 end
 
 function _plotmodeldatascatter!(
     axs, A, t; 
-    datacolor=:black, datamarker=:x, datamarkersize=3, kwargs...
+    datacolor=:black, datamarker=:x, datamarkersize=3, denoms, kwargs...
 )
     for (j, ax) in enumerate(axs)
         scatter!(
-            ax, t, A[:, j]; 
+            ax, t, A[:, j] ./ denoms[j]; 
             scatterkws(; prefix=:data, datacolor, datamarker, datamarkersize, kwargs...)...
         )
     end
@@ -440,3 +453,24 @@ function __plotmodelinterventionvlines!(axs, A, ::Automatic; kwargs...)
     end
     return axs
 end
+
+# include a denominator to plot proportions 
+
+function _plottingdenominator(Ns, naxes, plotproportions)
+    if plotproportions 
+        return _plottingdenominator_true(Ns, naxes) 
+    else 
+        return _plottingdenominator_false(Ns, naxes)
+    end
+end
+
+_plottingdenominator_true(Ns::Vector, ::Any) = Ns 
+
+function _plottingdenominator_true(::Nothing, naxes)
+    @warn "Cannot plot proportions without supplying population size; raw data plotted instead"
+    return _plottingdenominator_false(nothing, naxes)
+end 
+
+_plottingdenominator_false(Ns::Vector{T}, naxes) where T = ones(T, naxes) 
+
+_plottingdenominator_true(::Nothing, naxes) = ones(Int, naxes) 

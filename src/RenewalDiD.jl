@@ -18,7 +18,7 @@ export AbstractInterventionArray
 export AbstractInterventionVector, InterventionVector
 export AbstractInterventionMatrix, InterventionMatrix
 export AbstractInterventionArray3, InterventionArray
-export interventioncat
+export interventioncat, modifiedduration
 # generationinterval.jl
 export g_covid, g_seir, generationtime, testgenerationtime, vectorg_seir
 # abstractrenewaldiddata.jl
