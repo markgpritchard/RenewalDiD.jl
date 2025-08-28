@@ -7,7 +7,7 @@ using PrettyTables: pretty_table
 using Random: AbstractRNG, default_rng
 using StatsBase: Weights, coef, coefnames, mean, ordinalrank, quantile, sample
 using Turing: @addlogprob!, @model
-using Turing: Beta, Distribution, Exponential, LogNormal, Normal
+using Turing: Beta, Chains, Distribution, Exponential, LogNormal, Normal
 using Turing: arraydist, cdf, filldist, product_distribution, truncated
 using Turing.Optimisation: ModeResult
 
@@ -28,7 +28,11 @@ export packsimulations, packsimulationtuple, runsimulation, simulationcases, sim
 # fittingparameters.jl
 export RenewalDiDPriors, expectedseedcases, renewaldid
 # processparameters.jl
-export SampledOutput, map_DataFrame, nunique, quantilerenewaldidinfections, rankvalues
+export SampledOutput
+export map_DataFrame
+export nunique
+export quantilerenewaldidinfections
+export rankvalues
 export samplerenewaldidinfections
 
 # Plotting.jl 

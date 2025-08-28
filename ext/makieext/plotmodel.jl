@@ -21,7 +21,7 @@ function RenewalDiD.plotmodel!(
 end
 
 function RenewalDiD.plotmodel!(
-    gl::FigOrGridLayout, modeloutputs::NamedTuple, args...; 
+    gl::FigOrGridLayout, modeloutputs::SampledOutput, args...; 
     kwargs...
 ) 
     r0axs = _plotmodeloutputaxs(gl, modeloutputs.output; kwargs...)
@@ -109,7 +109,7 @@ function _plotmodel!(axs, modeloutputs, observedcases, interventions, t; kwargs.
 end
 
 function _plotmodel!(
-    r0axs, outputaxs, modeloutputs::NamedTuple, observedcases, interventions, t; 
+    r0axs, outputaxs, modeloutputs::SampledOutput, observedcases, interventions, t; 
     kwargs...
 ) 
     RenewalDiD.plotmodelR0!(r0axs, modeloutputs.R0s; kwargs...)

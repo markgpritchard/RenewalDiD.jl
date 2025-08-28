@@ -189,7 +189,6 @@ end
 
 # generic parameter name: prefer to use a symbol that is the name of a specific parameter
 _parameter(x, t; kwargs...) = _parameter(x, t, :parameter; kwargs...)
-
 _parameter(f::Function, t, symbol; kwargs...) = _parameter(f(t), t, symbol; kwargs...)
 
 function _parameter(x::Number, t, symbol; upper=nothing)
@@ -468,7 +467,7 @@ function _packsimulations(
     interventions = _siminterventionarray(duration, interventiontimes)
     u0s = _simargs(:u0, m1_args, args...)
     if unlimitedpop 
-        return SimulationData(; observedcases, interventions, nothing, rng, u0s, kwargs...)
+        return SimulationData(; observedcases, interventions, Ns=nothing, rng, u0s, kwargs...)
     else 
         return SimulationData(; observedcases, interventions, Ns, rng, u0s, kwargs...)
     end

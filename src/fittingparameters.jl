@@ -237,10 +237,7 @@ end
 _approxcasescalc(x, sigma) = x < 0 ? _approxcasescalc(zero(x), sigma) : x + sigma * sqrt(x)
 _approxcases(x, sigma) = __approxcases(_approxcasescalc(x, sigma))
 _approxcases(x, sigma, ceiling) = __approxcases(_approxcasescalc(x, sigma), ceiling)
-
-function __approxcases(x_oneplussigma::T) where T
-    return max(zero(T), x_oneplussigma)
-end
+__approxcases(x_oneplussigma::T) where T = max(zero(T), x_oneplussigma)
 
 function __approxcases(x_oneplussigma::T, ceiling) where T
     return min(max(zero(T), x_oneplussigma), ceiling)

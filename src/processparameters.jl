@@ -184,8 +184,15 @@ julia> samplerenewaldidinfections(g_seir, df, data, 1; mu=0.2, kappa=0.5)
  2.85361   16.5956    0.125572
 ```
 """
-function samplerenewaldidinfections(g, df::DataFrame, data, indexes=axes(df, 1); kwargs...)
-    return samplerenewaldidinfections(g, default_rng(), df, data, indexes; kwargs...)
+function samplerenewaldidinfections(g, args...; kwargs...)
+    return samplerenewaldidinfections(g, default_rng(), args...; kwargs...)
+end
+
+function samplerenewaldidinfections(
+    g, rng::AbstractRNG, df::Tuple{DataFrame, <:Chains}, args...; 
+    kwargs...
+)
+    return samplerenewaldidinfections(g, rng, df[1], args...; kwargs...)
 end
 
 function samplerenewaldidinfections(
@@ -193,6 +200,11 @@ function samplerenewaldidinfections(
     repeatsamples=nothing, kwargs...
 )
     return _samplerenewaldidinfections(g, rng, df, data, indexes, repeatsamples; kwargs...)
+end
+
+function samplerenewaldidinfections(::Any, ::AbstractRNG, args...; kwargs...)
+    throw(ArgumentError("to do"))
+    return nothing
 end
 
 function _samplerenewaldidinfections(g, rng, df, data, indexes, repeatsamples; kwargs...)
@@ -598,6 +610,7 @@ end
 
 function _assymetricquantileswarning(qi, qo)
     @warn "($qi, $qo): other functions expect that credible intervals are symmetrical"
+    return nothing
 end
 
 function _descendingquantilewarning(qi, qp)
