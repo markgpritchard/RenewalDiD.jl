@@ -176,7 +176,12 @@ end
 
 function __expectedseedcases(observedcases, n_seeds, doubletime, sampletime, minvalue)
     exptdseedcases = zeros(n_seeds, _ngroups(observedcases))
+    _expectedseedcases!(exptdseedcases, observedcases, n_seeds, doubletime, sampletime)
+    _expectedseedcasesminimum!(exptdseedcases, observedcases, minvalue)
+    return exptdseedcases
+end
 
+function _expectedseedcases!(exptdseedcases, observedcases, n_seeds, doubletime, sampletime)
     for g in 1:_ngroups(observedcases)
         tot = sum(@view observedcases[1:sampletime, g]) / sampletime
         for t in 1:n_seeds
@@ -186,9 +191,7 @@ function __expectedseedcases(observedcases, n_seeds, doubletime, sampletime, min
             )
         end
     end
-
-    _expectedseedcasesminimum!(exptdseedcases, observedcases, minvalue)
-    return exptdseedcases
+    return nothing
 end
 
 _expectedseedcasesdoubletime(inputdoubletime, ::Any) = inputdoubletime
@@ -208,7 +211,6 @@ function _expectedseedcasesminimum!(exptdseedcases, observedcases, minvalue)
 end
 
 _expectedseedcasesminimum!(::Any, ::Any, ::Nothing) = nothing
-
 _expectedseedcasesifneeded(exptdseedcases::Matrix, ::Any, ::Any; kwargs...) = exptdseedcases
 
 function _expectedseedcasesifneeded(::Nothing, observedcases, n_seeds; kwargs...)
@@ -234,7 +236,14 @@ function _expectedinfections(
     return sum(exp(logR_0) .* propsus .* [hx[x] * g(t - x; kwargs...) for x in eachindex(hx)])
 end
 
-_approxcasescalc(x, sigma) = x < 0 ? _approxcasescalc(zero(x), sigma) : x + sigma * sqrt(x)
+function _approxcasescalc(x, sigma)
+    if x < 0 
+        return _approxcasescalc(zero(x), sigma) 
+    else
+        return x + sigma * sqrt(x)
+    end
+end
+
 _approxcases(x, sigma) = __approxcases(_approxcasescalc(x, sigma))
 _approxcases(x, sigma, ceiling) = __approxcases(_approxcasescalc(x, sigma), ceiling)
 __approxcases(x_oneplussigma::T) where T = max(zero(T), x_oneplussigma)

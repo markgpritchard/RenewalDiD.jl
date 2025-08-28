@@ -510,6 +510,9 @@ end
 
 @testset "repeat samples" begin
     @test samplerenewaldidinfections(zeros(2), df1, data1, 2; repeatsamples=nothing).output == s1
+    @testset for i in eachindex(s1r1)
+        @test s1r1[i] ≈ 0 atol=1e-3 
+    end
     @test s1r1 == zeros(11, 3, 2)
     @test s1r2 == zeros(11, 3, 5)
     @test s2r1 == zeros(13, 4, 2)
