@@ -40,10 +40,10 @@ model1 = renewaldid(
     g_seir, 
     RenewalDiDPriors( ; 
         alphaprior=Normal(log(2.5), 1), 
-        mu_delayprior=log(5),
         sigma_gammaprior=Exponential(0.2),
         sigma_thetaprior=Exponential(0.075), 
-        psiprior=Beta(6, 4)
+        psiprior=Beta(6, 4),
+        delaydistn=LogNormal(log(5), log(2)),
     );                          
     mu=0.2, kappa=0.5               
 )

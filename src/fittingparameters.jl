@@ -5,25 +5,24 @@
 ## struct of prior distributions 
 
 """
-    RenewalDiDPriors{Q, S, T, U, V, W, X, Y}
+    RenewalDiDPriors{Q, S, T, U, V, W, X}
 
 Container for prior distributions passed to `renewaldid`.
 
 # Fields
 - `alphaprior::Q=Normal(0, 1)`: intercept for log basic reproduction ratio 
-- `mu_delayprior::S=log(2)`: natural logarithm of mean delay between infection and diagnosis
-    (`renewaldid` currently has `NaN` gradients when attempting to fit delays so 
-    `mu_delayprior` must be `<:Real`)
-- `sigma_delayprior::T=log(5)`: variance for lognormal-distributed delay between infection 
-    and diagnosis (`renewaldid` currently has `NaN` gradients when attempting to fit delays 
-    so `sigma_delayprior` must be `<:Real`)
-- `sigma_gammaprior::U=Exponential(1)`: variance in group-specific contributions to log 
+- `sigma_gammaprior::S=Exponential(1)`: variance in group-specific contributions to log 
     basic reproduction ratio
-- `sigma_thetaprior::V=Exponential(1)`: variance in time-varying contributions to log 
+- `sigma_thetaprior::T=Exponential(1)`: variance in time-varying contributions to log 
     basic reproduction ratio
-- `tauprior::W=Normal(0, 1)`: average treatment effect in the treated
-- `psiprior::X=Beta(1, 1)`: proportion of infections that are diagnosed
-- `omegaprior::Y=0`: rate of return to susceptibility after infection (not currently used)
+- `tauprior::U=Normal(0, 1)`: average treatment effect in the treated
+- `psiprior::V=Beta(1, 1)`: proportion of infections that are diagnosed
+- `omegaprior::W=0`: rate of return to susceptibility after infection (not currently used)
+- `delaydistn::X=LogNormal(log(2), log(2))`: distribution of delay times between infection 
+    and diagnosis
+
+NB, attempting to fit a delay distribution has so far given NaN gradients. Function 
+    `renewaldid` currently expects a distribution to be supplied.
 
 # Constructors
 
@@ -46,33 +45,31 @@ RenewalDiDPriors{Normal{Float64}, Float64, Float64, Exponential{Float64}, Expone
  omegaprior:       0
 ```
 """ 
-@kwdef struct RenewalDiDPriors{Q, S, T, U, V, W, X, Y}
-    # attempting to fit `mu_delay` and `sigma_delay` gives NaN gradients so currently use
-    # constants. `renewaldid` will throw a MethodError if these are distributions
+@kwdef struct RenewalDiDPriors{Q, S, T, U, V, W, X}
+    # attempting to fit a delay distribution has so far given NaN gradients. Function 
+    # `renewaldid` currently expects a distribution to be supplied 
     alphaprior::Q=Normal(0, 1)
-    mu_delayprior::S=log(2)  #mu_delayprior::S=Normal(0, 1)
-    sigma_delayprior::T=log(5)  #sigma_delayprior::T=Exponential(1)
-    sigma_gammaprior::U=Exponential(1)
-    sigma_thetaprior::V=Exponential(1)
-    tauprior::W=Normal(0, 1)
-    psiprior::X=Beta(1, 1)
-    omegaprior::Y=0
+    sigma_gammaprior::S=Exponential(1)
+    sigma_thetaprior::T=Exponential(1)
+    tauprior::U=Normal(0, 1)
+    psiprior::V=Beta(1, 1)
+    omegaprior::W=0
+    delaydistn::X=LogNormal(log(2), log(2))
 end
 
 function Base.show(
-    io::IO, ::MIME"text/plain", p::RenewalDiDPriors{Q, S, T, U, V, W, X, Y}
-) where {Q, S, T, U, V, W, X, Y}
+    io::IO, ::MIME"text/plain", p::RenewalDiDPriors{Q, S, T, U, V, W, X}
+) where {Q, S, T, U, V, W, X}
     print(
         io,
-        "RenewalDiDPriors{$Q, $S, $T, $U, $V, $W, $X, $Y}",
+        "RenewalDiDPriors{$Q, $S, $T, $U, $V, $W, $X}",
         "\n alphaprior:       ", p.alphaprior,
-        "\n mu_delayprior:    ", p.mu_delayprior,
-        "\n sigma_delayprior: ", p.sigma_delayprior,
         "\n sigma_gammaprior: ", p.sigma_gammaprior,
         "\n sigma_thetaprior: ", p.sigma_thetaprior,
         "\n tauprior:         ", p.tauprior,
         "\n psiprior:         ", p.psiprior,
         "\n omegaprior:       ", p.omegaprior,
+        "\n delaydistn:       ", p.delaydistn
     )
 end
 
@@ -398,17 +395,16 @@ DynamicPPL.Model{typeof(RenewalDiD._renewaldid), (:observedcases, :interventions
 ```
 """
 function renewaldid(
-    data::AbstractRenewalDiDData, g, priors::RenewalDiDPriors{Q, S, T, U, V, W, X, Y}; 
+    data::AbstractRenewalDiDData, g, priors::RenewalDiDPriors{Q, S, T, U, V, W, X}; 
     kwargs...
 ) where {
     Q <: Distribution, 
-    S <: Real, 
-    T <: Real, 
+    S <: Distribution, 
+    T <: Distribution, 
     U <: Distribution, 
     V <: Distribution, 
-    W <: Distribution, 
+    W <: Real, 
     X <: Distribution, 
-    Y <: Any
 }
     n_seeds = size(data.exptdseedcases, 1)
     return _renewaldid(
@@ -418,12 +414,11 @@ function renewaldid(
         data.Ns,
         g,    
         priors.alphaprior,
-        priors.mu_delayprior,
         priors.psiprior,
-        priors.sigma_delayprior,
         priors.sigma_gammaprior,
         priors.sigma_thetaprior,
         priors.tauprior,
+        priors.delaydistn,
         n_seeds,
         priors.omegaprior;
         kwargs...
@@ -437,12 +432,11 @@ end
     Ns,
     g,    
     alphaprior,
-    mu_delayprior,
     psiprior,
-    sigma_delayprior,
     sigma_gammaprior,
     sigma_thetaprior,
     tauprior,
+    delaydistn,
     n_seeds,
     omega;
     kwargs...
@@ -458,22 +452,10 @@ end
     thetas_raw ~ filldist(Normal(0, 1), ntimes - 1)
     sigma_theta ~ sigma_thetaprior
     psi ~ psiprior
-    #mu_delay ~ mu_delayprior
-    #sigma_delay ~ sigma_delayprior
     M_x ~ filldist(Normal(0, 1), ntimes + n_seeds, ngroups)
-    #fittingsigma ~ Exponential(1)
-    #predictobservedinfectionssigmamatrix ~ filldist(
-    #    truncated(Normal(0, 1); lower=-1), ntimes + 1, ngroups
-    #)
-
-    # attempting to fit `mu_delay` and `sigma_delay` gives NaN gradients so currently use
-    # constants
-    mu_delay = log(2)
-    sigma_delay = log(5)
 
     gammavec = _gammavec(gammas_raw, sigma_gamma)
     thetavec = _thetavec(thetas_raw, sigma_theta)
-
     predictedlogR_0 = _predictedlogR_0(alpha, gammavec, thetavec, tau, interventions)
 
     T = Complex{typeof(predictedlogR_0[1, 1])}
@@ -484,7 +466,6 @@ end
     )
 
     # equal delay assumed for all cases 
-    delaydistn = LogNormal(mu_delay, sigma_delay)
     delayedinfections = zeros(T, n_seeds + ntimes, ngroups)
 
     for t in 1:(n_seeds + ntimes) 
@@ -505,9 +486,6 @@ end
         return nothing  # exit the model evaluation early
     end
 
-    #predictobservedinfections = max.(0, np .+ predictobservedinfectionssigmamatrix .* np .* (1 - psi))
-
-    #observedcases ~ arraydist(Normal.(predictobservedinfections, fittingsigma))
     observedcases ~ arraydist(Normal.(np, sqrt.(np .* (1 - psi))))
     return nothing
 end
