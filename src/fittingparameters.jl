@@ -126,9 +126,9 @@ Return a matrix of infections before time `0` to seed subsequent transmission.
 # Keyword arguments 
 - `doubletime=automatic`: assumed doubling time for infections before time `0`; the default 
     is to equal `n_seeds`
-- `sampletime=automatic`: how many rows of `observedcases` to consider when deciding on the number of
-    infections to include in the seed matrix; default is `doubletime` if provided, otherwise 
-    `n_seeds`
+- `sampletime=automatic`: how many rows of `observedcases` to consider when deciding on the 
+    number of infections to include in the seed matrix; default is `doubletime` if provided, 
+    otherwise `n_seeds`
 - `minvalue=0.5`: minimum number of infection to include in seed matrix regardless of 
     numbers in `observedcases`
 
@@ -218,32 +218,36 @@ function _expectedseedcasesifneeded(::Nothing, observedcases, n_seeds; kwargs...
 end
 
 function _expectedinfections(g, args...; kwargs...) 
+    # `_expectedinfections` will accept a function or a vector in the keyword argument `func`
     return _expectedinfections(generationtime, args...; func=g, kwargs...)
-    # `_expectedinfections` will accept a function or a vector from the keyword argument `func`
 end
 
 function _expectedinfections(g::_Useablegenerationfunctions, logR_0, hx; kwargs...)
-    return _expectedinfections(g, 1, logR_0, hx; kwargs...)
+    return __expectedinfections(g, 1, logR_0, hx; kwargs...)  # assume propsus = 1
 end
 
 function _expectedinfections(
-    g::_Useablegenerationfunctions, inputpropsus::T, logR_0, hx; 
+    g::_Useablegenerationfunctions, inputpropsus, logR_0, hx; 
     kwargs...
-) where T
-    # rather than throw an error, enforce 0 <= propsus <= 1 
-    propsus = min(one(T), max(zero(T), inputpropsus))
+) 
+    propsus = min(1, max(0, inputpropsus))  # enforce 0 <= propsus <= 1 
+    return __expectedinfections(g, propsus, logR_0, hx; kwargs...) 
+end
+
+function __expectedinfections(g, propsus, logR_0, hx; kwargs...) 
     t = length(hx) + 1
     return sum(exp(logR_0) .* propsus .* [hx[x] * g(t - x; kwargs...) for x in eachindex(hx)])
 end
 
 function _approxcasescalc(x, sigma)
-    if x < 0 
-        return _approxcasescalc(zero(x), sigma) 
+    if x < 0  # should never be the case
+        return __approxcasescalc(zero(x), sigma)
     else
-        return x + sigma * sqrt(x)
+        return __approxcasescalc(x, sigma)
     end
 end
 
+__approxcasescalc(x, sigma) = x + sigma * sqrt(x)
 _approxcases(x, sigma) = __approxcases(_approxcasescalc(x, sigma))
 _approxcases(x, sigma, ceiling) = __approxcases(_approxcasescalc(x, sigma), ceiling)
 __approxcases(x_oneplussigma::T) where T = max(zero(T), x_oneplussigma)
@@ -504,7 +508,7 @@ end
     #predictobservedinfections = max.(0, np .+ predictobservedinfectionssigmamatrix .* np .* (1 - psi))
 
     #observedcases ~ arraydist(Normal.(predictobservedinfections, fittingsigma))
-    observedcases ~ arraydist(Normal.(np, np .* (1 - psi)))
+    observedcases ~ arraydist(Normal.(np, sqrt.(np .* (1 - psi))))
     return nothing
 end
 

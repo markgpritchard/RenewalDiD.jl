@@ -424,7 +424,7 @@ function _predictobservedinfections(rng, np::AbstractMatrix, psi)
 end
 
 function __predictobservedinfections(rng, np::Number, psi)
-    v = rand(rng, Normal(np, np * (1 - psi)))
+    v = rand(rng, Normal(np, sqrt(np * (1 - psi))))
     v > 0 || return zero(v)
     return v
 end
