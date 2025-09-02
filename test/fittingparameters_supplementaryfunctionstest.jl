@@ -258,14 +258,14 @@ namedzerostructunlimitied = RenewalDiDData( ;
     id="InfinitePopulation"
 )
 
-nzoutput = "RenewalDiDData{Float64, Matrix{Float64}}\n observedcases:  [0.0 0.0; 0.0 0.0; \
+nzoutput = "RenewalDiDData{Float64, Matrix{Float64}, Vector{Int64}}\n observedcases:  [0.0 0.0; 0.0 0.0; \
     0.0 0.0; 0.0 0.0]\n interventions:  [0.0 0.0; 0.0 0.0; 0.0 0.0]\n Ns:             \
     [0, 0]\n exptdseedcases: [0.5 0.5; 0.0 0.0; 0.0 0.0; 0.0 0.0; 0.0 0.0; 0.0 0.0; 0.0 0.0]"
-nnzoutput = "RenewalDiDData{Float64, Matrix{Float64}}, (IHaveAName)\n observedcases:  [0.0 \
+nnzoutput = "RenewalDiDData{Float64, Matrix{Float64}, Vector{Int64}}, (IHaveAName)\n observedcases:  [0.0 \
     0.0; 0.0 0.0; 0.0 0.0; 0.0 0.0]\n interventions:  [0.0 0.0; 0.0 0.0; 0.0 0.0]\n \
     Ns:             [0, 0]\n exptdseedcases: [0.5 0.5; 0.0 0.0; 0.0 0.0; 0.0 0.0; 0.0 0.0; \
     0.0 0.0; 0.0 0.0]"
-unnzoutput = "RenewalDiDData{Float64, Matrix{Float64}}, \
+unnzoutput = "RenewalDiDData{Float64, Matrix{Float64}, Nothing}, \
     (InfinitePopulation)\n observedcases:  [0.0 0.0; 0.0 0.0; 0.0 0.0; 0.0 \
     0.0]\n interventions:  [0.0 0.0; 0.0 0.0; 0.0 0.0]\n Ns:             \
     unlimited\n exptdseedcases: [0.5 0.5; 0.0 0.0; 0.0 0.0; 0.0 0.0; 0.0 0.0; 0.0 0.0; 0.0 0.0]"

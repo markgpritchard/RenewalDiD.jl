@@ -184,62 +184,75 @@ julia> samplerenewaldidinfections(g_seir, df, data, 1; mu=0.2, kappa=0.5)
  2.85361   16.5956    0.125572
 ```
 """
-function samplerenewaldidinfections(g, args...; kwargs...)
-    return samplerenewaldidinfections(g, default_rng(), args...; kwargs...)
-end
-
 function samplerenewaldidinfections(
-    g, rng::AbstractRNG, df::Tuple{DataFrame, <:Chains}, args...; 
+    model, fittedparameters, indexes=automatic; 
     kwargs...
 )
-    return samplerenewaldidinfections(g, rng, df[1], args...; kwargs...)
+    return samplerenewaldidinfections(
+        default_rng(), model, fittedparameters, indexes; 
+        kwargs...
+    )
 end
 
 function samplerenewaldidinfections(
-    g, rng::AbstractRNG, df::DataFrame, data, indexes=axes(df, 1); 
-    repeatsamples=nothing, kwargs...
+    rng::AbstractRNG, 
+    model, 
+    fittedparameters::Tuple{DataFrame, <:Chains}, 
+    indexes=automatic; 
+    kwargs...
 )
-    return _samplerenewaldidinfections(g, rng, df, data, indexes, repeatsamples; kwargs...)
+    return samplerenewaldidinfections(rng, model, fittedparameters[1], indexes; kwargs...)
 end
 
-function samplerenewaldidinfections(::Any, ::AbstractRNG, args...; kwargs...)
-    throw(ArgumentError("to do"))
+function samplerenewaldidinfections(
+    rng::AbstractRNG, model, fittedparameters::Chains, indexes=automatic; 
+    kwargs...
+)
+    return samplerenewaldidinfections(
+        rng, model, DataFrame(fittedparameters), indexes; 
+        kwargs...
+    )
+end
+
+function samplerenewaldidinfections(
+    rng::AbstractRNG, model, fittedparameters::DataFrame, indexes=automatic; 
+    repeatsamples=nothing, kwargs...
+)
+    return _samplerenewaldidinfections(
+        rng, model, fittedparameters, indexes, repeatsamples; 
+        kwargs...
+    )
+end
+
+function samplerenewaldidinfections(
+    ::AbstractRNG, ::Any, fittedparameters, x=nothing; 
+    kwargs...
+) 
+    throw(_dftypeerror(fittedparameters))
     return nothing
 end
 
-function _samplerenewaldidinfections(g, rng, df, data, indexes, repeatsamples; kwargs...)
+function _samplerenewaldidinfections(
+    rng, model, fittedparameters, ::Automatic, repeatsamples; 
+    kwargs...
+) 
     return _samplerenewaldidinfections(
-        generationtime, rng, df, data, indexes, repeatsamples; 
-        func=g,  # `generationtime` accepts function or vector from the keyword `func`
+        rng, model, fittedparameters, axes(fittedparameters, 1), repeatsamples; 
         kwargs...
     )
 end
 
 function _samplerenewaldidinfections(
-    g::_Useablegenerationfunctions, rng, df, data, indexes, repeatsamples; 
+    rng, model, fittedparameters, indexes, repeatsamples; 
     kwargs...
 )
-    ngroups = _ngroups(data.interventions)
-    ntimes = _ntimes(data.interventions)
-    ninterventions = _ninterventions(data.interventions)
-    n_seeds = size(data.exptdseedcases, 1)
-    Ns = data.Ns  
+    model.f == _renewaldid || throw(ArgumentError("to do"))
+    ngroups = _ngroups(model.args.interventions)
+    ntimes = _ntimes(model.args.interventions)
     R0s = _samplerenewaldidinitialoutput(ntimes - 1, ngroups, indexes, repeatsamples)
     output = _samplerenewaldidinitialoutput(ntimes, ngroups, indexes, repeatsamples)
     _samplerenewaldidinfections!(
-        g, 
-        rng, 
-        output, 
-        R0s, 
-        df, 
-        data, 
-        indexes, 
-        ngroups, 
-        ntimes, 
-        ninterventions, 
-        repeatsamples, 
-        n_seeds, 
-        Ns; 
+        rng, output, R0s, model, fittedparameters, indexes, repeatsamples; 
         kwargs...
     )
     return SampledOutput(output, R0s)
@@ -266,36 +279,18 @@ function _samplerenewaldidinitialoutput(
 end
 
 function _samplerenewaldidinfections!(
-    g, 
-    rng,
-    output, 
-    R0s,
-    df, 
-    data, 
-    indexes::AbstractVector{<:Integer}, 
-    ngroups, 
-    ntimes, 
-    ninterventions, 
-    ::Nothing,
-    n_seeds, 
-    Ns; 
+    rng, output, R0s, model, fittedparameters, indexes::AbstractVector{<:Integer}, ::Nothing; 
     kwargs...
 )
-    for (r, j) in enumerate(indexes)
+    for (r, i) in enumerate(indexes)
         _samplerenewaldidinfections!(
-            g, 
             rng, 
             (@view output[:, :, r]), 
             (@view R0s[:, :, r]), 
-            df, 
-            data, 
-            j, 
-            ngroups, 
-            ntimes, 
-            ninterventions, 
-            nothing,
-            n_seeds,
-            Ns; 
+            model, 
+            fittedparameters, 
+            i, 
+            nothing; 
             kwargs...
         )
     end
@@ -303,38 +298,26 @@ function _samplerenewaldidinfections!(
 end
 
 function _samplerenewaldidinfections!(
-    g, 
     rng,
     output, 
     R0s,
-    df, 
-    data, 
+    model, 
+    fittedparameters, 
     indexes::AbstractVector{<:Integer}, 
-    ngroups, 
-    ntimes, 
-    ninterventions, 
-    repeatsamples::Number,
-    n_seeds, 
-    Ns; 
+    repeatsamples::Number; 
     kwargs...
 )
     r = 1
-    for j in indexes
+    for i in indexes
         for _ in 1:repeatsamples 
             _samplerenewaldidinfections!(
-                g, 
                 rng, 
                 (@view output[:, :, r]), 
                 (@view R0s[:, :, r]), 
-                df, 
-                data, 
-                j, 
-                ngroups, 
-                ntimes, 
-                ninterventions, 
-                nothing,
-                n_seeds,
-                Ns; 
+                model, 
+                fittedparameters, 
+                i, 
+                nothing; 
                 kwargs...
             )
             r += 1
@@ -344,36 +327,18 @@ function _samplerenewaldidinfections!(
 end
 
 function _samplerenewaldidinfections!(
-    g, 
-    rng,
-    output, 
-    R0s,
-    df, 
-    data, 
-    i::Integer, 
-    ngroups, 
-    ntimes, 
-    ninterventions, 
-    repeatsamples::Number,
-    n_seeds, 
-    Ns; 
+    rng, output, R0s, model, fittedparameters, i::Integer, repeatsamples::Number; 
     kwargs...
 )
     for r in 1:repeatsamples 
         _samplerenewaldidinfections!(
-            g, 
             rng, 
             (@view output[:, :, r]), 
             (@view R0s[:, :, r]), 
-            df, 
-            data, 
+            model, 
+            fittedparameters, 
             i, 
-            ngroups, 
-            ntimes, 
-            ninterventions, 
-            nothing,
-            n_seeds,
-            Ns; 
+            nothing; 
             kwargs...
         )
     end
@@ -381,36 +346,37 @@ function _samplerenewaldidinfections!(
 end
 
 function _samplerenewaldidinfections!(
-    g, 
-    rng,
-    output, 
-    R0s,
-    df, 
-    data, 
-    i::Integer, 
-    ngroups, 
-    ntimes, 
-    ninterventions, 
-    ::Nothing,
-    n_seeds, 
-    Ns; 
+    rng, output, R0s, model, fittedparameters, i::Integer, ::Nothing; 
     kwargs...
 )
-    _samplerenewaldidinfectionsassertions(df, data.exptdseedcases, i, ngroups, ntimes)
-    alpha = df.alpha[i]
-    gammavec = _gammavec(df, i, ngroups)
-    thetavec = _thetavec(df, i, ntimes)
-    tau = _tauvec(df, i, ninterventions)
-    psi = df.psi[i]
-    M_x = _mxmatrix(df, i, ngroups, ntimes, n_seeds)
-    R0s .= _predictedlogR_0(alpha, gammavec, thetavec, tau, data.interventions)
-    T = Complex{typeof(R0s[1, 1])}
-    predictedinfections = _infectionsmatrix(T, R0s, n_seeds)
-    _infections!(
-        g, predictedinfections, M_x, R0s, data.exptdseedcases, Ns, n_seeds; 
-        kwargs...
+    ngroups = _ngroups(model.args.interventions)
+    ntimes = _ntimes(model.args.interventions)
+    _samplerenewaldidinfectionsassertions(
+        fittedparameters, model.args.expectedseedcases, i, ngroups, ntimes
     )
-    np = real.(predictedinfections[n_seeds:n_seeds+ntimes, :]) .* psi
+    alpha = fittedparameters.alpha[i]
+    gammavec = _gammavec(fittedparameters, i, ngroups)
+    thetavec = _thetavec(fittedparameters, i, ntimes)
+    tau = _tauvec(fittedparameters, i, _ninterventions(model.args.interventions))
+    psi = fittedparameters.psi[i]
+    M_x = _mxmatrix(fittedparameters, i, ngroups, ntimes, model.args.n_seeds)
+    R0s .= _predictedlogR_0(alpha, gammavec, thetavec, tau, model.args.interventions)
+    T = Complex{typeof(R0s[1, 1])}
+    predictedinfections = _infectionsmatrix(T, R0s, model.args.n_seeds)
+    _infections!(
+        model.args.g, 
+        predictedinfections, 
+        M_x, 
+        R0s, 
+        model.args.expectedseedcases, 
+        model.args.Ns, 
+        model.args.n_seeds; 
+        model.defaults...
+    )
+    delayedinfections = _delayedinfections(
+        T, predictedinfections, model.args.delaydistn, ngroups, ntimes, model.args.n_seeds
+    )
+    np = real.(delayedinfections[model.args.n_seeds:(model.args.n_seeds + ntimes), :]) .* psi
     isnan(maximum(np)) && return _halt_samplerenewaldidinfections(i)  # exit early 
     output .= _predictobservedinfections(rng, np, psi)
     return nothing
@@ -516,13 +482,6 @@ function quantilerenewaldidinfections(SO::SampledOutput, q; mutewarnings=nothing
         quantilerenewaldidinfections(SO.R0s, q; mutewarnings)
     )
 end
-
-#=
-function quantilerenewaldidinfections(nt::NamedTuple, q; mutewarnings=nothing)
-    result = [quantilerenewaldidinfections(v, q; mutewarnings) for v in values(nt)]
-    return NamedTuple{keys(nt)}((result..., ))
-end
-=#
 
 function quantilerenewaldidinfections(A::AbstractArray, q; mutewarnings=nothing)
     _quantilerenewaldidinfectionswarningset(A, q, mutewarnings)
@@ -675,6 +634,11 @@ end
 function _dfMxdimensiontoolargererror()
     m = "`df` must not contain values M_x for times beyond `_ntimes(seedmatrix) + ntimes`"
     return DimensionMismatch(m)
+end
+
+function _dftypeerror(::T) where T 
+    m = "`fittedparameters` must be a `DataFrame`, `Chains` or `Tuple{DataFrame, <:Chains}`"
+    return ArgumentError("fittedparameters::$T: " * m)
 end
 
 _rankvaluechainerror() = ErrorException("all chains must have an equal length")

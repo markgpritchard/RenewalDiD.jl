@@ -82,6 +82,18 @@ model2 = renewaldid(
     mu=0.2, kappa=0.5,               
 )
 
+model3 = renewaldid(                      
+    sim, 
+    g_seir, 
+    RenewalDiDPriors( ; 
+        alphaprior=Normal(log(2.5), 1), 
+        sigma_thetaprior=Exponential(0.075), 
+        psiprior=Beta(6, 4),
+        delaydistn=Exponential(1 / 0.3),
+    );                          
+    mu=0.2, kappa=0.5,               
+)
+
 @testset "any `NaN` gradients in model 1?" begin
     # this test seems dependent on the rng supplied -- would be good to clarify why and make
     # more robust
@@ -94,6 +106,13 @@ end
 @testset "any `NaN` gradients in model 2?" begin
     adtype = AutoReverseDiff()
     result = run_ad(model2, adtype; test=false, verbose=false,);
+    @test sum(isnan.(result.grad_actual)) == 0
+    @test isnothing(findfirst(isnan, result.grad_actual))
+end
+
+@testset "any `NaN` gradients in model 3?" begin
+    adtype = AutoReverseDiff()
+    result = run_ad(model3, adtype; rng=Xoshiro(2000), test=false, verbose=false,);
     @test sum(isnan.(result.grad_actual)) == 0
     @test isnothing(findfirst(isnan, result.grad_actual))
 end

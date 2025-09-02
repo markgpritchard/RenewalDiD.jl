@@ -1,7 +1,8 @@
 # test functions for processing output of fitted parameters
 
 using RenewalDiD
-using RenewalDiD.FittedParameterTestFunctions
+using RenewalDiD.FittedParameterTestFunctions: testdataframe, testsimulation
+using RenewalDiD.FittedParameterTestFunctions: tupleforsamplerenewaldidinfections as tfsr
 using StableRNGs
 using Test
 using Turing
@@ -249,28 +250,28 @@ data3mb = RenewalDiDData( ;
     interventions=zeros(2, 2), 
     exptdseedcases=[0  0; 1  1],
 )
-s1 = samplerenewaldidinfections(zeros(2), df1, data1, 2).output
-s2 = samplerenewaldidinfections(zeros(2), df2, data2, 2).output
-s3 = samplerenewaldidinfections([0, 1], df3, data3, 1).output
-s4 = samplerenewaldidinfections([0, 1], df4, data3, 1).output
-s5 = samplerenewaldidinfections([0, 1], df5, data3, 1).output
-s6 = samplerenewaldidinfections([0, 1], df6, data3, 1).output
-s7 = samplerenewaldidinfections([0, 1], df7, data3, 1).output
-s8 = samplerenewaldidinfections(zeros(2), df8, data8).output
-s9 = samplerenewaldidinfections(zeros(2), df9, data8).output
-s10 = samplerenewaldidinfections(zeros(2), df10, data10).output
-s3ma = samplerenewaldidinfections(zeros(2), df3, data3ma).output
-s3mb = samplerenewaldidinfections([0, 1], df3, data3mb).output
-s3mc = samplerenewaldidinfections([0, 1], df3, data3mb, 4:6).output
-s1r1 = samplerenewaldidinfections(zeros(2), df1, data1, 2; repeatsamples=2).output
-s1r2 = samplerenewaldidinfections(zeros(2), df1, data1, 2; repeatsamples=5).output
-s2r1 = samplerenewaldidinfections(zeros(2), df2, data2, 2; repeatsamples=2).output
-s2r2 = samplerenewaldidinfections(zeros(2), df2, data2, 2; repeatsamples=10).output
-s3r = samplerenewaldidinfections([0, 1], df3, data3, 1; repeatsamples=4).output
-s8r = samplerenewaldidinfections(zeros(2), df8, data8; repeatsamples=3).output
-s3mar = samplerenewaldidinfections(zeros(2), df3, data3ma; repeatsamples=3).output
-s3mbr = samplerenewaldidinfections([0, 1], df3, data3mb).output
-s3mcr = samplerenewaldidinfections([0, 1], df3, data3mb, 4:6).output
+s1 = samplerenewaldidinfections(tfsr(data1; vec=zeros(2)), df1, 2).output
+s2 = samplerenewaldidinfections(tfsr(data2; vec=zeros(2)), df2, 2).output
+s3 = samplerenewaldidinfections(tfsr(data3; vec=[0, 1]), df3, 1).output
+s4 = samplerenewaldidinfections(tfsr(data3; vec=[0, 1]), df4, 1).output
+s5 = samplerenewaldidinfections(tfsr(data3; vec=[0, 1]), df5, 1).output
+s6 = samplerenewaldidinfections(tfsr(data3; vec=[0, 1]), df6, 1).output
+s7 = samplerenewaldidinfections(tfsr(data3; vec=[0, 1]), df7, 1).output
+s8 = samplerenewaldidinfections(tfsr(data8; vec=zeros(2)), df8).output
+s9 = samplerenewaldidinfections(tfsr(data8; vec=zeros(2)), df9).output
+s10 = samplerenewaldidinfections(tfsr(data10; vec=zeros(2)), df10).output
+s3ma = samplerenewaldidinfections(tfsr(data3ma; vec=zeros(2)), df3).output
+s3mb = samplerenewaldidinfections(tfsr(data3mb; vec=[0, 1]), df3).output
+s3mc = samplerenewaldidinfections(tfsr(data3mb; vec=[0, 1]), df3, 4:6).output
+s1r1 = samplerenewaldidinfections(tfsr(data1; vec=zeros(2)), df1, 2; repeatsamples=2).output
+s1r2 = samplerenewaldidinfections(tfsr(data1; vec=zeros(2)), df1, 2; repeatsamples=5).output
+s2r1 = samplerenewaldidinfections(tfsr(data2; vec=zeros(2)), df2, 2; repeatsamples=2).output
+s2r2 = samplerenewaldidinfections(tfsr(data2; vec=zeros(2)), df2, 2; repeatsamples=10).output
+s3r = samplerenewaldidinfections(tfsr(data3; vec=[0, 1]), df3, 1; repeatsamples=4).output
+s8r = samplerenewaldidinfections(tfsr(data8; vec=zeros(2)), df8; repeatsamples=3).output
+s3mar = samplerenewaldidinfections(tfsr(data3ma; vec=zeros(2)), df3; repeatsamples=3).output
+s3mbr = samplerenewaldidinfections(tfsr(data3mb; vec=[0, 1]), df3).output
+s3mcr = samplerenewaldidinfections(tfsr(data3mb; vec=[0, 1]), df3, 4:6).output
 
 rv16a = let
     _rvs = rankvalues(rankvaluedf16, :tau)
@@ -372,18 +373,18 @@ end
         Ns=(100 .* ones(3)), 
         exptdseedcases=zeros(7, 3),
     )
-    @test_throws DimensionMismatch samplerenewaldidinfections(zeros(2), df1, data13, 2) 
+    @test_throws DimensionMismatch samplerenewaldidinfections(tfsr(data13; vec=zeros(2)), df1, 2) 
     data14 = RenewalDiDData( ; 
         observedcases=zeros(12, 3), 
         interventions=zeros(11, 3), 
         Ns=(100 .* ones(3)), 
         exptdseedcases=zeros(7, 3),
     )
-    @test_throws DimensionMismatch samplerenewaldidinfections(zeros(2), df1, data14, 2) 
-    @test_throws BoundsError samplerenewaldidinfections(zeros(2), df1, data1, 3) 
-    @test_throws MethodError samplerenewaldidinfections([0, 1], df3, data3, 4.0:6)
-    @test_throws MethodError samplerenewaldidinfections([0, 1], df3, data3, 4:0.5:6)
-    @test_throws BoundsError samplerenewaldidinfections([0, 1], df3, data3, 4:16)  # df3 is 10 rows long
+    @test_throws DimensionMismatch samplerenewaldidinfections(tfsr(data14; vec=zeros(2)), df1, 2) 
+    @test_throws BoundsError samplerenewaldidinfections(tfsr(data1; vec=zeros(2)), df1, 3) 
+    @test_throws MethodError samplerenewaldidinfections(tfsr(data3; vec=[0, 1]), df3, 4.0:6)
+    @test_throws MethodError samplerenewaldidinfections(tfsr(data3; vec=[0, 1]), df3, 4:0.5:6)
+    @test_throws BoundsError samplerenewaldidinfections(tfsr(data3; vec=[0, 1]), df3, 4:16)  # df3 is 10 rows long
     @test_throws DimensionMismatch RenewalDiDData( ; 
         observedcases=zeros(11, 3), 
         interventions=zeros(10, 3), 
@@ -396,14 +397,14 @@ end
         Ns=(100 .* ones(3)), 
         exptdseedcases=zeros(8, 3),
     ) 
-    @test_throws DimensionMismatch samplerenewaldidinfections(zeros(2), df1, data16) 
+    @test_throws DimensionMismatch samplerenewaldidinfections(tfsr(data16; vec=zeros(2)), df1) 
     data17 = RenewalDiDData( ; 
         observedcases=zeros(11, 3), 
         interventions=zeros(10, 3), 
         Ns=(100 .* ones(3)), 
         exptdseedcases=zeros(6, 3),
     ) 
-    @test_throws DimensionMismatch samplerenewaldidinfections(zeros(2), df1, data17) 
+    @test_throws DimensionMismatch samplerenewaldidinfections(tfsr(data17; vec=zeros(2)), df1) 
     @test_throws DimensionMismatch RenewalDiDData( ; 
         observedcases=zeros(11, 2), 
         interventions=zeros(10, 2), 
@@ -422,14 +423,14 @@ end
         Ns=(100 .* ones(3)), 
         exptdseedcases=zeros(7, 3),
     ) 
-    @test_throws DimensionMismatch samplerenewaldidinfections(zeros(2), df1, data18) 
+    @test_throws DimensionMismatch samplerenewaldidinfections(tfsr(data18; vec=zeros(2)), df1) 
     data19 = RenewalDiDData( ; 
         observedcases=zeros(12, 3), 
         interventions=zeros(11, 3), 
         Ns=(100 .* ones(3)), 
         exptdseedcases=zeros(7, 3),
     ) 
-    @test_throws DimensionMismatch samplerenewaldidinfections(zeros(2), df1, data19) 
+    @test_throws DimensionMismatch samplerenewaldidinfections(tfsr(data19; vec=zeros(2)), df1) 
 end
 
 @testset "quantiles of a single sample return a warning and the input" begin
@@ -509,7 +510,7 @@ end
 end
 
 @testset "repeat samples" begin
-    @test samplerenewaldidinfections(zeros(2), df1, data1, 2; repeatsamples=nothing).output == s1
+    @test samplerenewaldidinfections(tfsr(data1; vec=zeros(2)), df1, 2; repeatsamples=nothing).output == s1
     @testset for i in eachindex(s1r1)
         @test s1r1[i] ≈ 0 atol=1e-3 
     end

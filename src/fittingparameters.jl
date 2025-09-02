@@ -465,18 +465,10 @@ end
         kwargs...
     )
 
-    # equal delay assumed for all cases 
-    delayedinfections = zeros(T, n_seeds + ntimes, ngroups)
-
-    for t in 1:(n_seeds + ntimes) 
-        for j in 1:ngroups
-            newvalue = zero(T) 
-            for x in 1:t 
-                newvalue += _delayedinfections(predictedinfections, delaydistn, x, t, j)
-            end
-            delayedinfections[t, j] += newvalue 
-        end
-    end
+    # delay between infection and detection
+    delayedinfections = _delayedinfections(
+        T, predictedinfections, delaydistn, ngroups, ntimes, n_seeds
+    )
 
     # Normal approximation of Binomial to avoid forcing integer values 
     np = real.(delayedinfections[n_seeds:n_seeds+ntimes, :]) .* psi
@@ -490,13 +482,35 @@ end
     return nothing
 end
 
-function _delayedinfections(
-    predictedinfections::AbstractArray{T}, delaydistn, x, t, j
+function _delayedinfections(T, predictedinfections, delaydistn, ngroups, ntimes, n_seeds)
+    delayedinfections = zeros(T, n_seeds + ntimes, ngroups)
+    _delayedinfections!(
+        delayedinfections, predictedinfections, delaydistn, ngroups, ntimes, n_seeds
+    )
+    return delayedinfections
+end
+
+function _delayedinfections!(
+    delayedinfections::Matrix{T}, predictedinfections, delaydistn, ngroups, ntimes, n_seeds
 ) where T
-    if isnan(cdf(delaydistn, t + 1 - x)) || isnan(cdf(delaydistn, t - x))
-        return zero(T)
+    for t in 1:(n_seeds + ntimes) 
+        for j in 1:ngroups
+            newvalue = zero(T) 
+            for x in 1:t 
+                newvalue += __delayedinfections(predictedinfections, delaydistn, x, t, j)
+            end
+            delayedinfections[t, j] += newvalue 
+        end
     end
-    return predictedinfections[x, j] * (cdf(delaydistn, t + 1 - x) - cdf(delaydistn, t - x))
+    return nothing
+end
+
+function __delayedinfections(predictedinfections, distribution, x, t, j) 
+    return predictedinfections[x, j] * _dailyproportiondetected(t - x; distribution)
+end
+
+function _dailyproportiondetected(t::Integer; distribution)
+    return cdf(distribution, t) - cdf(distribution, t - 1)
 end
 
 

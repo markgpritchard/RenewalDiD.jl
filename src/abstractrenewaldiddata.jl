@@ -210,13 +210,13 @@ function _showabstractrenewaldiddata(io, d)
     return nothing
 end
 
-function _showtitle(io, d::RenewalDiDData{S, T}) where {S, T}
-    print(io, "RenewalDiDData{$S, $T}$(_printid(d))")
+function _showtitle(io, d::RenewalDiDData{S, T, U}) where {S, T, U}
+    print(io, "RenewalDiDData{$S, $T, $U}$(_printid(d))")
     return nothing
 end
 
-function _showtitle(io, d::SimulationData{S, T}) where {S, T}
-    print(io, "SimulationData{$S, $T}$(_printid(d))")
+function _showtitle(io, d::SimulationData{S, T, U}) where {S, T, U}
+    print(io, "SimulationData{$S, $T, $U}$(_printid(d))")
     return nothing
 end
 

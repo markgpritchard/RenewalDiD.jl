@@ -6,9 +6,12 @@ module FittedParameterTestFunctions
 
 using DataFrames: DataFrame, insertcols!
 using Random: AbstractRNG, default_rng
-using RenewalDiD: Automatic, automatic, packsimulations, packsimulationtuple, simulationu0
+using RenewalDiD: Automatic
+using RenewalDiD: _renewaldid, automatic, generationtime, packsimulations, 
+    packsimulationtuple, simulationu0
+using Turing: Normal
 
-export testdataframe, testsimulation
+export testdataframe, testsimulation, tupleforsamplerenewaldidinfections
 
 function testdataframe(
     rng::AbstractRNG=default_rng(); 
@@ -182,5 +185,28 @@ end
 _beta1(t) = 0.3 + 0.1 * cos((t - 20) * 2pi / 365)
 _beta2(t) = _beta1(t) * t < 4 ? 1.1 : 0.88
 _beta3(t) = _beta1(t) * t < 6 ? 0.9 : 0.72
+
+function tupleforsamplerenewaldidinfections(data; vec=nothing, kwargs...)
+    return _tupleforsamplerenewaldidinfections(data, vec; kwargs...)
+end
+
+function _tupleforsamplerenewaldidinfections(
+    data, vec::AbstractVector; 
+    delaydistn=Normal(0,0), 
+)
+    return (
+        args=(
+            observedcases=data.observedcases,
+            interventions=data.interventions,
+            expectedseedcases=data.exptdseedcases,
+            Ns=data.Ns,
+            g=generationtime,
+            delaydistn=delaydistn,
+            n_seeds=size(data.exptdseedcases, 1),
+        ),
+        f=_renewaldid,
+        defaults=(vec=vec, ),
+    )
+end
 
 end  # module FittedParameterTestFunctions
