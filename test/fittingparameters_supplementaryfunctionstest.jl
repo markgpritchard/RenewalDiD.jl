@@ -7,8 +7,8 @@ using StatsBase: mean, var
 using Turing: Normal
 
 M1 = InterventionMatrix(4, [2, 3, nothing]) 
-M2 = InterventionMatrix(5, [nothing, nothing]; mutewarnings=true) 
-A1 = InterventionArray(4, [2, 3, nothing], [nothing, nothing, nothing])
+M2 = InterventionMatrix(5, Vector{Nothing}(nothing, 2); mutewarnings=true) 
+A1 = InterventionArray(4, [2, 3, nothing], Vector{Nothing}(nothing, 3))
 A2 = InterventionArray(5, [2, 3], [4, nothing])
 A3 = InterventionArray(4, [2, 3, nothing], [3, nothing, nothing])
 
@@ -17,6 +17,7 @@ obs2 = (_obs = zeros(Int, 20, 2); _obs[1, 1] += 1; _obs[1:5, :] .+= 1; _obs)
 
 seedinfections1 = [1  0; 2  1]
 M_x1 = [2  0; -0.5  1; 1  0.5; -2  1; 0  1]
+
 calcseedinfections1 = let  # note, Ns not yet used  
     infectionsmatrix = zeros(2, 2)
     RenewalDiD._infections_seed!(infectionsmatrix, zeros(5, 2), zeros(2, 2), nothing, 2)
@@ -343,6 +344,14 @@ end
     @test RenewalDiD._predictedlogR_0(1, [-1, 0, 1], [-1, 0.5, 2.5, 0], [-1, 0], A3) == R0prediction3
     @test RenewalDiD._predictedlogR_0(1, [-1, 0, 1], [-1, 0.5, 2.5, 0], [-1, -1], A3) != R0prediction3
     @test RenewalDiD._predictedlogR_0(0, zeros(2), zeros(5), [2, 2], A2) == R0prediction4
+end
+
+@testset "seed infections returned by `_infections_seed" begin
+    @test RenewalDiD._infections_seed!(zeros(2, 2), zeros(5, 2), zeros(2, 2), nothing, 2) == 
+        calcseedinfections1
+    @test RenewalDiD._infections_seed!(
+        zeros(ComplexF64, 2, 2), M_x1, seedinfections1, [50, 100], 2
+    ) == calcseedinfections10
 end
 
 @testset "expected seed cases" begin

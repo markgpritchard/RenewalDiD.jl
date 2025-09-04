@@ -315,14 +315,14 @@ function _infections_seed!(infn, M_x, exptdseedcases, Ns, n_seeds; kwargs...)
             infn[t, j] += ((prevsus - real(infn[t, j])) / Ns[j])im
         end
     end
-    return nothing
+    return infn
 end
 
 function __infections_seed!(infn, M_x, exptdseedcases, n_seeds; kwargs...)
     for j in 1:_ngroups(M_x), t in 1:n_seeds
         infn[t, j] = _approxcases(exptdseedcases[t, j], M_x[t, j])
     end 
-    return nothing
+    return infn
 end
 
 function _infections_transmitted!(g, infn, M_x, logR_0, ::Nothing, n_seeds; kwargs...) 
