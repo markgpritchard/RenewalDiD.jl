@@ -173,42 +173,19 @@ seedexpectation5 = [
     (log(4 / 3) - log(2) / 5)  (log(4 / 3) - log(2) / 5)
 ]
 seedexpectation6 = [0  0; 0  0; 0  0; 0  0; (log(6 / 5) - log(2) / 5)  0]
-mseedexpectation01 = (m = zeros(7, 2); m[1, :] .+= 1; m)
-mseedexpectation02 = (m = zeros(5, 2); m[1, :] .+= 2; m)
-mseedexpectation03 = (m = zeros(5, 3); m[1, :] .+= 0.5; m)
-mseedexpectation1 = [
-    (0.5 - (log(6 / 5) - log(2) / 5))  (0.5 - (log(6 / 5) - log(2) / 5));
-    0  0; 
-    0  0; 
-    0  0; 
-    (log(6 / 5) - log(2) / 5)  (log(6 / 5) - log(2) / 5)
-]
-mseedexpectation2 = [
-    (0.5 - (log(6 / 5) - log(2) / 5))  (0.5 - (log(6 / 5) - log(2) / 5));
-    0  0; 
-    0  0; 
-    0  0; 
-    (log(6 / 5) - log(2) / 5)  (log(6 / 5) - log(2) / 5)
-]
+mseedexpectation01 = (m = zeros(7, 2); m[7, :] .+= 1; m)
+mseedexpectation02 = (m = zeros(5, 2); m[5, :] .+= 2; m)
+mseedexpectation03 = (m = zeros(5, 3); m[5, :] .+= 0.5; m)
+mseedexpectation1 = [0  0; 0  0; 0  0; 0  0; 0.5  0.5]
+mseedexpectation2 = mseedexpectation1
 mseedexpectation3 = seedexpectation3
-mseedexpectation4 = [
-    (1 - (log(6 / 5) - log(2) / 5))  (1 - (log(6 / 5) - log(2) / 5));
-    0  0; 
-    0  0; 
-    0  0; 
-    (log(6 / 5) - log(2) / 5)  (log(6 / 5) - log(2) / 5)
-]
+mseedexpectation4 = [0  0; 0  0; 0  0; 0  0; 1  1]
 mseedexpectation5 = (
     r4 = log(4 / 3) - 2 * log(2) / 5;
-    r5 = log(4 / 3) - log(2) / 5; 
-    r1 = 0.5 - r4 - r5;
-    [r1  r1; 0  0; 0  0; r4  r4; r5  r5]
+    r5 = 0.5 - r4;
+    [0  0; 0  0; 0  0; r4  r4; r5  r5]
 ) 
-mseedexpectation6 = (
-    r1a = 0.75 - (log(6 / 5) - log(2) / 5);
-    r5a = log(6 / 5) - log(2) / 5;
-    [r1a  0.75; 0  0; 0  0; 0  0; r5a  0]
-) 
+mseedexpectation6 = [0  0; 0  0; 0  0; 0  0; 0.75  0.75]
 predictedinfections3 = [1  0; 2  1; 0  0; 0  0; 0  0]
 predictedinfections4 = [1  0; 2  1; 3  1.5; 4.5  2.25; 6.75  3.375]
 predictedinfections5 = [3  0; 1  2; 2  3; 0  6; 0  12]
@@ -260,15 +237,15 @@ namedzerostructunlimitied = RenewalDiDData( ;
 
 nzoutput = "RenewalDiDData{Float64, Matrix{Float64}, Vector{Int64}}\n observedcases:  [0.0 0.0; 0.0 0.0; \
     0.0 0.0; 0.0 0.0]\n interventions:  [0.0 0.0; 0.0 0.0; 0.0 0.0]\n Ns:             \
-    [0, 0]\n exptdseedcases: [0.5 0.5; 0.0 0.0; 0.0 0.0; 0.0 0.0; 0.0 0.0; 0.0 0.0; 0.0 0.0]"
+    [0, 0]\n exptdseedcases: [0.0 0.0; 0.0 0.0; 0.0 0.0; 0.0 0.0; 0.0 0.0; 0.0 0.0; 0.5 0.5]"
 nnzoutput = "RenewalDiDData{Float64, Matrix{Float64}, Vector{Int64}}, (IHaveAName)\n observedcases:  [0.0 \
     0.0; 0.0 0.0; 0.0 0.0; 0.0 0.0]\n interventions:  [0.0 0.0; 0.0 0.0; 0.0 0.0]\n \
-    Ns:             [0, 0]\n exptdseedcases: [0.5 0.5; 0.0 0.0; 0.0 0.0; 0.0 0.0; 0.0 0.0; \
-    0.0 0.0; 0.0 0.0]"
+    Ns:             [0, 0]\n exptdseedcases: [0.0 0.0; 0.0 0.0; 0.0 0.0; 0.0 0.0; 0.0 0.0; \
+    0.0 0.0; 0.5 0.5]"
 unnzoutput = "RenewalDiDData{Float64, Matrix{Float64}, Nothing}, \
     (InfinitePopulation)\n observedcases:  [0.0 0.0; 0.0 0.0; 0.0 0.0; 0.0 \
     0.0]\n interventions:  [0.0 0.0; 0.0 0.0; 0.0 0.0]\n Ns:             \
-    unlimited\n exptdseedcases: [0.5 0.5; 0.0 0.0; 0.0 0.0; 0.0 0.0; 0.0 0.0; 0.0 0.0; 0.0 0.0]"
+    unlimited\n exptdseedcases: [0.0 0.0; 0.0 0.0; 0.0 0.0; 0.0 0.0; 0.0 0.0; 0.0 0.0; 0.5 0.5]"
 
 @testset "data struct" begin
     @test (@inferred RenewalDiDData( ; 

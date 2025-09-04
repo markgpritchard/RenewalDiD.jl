@@ -48,11 +48,6 @@ export samplerenewaldidinfections
 struct Automatic end  # not exported
 const automatic = Automatic()  # not exported
 
-# allow default values to be equal across multiple functions. In final version likely to 
-# replace these constants with the values directly in the functions. 
-const DEFAULT_SEEDMATRIX_HEIGHT = 7  # not exported 
-const DEFAULT_SEEDMATRIX_MINVALUE = 0.5  # not exported
-
 include("interventionarrays.jl")
 include("generationinterval.jl")
 include("abstractrenewaldiddata.jl")

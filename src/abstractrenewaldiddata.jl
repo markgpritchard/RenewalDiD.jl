@@ -106,16 +106,10 @@ function RenewalDiDData( ;
     interventions, 
     Ns=nothing,
     exptdseedcases=nothing,
-    n_seeds=DEFAULT_SEEDMATRIX_HEIGHT, 
-    doubletime=automatic, 
-    sampletime=automatic, 
-    minvalue=DEFAULT_SEEDMATRIX_MINVALUE,
     id="",
+    kwargs...  # remaining keyword arguments are passed to `expectedseedcases`
 )
-    newexptdseedcases = _expectedseedcasesifneeded(
-        exptdseedcases, observedcases, n_seeds; 
-        doubletime, sampletime, minvalue
-    )
+    newexptdseedcases = _expectedseedcasesifneeded(exptdseedcases, observedcases; kwargs...)
     return RenewalDiDData(observedcases, interventions, Ns, newexptdseedcases, id)
 end
 
@@ -180,16 +174,10 @@ function SimulationData( ;
     rng, 
     u0s, 
     exptdseedcases=nothing,
-    n_seeds=DEFAULT_SEEDMATRIX_HEIGHT, 
-    doubletime=automatic, 
-    sampletime=automatic, 
-    minvalue=DEFAULT_SEEDMATRIX_MINVALUE,
     id="",
+    kwargs...  # remaining keyword arguments are passed to `expectedseedcases`
 )
-    newexptdseedcases = _expectedseedcasesifneeded(
-        exptdseedcases, observedcases, n_seeds; 
-        doubletime, sampletime, minvalue
-    )
+    newexptdseedcases = _expectedseedcasesifneeded(exptdseedcases, observedcases; kwargs...)
     return SimulationData(observedcases, interventions, Ns, newexptdseedcases, rng, u0s, id)
 end
 

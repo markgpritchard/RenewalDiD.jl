@@ -157,8 +157,8 @@ julia> expectedseedcases(observedcases, 3; minvalue=10)
 ```
 """
 function expectedseedcases(
-    observedcases, n_seeds=DEFAULT_SEEDMATRIX_HEIGHT; 
-    doubletime=automatic, sampletime=automatic, minvalue=DEFAULT_SEEDMATRIX_MINVALUE,
+    observedcases, n_seeds=7; 
+    doubletime=automatic, sampletime=automatic, minvalue=0.5,
 )
     return _expectedseedcases(observedcases, n_seeds, doubletime, sampletime, minvalue)
 end
@@ -174,7 +174,7 @@ end
 function __expectedseedcases(observedcases, n_seeds, doubletime, sampletime, minvalue)
     exptdseedcases = zeros(n_seeds, _ngroups(observedcases))
     _expectedseedcases!(exptdseedcases, observedcases, n_seeds, doubletime, sampletime)
-    _expectedseedcasesminimum!(exptdseedcases, observedcases, minvalue)
+    _expectedseedcasesminimum!(exptdseedcases, observedcases, minvalue, n_seeds)
     return exptdseedcases
 end
 
@@ -199,18 +199,27 @@ function _expectedseedcasessampletime(::Automatic, observedcases, n_seeds)
     return min(n_seeds, _ntimes(observedcases))
 end
 
-function _expectedseedcasesminimum!(exptdseedcases, observedcases, minvalue)
+function _expectedseedcasesminimum!(exptdseedcases, observedcases, minvalue, n_seeds)
     for g in 1:_ngroups(observedcases)
-        sum(exptdseedcases[:, g]) >= minvalue && continue 
-        exptdseedcases[1, g] += minvalue - sum(exptdseedcases[:, g])
+        c = sum(@view exptdseedcases[:, g])
+        c >= minvalue && continue 
+        exptdseedcases[n_seeds, g] += minvalue - c
     end
     return nothing
 end
 
-_expectedseedcasesminimum!(::Any, ::Any, ::Nothing) = nothing
-_expectedseedcasesifneeded(exptdseedcases::Matrix, ::Any, ::Any; kwargs...) = exptdseedcases
+_expectedseedcasesminimum!(::Any, ::Any, ::Nothing, ::Any) = nothing
+_expectedseedcasesifneeded(exptdseedcases::Matrix, ::Any; kwargs...) = exptdseedcases
 
-function _expectedseedcasesifneeded(::Nothing, observedcases, n_seeds; kwargs...)
+function _expectedseedcasesifneeded(::Nothing, observedcases; n_seeds=automatic, kwargs...)
+    return __expectedseedcasesifneeded(observedcases, n_seeds; kwargs...)
+end
+
+function __expectedseedcasesifneeded(observedcases, ::Automatic; kwargs...)
+    return expectedseedcases(observedcases; kwargs...)
+end
+
+function __expectedseedcasesifneeded(observedcases, n_seeds; kwargs...)
     return expectedseedcases(observedcases, n_seeds; kwargs...)
 end
 
