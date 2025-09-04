@@ -193,6 +193,9 @@ function SimulationData( ;
     return SimulationData(observedcases, interventions, Ns, newexptdseedcases, rng, u0s, id)
 end
 
+
+# Functions ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 function Base.show(io::IO, ::MIME"text/plain", d::AbstractRenewalDiDData)
     return _showabstractrenewaldiddata(io, d)
 end
@@ -200,13 +203,13 @@ end
 function _showabstractrenewaldiddata(io, d)
     _showtitle(io, d)
     print(io, "\n observedcases:  ")
-    show(io, d.observedcases)
+    show(io, _observedcases(d))
     print(io, "\n interventions:  ")
-    show(io, d.interventions)
+    show(io, _interventions(d))
     print(io, "\n Ns:             ")
     _showns(io, d)
     print(io, "\n exptdseedcases: ")
-    show(io, d.exptdseedcases)
+    show(io, _expectedseedcases(d))
     return nothing
 end
 
@@ -220,6 +223,18 @@ function _showtitle(io, d::SimulationData{S, T, U}) where {S, T, U}
     return nothing
 end
 
-_printid(d) = d.id == "" ? "" : ", ($(d.id))"
-_showns(io, d::AbstractRenewalDiDData{<:Any, <:Any, Vector{Int}}) = show(io, d.Ns)
+_printid(d) = _id(d) == "" ? "" : ", ($(_id(d)))"
+_showns(io, d::AbstractRenewalDiDData{<:Any, <:Any, Vector{Int}}) = show(io, _ns(d))
 _showns(io, ::AbstractRenewalDiDData{<:Any, <:Any, Nothing}) = print(io, "unlimited")
+
+## extract values from structs 
+
+_expectedseedcases(d::AbstractRenewalDiDData) = d.exptdseedcases 
+_id(d::AbstractRenewalDiDData) = d.id
+_interventions(d::AbstractRenewalDiDData) = d.interventions 
+_ngroups(d::AbstractRenewalDiDData) = _ngroups(_interventions(d))
+_ninterventions(d::AbstractRenewalDiDData) = _ninterventions(_interventions(d))
+_ns(d::AbstractRenewalDiDData) = d.Ns 
+_nseeds(d::AbstractRenewalDiDData) = size(_expectedseedcases(d), 1)
+_ntimes(d::AbstractRenewalDiDData) = _ntimes(_interventions(d))
+_observedcases(d::AbstractRenewalDiDData) = d.observedcases 

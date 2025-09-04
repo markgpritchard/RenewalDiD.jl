@@ -1,17 +1,6 @@
-# functions that are used when testing the package `RenewalDiD`.
+# functions that are used when testing the package `RenewalDiD`
 
-# Nothing from this module is exported by the package.
-
-module FittedParameterTestFunctions
-
-using DataFrames: DataFrame, insertcols!
-using Random: AbstractRNG, default_rng
-using RenewalDiD: Automatic
-using RenewalDiD: _renewaldid, automatic, generationtime, packsimulations, 
-    packsimulationtuple, simulationu0
-using Turing: Normal
-
-export testdataframe, testsimulation, tupleforsamplerenewaldidinfections
+# nothing from this file is exported
 
 function testdataframe(
     rng::AbstractRNG=default_rng(); 
@@ -171,42 +160,37 @@ function testsimulation(rng::AbstractRNG=default_rng())
     psi = 0.6
     kappa = 0.5
     s1 = packsimulationtuple( ; 
-        u0=u0_1, beta=_beta1, mu, delta, psi, kappa, intervention=nothing,
+        u0=u0_1, beta=_testsimulationbeta1, mu, delta, psi, kappa, intervention=nothing,
     )
     s2 = packsimulationtuple( ; 
-        u0=u0_2, beta=_beta2, mu, delta, psi, kappa, intervention=4,
+        u0=u0_2, beta=_testsimulationbeta2, mu, delta, psi, kappa, intervention=4,
     )
     s3 = packsimulationtuple( ; 
-        u0=u0_3, beta=_beta3, mu, delta, psi, kappa, intervention=6,
+        u0=u0_3, beta=_testsimulationbeta3, mu, delta, psi, kappa, intervention=6,
     )
     return packsimulations(rng, 10, s1, s2, s3)
 end
 
-_beta1(t) = 0.3 + 0.1 * cos((t - 20) * 2pi / 365)
-_beta2(t) = _beta1(t) * t < 4 ? 1.1 : 0.88
-_beta3(t) = _beta1(t) * t < 6 ? 0.9 : 0.72
+_testsimulationbeta1(t) = 0.3 + 0.1 * cos((t - 20) * 2pi / 365)
+_testsimulationbeta2(t) = _testsimulationbeta1(t) * t < 4 ? 1.1 : 0.88
+_testsimulationbeta3(t) = _testsimulationbeta1(t) * t < 6 ? 0.9 : 0.72
 
 function tupleforsamplerenewaldidinfections(data; vec=nothing, kwargs...)
     return _tupleforsamplerenewaldidinfections(data, vec; kwargs...)
 end
 
-function _tupleforsamplerenewaldidinfections(
-    data, vec::AbstractVector; 
-    delaydistn=Normal(0,0), 
-)
-    return (
-        args=(
-            observedcases=data.observedcases,
-            interventions=data.interventions,
-            expectedseedcases=data.exptdseedcases,
-            Ns=data.Ns,
+function _tupleforsamplerenewaldidinfections(d, vec::AbstractVector; delaydistn=Normal(0, 0))
+    return Model(
+        _renewaldid,
+        (
+            observedcases=_observedcases(d),
+            interventions=_interventions(d),
+            expectedseedcases=_expectedseedcases(d),
+            Ns=_ns(d),
             g=generationtime,
             delaydistn=delaydistn,
-            n_seeds=size(data.exptdseedcases, 1),
+            n_seeds=_nseeds(d),
         ),
-        f=_renewaldid,
-        defaults=(vec=vec, ),
+        (vec=vec, ),
     )
 end
-
-end  # module FittedParameterTestFunctions

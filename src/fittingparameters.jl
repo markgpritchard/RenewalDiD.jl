@@ -406,12 +406,11 @@ function renewaldid(
     W <: Real, 
     X <: Distribution, 
 }
-    n_seeds = size(data.exptdseedcases, 1)
     return _renewaldid(
-        data.observedcases,
-        data.interventions,
-        data.exptdseedcases,
-        data.Ns,
+        _observedcases(data),
+        _interventions(data),
+        _expectedseedcases(data),
+        _ns(data),
         g,    
         priors.alphaprior,
         priors.psiprior,
@@ -419,7 +418,7 @@ function renewaldid(
         priors.sigma_thetaprior,
         priors.tauprior,
         priors.delaydistn,
-        n_seeds,
+        _nseeds(data),
         priors.omegaprior;
         kwargs...
     )

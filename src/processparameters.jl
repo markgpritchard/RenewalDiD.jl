@@ -1,5 +1,7 @@
 # run simulation with fitted parameters 
 
+# structs and types ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
 @auto_hash_equals struct SampledOutput{T, N} 
     output::Array{T, N}
     R0s::Array{T, N}
@@ -8,6 +10,20 @@
         return new{T, N}(output, R0s)
     end
 end
+
+const RenewalDiDModel = Model{typeof(_renewaldid)}
+
+_defaults(m::RenewalDiDModel) = m.defaults
+_delaydistn(m::RenewalDiDModel) = m.args.delaydistn
+_expectedseedcases(m::RenewalDiDModel) = m.args.expectedseedcases 
+_generationtimefunction(m::RenewalDiDModel) = m.args.g
+_interventions(m::RenewalDiDModel) = m.args.interventions 
+_ngroups(m::RenewalDiDModel) = _ngroups(_interventions(m))
+_ninterventions(m::RenewalDiDModel) = _ninterventions(_interventions(m))
+_ns(m::RenewalDiDModel) = m.args.Ns 
+_nseeds(m::RenewalDiDModel) = m.args.n_seeds
+_ntimes(m::RenewalDiDModel) = _ntimes(_interventions(m))
+
 
 # Functions ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
@@ -185,7 +201,7 @@ julia> samplerenewaldidinfections(g_seir, df, data, 1; mu=0.2, kappa=0.5)
 ```
 """
 function samplerenewaldidinfections(
-    model, fittedparameters, indexes=automatic; 
+    model::RenewalDiDModel, fittedparameters, indexes=automatic; 
     kwargs...
 )
     return samplerenewaldidinfections(
@@ -196,7 +212,7 @@ end
 
 function samplerenewaldidinfections(
     rng::AbstractRNG, 
-    model, 
+    model::RenewalDiDModel, 
     fittedparameters::Tuple{DataFrame, <:Chains}, 
     indexes=automatic; 
     kwargs...
@@ -205,7 +221,7 @@ function samplerenewaldidinfections(
 end
 
 function samplerenewaldidinfections(
-    rng::AbstractRNG, model, fittedparameters::Chains, indexes=automatic; 
+    rng::AbstractRNG, model::RenewalDiDModel, fittedparameters::Chains, indexes=automatic; 
     kwargs...
 )
     return samplerenewaldidinfections(
@@ -215,7 +231,7 @@ function samplerenewaldidinfections(
 end
 
 function samplerenewaldidinfections(
-    rng::AbstractRNG, model, fittedparameters::DataFrame, indexes=automatic; 
+    rng::AbstractRNG, model::RenewalDiDModel, fittedparameters::DataFrame, indexes=automatic; 
     repeatsamples=nothing, kwargs...
 )
     return _samplerenewaldidinfections(
@@ -225,7 +241,7 @@ function samplerenewaldidinfections(
 end
 
 function samplerenewaldidinfections(
-    ::AbstractRNG, ::Any, fittedparameters, x=nothing; 
+    ::AbstractRNG, ::RenewalDiDModel, fittedparameters, x=nothing; 
     kwargs...
 ) 
     throw(_dftypeerror(fittedparameters))
@@ -246,9 +262,8 @@ function _samplerenewaldidinfections(
     rng, model, fittedparameters, indexes, repeatsamples; 
     kwargs...
 )
-    model.f == _renewaldid || throw(ArgumentError("to do"))
-    ngroups = _ngroups(model.args.interventions)
-    ntimes = _ntimes(model.args.interventions)
+    ngroups = _ngroups(model)
+    ntimes = _ntimes(model)
     R0s = _samplerenewaldidinitialoutput(ntimes - 1, ngroups, indexes, repeatsamples)
     output = _samplerenewaldidinitialoutput(ntimes, ngroups, indexes, repeatsamples)
     _samplerenewaldidinfections!(
@@ -345,38 +360,40 @@ function _samplerenewaldidinfections!(
     return nothing
 end
 
+
+
 function _samplerenewaldidinfections!(
     rng, output, R0s, model, fittedparameters, i::Integer, ::Nothing; 
     kwargs...
 )
-    ngroups = _ngroups(model.args.interventions)
-    ntimes = _ntimes(model.args.interventions)
+    ngroups = _ngroups(model)
+    ntimes = _ntimes(model)
     _samplerenewaldidinfectionsassertions(
-        fittedparameters, model.args.expectedseedcases, i, ngroups, ntimes
+        fittedparameters, _expectedseedcases(model), i, ngroups, ntimes
     )
     alpha = fittedparameters.alpha[i]
     gammavec = _gammavec(fittedparameters, i, ngroups)
     thetavec = _thetavec(fittedparameters, i, ntimes)
-    tau = _tauvec(fittedparameters, i, _ninterventions(model.args.interventions))
+    tau = _tauvec(fittedparameters, i, _ninterventions(model))
     psi = fittedparameters.psi[i]
-    M_x = _mxmatrix(fittedparameters, i, ngroups, ntimes, model.args.n_seeds)
-    R0s .= _predictedlogR_0(alpha, gammavec, thetavec, tau, model.args.interventions)
+    M_x = _mxmatrix(fittedparameters, i, ngroups, ntimes, _nseeds(model))
+    R0s .= _predictedlogR_0(alpha, gammavec, thetavec, tau, _interventions(model))
     T = Complex{typeof(R0s[1, 1])}
-    predictedinfections = _infectionsmatrix(T, R0s, model.args.n_seeds)
+    predictedinfections = _infectionsmatrix(T, R0s, _nseeds(model))
     _infections!(
-        model.args.g, 
+        _generationtimefunction(model), 
         predictedinfections, 
         M_x, 
         R0s, 
-        model.args.expectedseedcases, 
-        model.args.Ns, 
-        model.args.n_seeds; 
-        model.defaults...
+        _expectedseedcases(model), 
+        _ns(model), 
+        _nseeds(model); 
+        _defaults(model)...
     )
     delayedinfections = _delayedinfections(
-        T, predictedinfections, model.args.delaydistn, ngroups, ntimes, model.args.n_seeds
+        T, predictedinfections, _delaydistn(model), ngroups, ntimes, _nseeds(model)
     )
-    np = real.(delayedinfections[model.args.n_seeds:(model.args.n_seeds + ntimes), :]) .* psi
+    np = real.(delayedinfections[_nseeds(model):(_nseeds(model) + ntimes), :]) .* psi
     isnan(maximum(np)) && return _halt_samplerenewaldidinfections(i)  # exit early 
     output .= _predictobservedinfections(rng, np, psi)
     return nothing

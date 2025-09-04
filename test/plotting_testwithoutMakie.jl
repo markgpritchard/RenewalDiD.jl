@@ -2,7 +2,7 @@
 
 using DataFrames
 using RenewalDiD
-using RenewalDiD.FittedParameterTestFunctions
+using RenewalDiD: testdataframe
 using RenewalDiD.Plotting
 using Test
 

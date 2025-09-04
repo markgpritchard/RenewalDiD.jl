@@ -34,7 +34,8 @@ export nunique
 export quantilerenewaldidinfections
 export rankvalues
 export samplerenewaldidinfections
-
+# functionsfortests.jl
+@compat public testdataframe, testsimulation, tupleforsamplerenewaldidinfections
 # Plotting.jl 
 @compat public plotmodel, plotmodel!
 @compat public plotmodeldata, plotmodeldata!
@@ -58,10 +59,10 @@ include("abstractrenewaldiddata.jl")
 include("simulations.jl")
 include("fittingparameters.jl")
 include("processparameters.jl")
+include("functionsfortests.jl")
 
 # submodules
 include("plotting/Plotting.jl")
-include("fittedparametertestfunctions/FittedParameterTestFunctions.jl")
 
 const RENEWALDIDPLOTTINGFUNCTIONSLIST = [
     plotmodel, 

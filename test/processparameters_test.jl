@@ -1,8 +1,8 @@
 # test functions for processing output of fitted parameters
 
 using RenewalDiD
-using RenewalDiD.FittedParameterTestFunctions: testdataframe, testsimulation
-using RenewalDiD.FittedParameterTestFunctions: tupleforsamplerenewaldidinfections as tfsr
+using RenewalDiD: testdataframe, testsimulation
+using RenewalDiD: tupleforsamplerenewaldidinfections as tfsr
 using StableRNGs
 using Test
 using Turing

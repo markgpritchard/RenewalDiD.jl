@@ -95,6 +95,7 @@ model3 = renewaldid(
 )
 
 @testset "any `NaN` gradients in model 1?" begin
+    @info "model 1"
     # this test seems dependent on the rng supplied -- would be good to clarify why and make
     # more robust
     adtype = AutoReverseDiff()
@@ -104,6 +105,7 @@ model3 = renewaldid(
 end
 
 @testset "any `NaN` gradients in model 2?" begin
+    @info "model 2"
     adtype = AutoReverseDiff()
     result = run_ad(model2, adtype; test=false, verbose=false,);
     @test sum(isnan.(result.grad_actual)) == 0
@@ -111,6 +113,7 @@ end
 end
 
 @testset "any `NaN` gradients in model 3?" begin
+    @info "model 3"
     adtype = AutoReverseDiff()
     result = run_ad(model3, adtype; rng=Xoshiro(2000), test=false, verbose=false,);
     @test sum(isnan.(result.grad_actual)) == 0
@@ -118,7 +121,9 @@ end
 end
 
 @testset "mode estimate" begin
+    @info "mode estimate model 1"
     map_estimate1 = maximum_likelihood(model1; adtype=AutoReverseDiff(), maxtime=30)
+    @info "mode estimate model 2"
     map_estimate2 = maximum_likelihood(model2; adtype=AutoReverseDiff(), maxtime=30)
     map_df1 = map_DataFrame(map_estimate1)
     map_df2 = map_DataFrame(map_estimate2)
