@@ -1,15 +1,22 @@
 module RenewalDiD
 
+import PrettyTables  # can remove this once support for version 2 no longer needed
+
 using AutoHashEquals: @auto_hash_equals
 using Compat: @compat
 using DataFrames: DataFrame, insertcols!
 using DynamicPPL: @addlogprob!, @model, Model
-using PrettyTables: pretty_table
 using Random: AbstractRNG, default_rng
 using StatsBase: Weights, coef, coefnames, mean, ordinalrank, quantile, sample
 using Turing: Beta, Chains, Distribution, Exponential, LogNormal, Normal
 using Turing: arraydist, cdf, filldist, product_distribution, truncated
 using Turing.Optimisation: ModeResult
+
+@static if pkgversion(PrettyTables).major == 2
+    using PrettyTables: pretty_table
+else 
+    using PrettyTables: @text__no_horizontal_lines, TextTableFormat, pretty_table
+end
 
 # re-export from `DataFrames`
 export DataFrame
