@@ -486,7 +486,7 @@ end
         return nothing  # exit the model evaluation early
     end
 
-    observedcases ~ arraydist(Normal.(np, sqrt.(np .* (1 - psi))))
+    observedcases ~ arraydist(Normal.(np, sqrt.(np .* (1 - psi) .+ 1)))
     return nothing
 end
 
