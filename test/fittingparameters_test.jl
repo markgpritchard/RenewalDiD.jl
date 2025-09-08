@@ -128,8 +128,8 @@ end
 end
 
 @testset "mode estimate" begin
-    map_estimate1 = maximum_likelihood(model1; adtype=AutoReverseDiff(), maxtime=30)
-    map_estimate2 = maximum_likelihood(model2; adtype=AutoReverseDiff(), maxtime=30)
+    map_estimate1 = maximum_a_posteriori(model1; adtype=AutoReverseDiff(), maxtime=30)
+    map_estimate2 = maximum_a_posteriori(model2; adtype=AutoReverseDiff(), maxtime=30)
     map_df1 = map_DataFrame(map_estimate1)
     map_df2 = map_DataFrame(map_estimate2)
     @test map_df1 isa DataFrame
