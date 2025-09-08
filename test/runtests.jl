@@ -9,6 +9,10 @@ using Test
        # include("documenterdoctest.jl")
         @warn "not currently testing documenterdoctest.jl"
     end
+    @testset "Aqua tests" begin
+        @info "Aqua tests"
+        include("aquatests.jl")
+    end
     @testset "test functions for tests" begin
         include("functionsfortests_test.jl")
     end

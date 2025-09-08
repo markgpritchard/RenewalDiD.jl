@@ -1,5 +1,8 @@
 # test functions for processing output of fitted parameters
 
+# `minsigma2 = 0` for all tests - may wish to revisit these tests, or even how `minsigma2` 
+# is used
+
 using RenewalDiD
 using RenewalDiD: testdataframe, testsimulation
 using RenewalDiD: tupleforsamplerenewaldidinfections as tfsr
@@ -100,6 +103,7 @@ df1 = testdataframe( ;
     alpha=[0, rand()], 
     sigma_gamma=[0, rand()], 
     sigma_theta=[0, rand()], 
+    minsigma2=zeros(2),
 )
 df2 = testdataframe( ; 
     nchains=4, 
@@ -107,6 +111,7 @@ df2 = testdataframe( ;
     ngroups=4, 
     ntimes=12, 
     nseeds=7,
+    minsigma2=zeros(800),
 )
 df3 = testdataframe( ;
     nchains=1,
@@ -119,6 +124,7 @@ df3 = testdataframe( ;
     psi=ones(10),
     thetadefault=zeros(10), 
     mxdefault=zeros(10),
+    minsigma2=zeros(10),
 )
 df4 = testdataframe( ;
     nchains=1,
@@ -131,6 +137,7 @@ df4 = testdataframe( ;
     psi=ones(1),
     thetadefault=zeros(1), 
     mxdefault=zeros(1),
+    minsigma2=zeros(1),
 )
 df5 = let 
     kw = (Symbol("gammas_raw[1]") => [log(2)], )
@@ -146,6 +153,7 @@ df5 = let
         psi=ones(1),
         thetadefault=zeros(1), 
         mxdefault=zeros(1),
+        minsigma2=zeros(1),
         kw...
     )
 end
@@ -163,6 +171,7 @@ df6 = let
         psi=ones(1),
         thetadefault=zeros(1), 
         mxdefault=zeros(1),
+        minsigma2=zeros(1),
         kw...
     )
 end
@@ -179,6 +188,7 @@ df7 = let
         gammadefault=zeros(1), 
         thetadefault=zeros(1), 
         mxdefault=(-1.5 .* ones(1)),
+        minsigma2=zeros(1),
         kw...
     )
 end
@@ -192,6 +202,7 @@ df8 = testdataframe( ;
     gammadefault=zeros(16), 
     thetadefault=zeros(16), 
     mxdefault=zeros(16),
+    minsigma2=zeros(16),
 )
 df9 = testdataframe( ;
     nchains=3,
@@ -203,6 +214,7 @@ df9 = testdataframe( ;
     gammadefault=zeros(24), 
     thetadefault=zeros(24), 
     mxdefault=zeros(24),
+    minsigma2=zeros(24),
 )
 df10 = testdataframe( ;
     nchains=2,
@@ -214,6 +226,7 @@ df10 = testdataframe( ;
     gammadefault=zeros(16), 
     thetadefault=zeros(16), 
     mxdefault=zeros(16),
+    minsigma2=zeros(16),
 )
 data1 = RenewalDiDData( ; 
     observedcases=zeros(11, 3), 

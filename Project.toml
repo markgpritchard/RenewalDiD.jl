@@ -1,7 +1,7 @@
 name = "RenewalDiD"
 uuid = "168ba0f3-27c8-4f61-a62a-678154ba4d3f"
 authors = ["Mark Pritchard <mark.pritchard@ndm.ox.ac.uk>"]
-version = "0.0.1-DEV19"
+version = "0.0.1-DEV20"
 
 [deps]
 AutoHashEquals = "15f4f7f2-30c1-5605-9d31-71845cf9641f"
@@ -20,18 +20,25 @@ Makie = "ee78f7c6-11fb-53f2-987a-cfe4a2b5a57a"
 RenewalDiDMakieExt = "Makie"
 
 [compat]
+Aqua = "0.8"
 AutoHashEquals = "2"
+CairoMakie = "0.11, 0.12, 0.13, 0.14, 0.15"
 Compat = "3.47, 4.10"
 DataFrames = "1"
+Documenter = "1"
 DynamicPPL = "0.37"
 Makie = "0.20, 0.21, 0.22, 0.23, 0.24"
 PrettyTables = "2, 3"
 Random = "1"
+ReverseDiff = "1"
+StableRNGs = "1"
 StatsBase = "0.33, 0.34"
+Test = "1"
 Turing = "0.40"
 julia = "1.10"
 
 [extras]
+Aqua = "4c88cf16-eb10-579e-8560-4a9242c79595"
 CairoMakie = "13f3f980-e62b-5c42-98c6-ff1f3baf88f0"
 Documenter = "e30172f5-a6a5-5a46-863b-614d45cd2de4"
 ReverseDiff = "37e2e3b7-166d-5795-8a7a-e32c996b4267"
@@ -39,4 +46,4 @@ StableRNGs = "860ef19b-820b-49d6-a774-d7a799459cd3"
 Test = "8dfed614-e22c-5e08-85e1-65c5234f0b40"
 
 [targets]
-test = ["Test", "CairoMakie", "Documenter", "ReverseDiff", "StableRNGs"]
+test = ["Test", "Aqua", "CairoMakie", "Documenter", "ReverseDiff", "StableRNGs"]
