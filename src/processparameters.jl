@@ -376,6 +376,7 @@ function _samplerenewaldidinfections!(
     thetavec = _thetavec(fittedparameters, i, ntimes)
     tau = _tauvec(fittedparameters, i, _ninterventions(model))
     psi = fittedparameters.psi[i]
+    minsigma2 = fittedparameters.minsigma2[i]
     M_x = _mxmatrix(fittedparameters, i, ngroups, ntimes, _nseeds(model))
     R0s .= _predictedlogR_0(alpha, gammavec, thetavec, tau, _interventions(model))
     T = Complex{typeof(R0s[1, 1])}
@@ -395,19 +396,19 @@ function _samplerenewaldidinfections!(
     )
     np = real.(delayedinfections[_nseeds(model):(_nseeds(model) + ntimes), :]) .* psi
     isnan(maximum(np)) && return _halt_samplerenewaldidinfections(i)  # exit early 
-    output .= _predictobservedinfections(rng, np, psi)
+    output .= _predictobservedinfections(rng, np, psi, minsigma2)
     return nothing
 end
 
-function _predictobservedinfections(rng, np::AbstractMatrix, psi)
+function _predictobservedinfections(rng, np::AbstractMatrix, psi, minsigma2)
     return [
-        __predictobservedinfections(rng, np[t, g], psi) 
+        __predictobservedinfections(rng, np[t, g], psi, minsigma2) 
         for t in axes(np, 1), g in axes(np, 2)
     ]
 end
 
-function __predictobservedinfections(rng, np::Number, psi)
-    v = rand(rng, Normal(np, sqrt(np * (1 - psi))))
+function __predictobservedinfections(rng, np::Number, psi, minsigma2)
+    v = rand(rng, Normal(np, sqrt(np * (1 - psi) + minsigma2)))
     v > 0 || return zero(v)
     return v
 end
@@ -535,7 +536,8 @@ _interventionstarttimes(M::AbstractMatrix, i) = findfirst(x -> x == 1, M[:, i])
 
 ## DataFrame of mode estimates
 
-function map_DataFrame(result::ModeResult)
+#function map_DataFrame(result::ModeResult)
+function map_DataFrame(result)
     df = DataFrame()
     for (n, v) in zip(coefnames(result), coef(result))
         insertcols!(df, n => v)

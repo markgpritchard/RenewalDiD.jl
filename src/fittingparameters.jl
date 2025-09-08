@@ -461,6 +461,7 @@ end
     sigma_theta ~ sigma_thetaprior
     psi ~ psiprior
     M_x ~ filldist(Normal(0, 1), ntimes + n_seeds, ngroups)
+    minsigma2 ~ Beta(1, 2)
 
     gammavec = _gammavec(gammas_raw, sigma_gamma)
     thetavec = _thetavec(thetas_raw, sigma_theta)
@@ -486,7 +487,7 @@ end
         return nothing  # exit the model evaluation early
     end
 
-    observedcases ~ arraydist(Normal.(np, sqrt.(np .* (1 - psi) .+ 1)))
+    observedcases ~ arraydist(Normal.(np, sqrt.(np .* (1 - psi) .+ minsigma2)))
     return nothing
 end
 

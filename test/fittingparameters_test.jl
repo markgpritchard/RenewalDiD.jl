@@ -96,7 +96,7 @@ model3 = renewaldid(
 
 @testset "sufficient non-`NaN` log likelihoods from prior" begin
     # test would have been failed by previous version of function `_renewaldid`
-    ps = [sample(rng, m, Prior(), 1000) for m in [model1, model2, model3]]
+    ps = [sample(rng, m, Prior(), 1000; progress=false) for m in [model1, model2, model3]]
     ds = DataFrame.(ps)
     for d in ds 
         nonnanloglikelihood = [isnan(x) ? 0 : 1 for x in d.loglikelihood]
