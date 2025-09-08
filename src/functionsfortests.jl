@@ -45,6 +45,7 @@ function testdataframe(
     _addtotestdataframe!(df, :sigma_theta, kwargs, rand(rng, nrows))
     _addtotestdataframe!(df, :psi, kwargs, rand(rng, nrows))
     _addmxtotestdataframe!(rng, df, ngroups, ntimes, nseeds, nrows, kwargs, mxdefault)
+    _addtotestdataframe!(df, :minsigma2, kwargs, rand(rng, Beta(1, 2), nrows))
     _addtotestdataframe!(df, :fittingsigma, kwargs, -100 .* rand(rng, nrows))
     _addpredobsinfsigmatotestdataframe!(
         rng, df, ngroups, ntimes, nrows, kwargs, predictiondefault
