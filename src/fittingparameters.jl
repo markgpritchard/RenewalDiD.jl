@@ -245,18 +245,12 @@ function __expectedinfections(g, propsus, logR_0, hx; kwargs...)
     return sum(exp(logR_0) .* propsus .* [hx[x] * g(t - x; kwargs...) for x in eachindex(hx)])
 end
 
-function _approxcasescalc(x, sigma)
-    if x < 0  # should never be the case
-        return __approxcasescalc(zero(x), sigma)
-    else
-        return __approxcasescalc(x, sigma)
-    end
-end
-
+_approxcasescalc(x, sigma) = __approxcasescalc(max(zero(x), x), sigma)  # should never x < 0
 __approxcasescalc(x, sigma) = x + sigma * sqrt(x)
-_approxcases(x, sigma) = __approxcases(_approxcasescalc(x, sigma))
-_approxcases(x, sigma, ceiling) = __approxcases(_approxcasescalc(x, sigma), ceiling)
-__approxcases(x_oneplussigma::T) where T = max(zero(T), x_oneplussigma)
+
+# put a ceiling in all instances to prevent NaN outcomes when parameters generate
+# astronomical numbers of infections
+_approxcases(x, sigma, ceiling=1e12) = __approxcases(_approxcasescalc(x, sigma), ceiling)
 
 function __approxcases(x_oneplussigma::T, ceiling) where T
     return min(max(zero(T), x_oneplussigma), ceiling)
@@ -474,6 +468,11 @@ end
         kwargs...
     )
 
+    if isnan(maximum(real.(predictedinfections)))
+        println("predictedinfections= $predictedinfections")
+
+    end
+
     # delay between infection and detection
     delayedinfections = _delayedinfections(
         T, predictedinfections, delaydistn, ngroups, ntimes, n_seeds
@@ -508,10 +507,9 @@ function _delayedinfections!(
 ) where T
     for t in 1:(n_seeds + ntimes) 
         for j in 1:ngroups
-            newvalue = zero(T) 
-            for x in 1:t 
-                newvalue += __delayedinfections(predictedinfections, delaydistn, x, t, j)
-            end
+            newvalue = sum(
+                [__delayedinfections(predictedinfections, delaydistn, x, t, j) for x in 1:t]
+            )
             delayedinfections[t, j] += newvalue 
         end
     end
