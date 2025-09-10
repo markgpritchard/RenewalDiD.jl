@@ -5,17 +5,20 @@ using Test
 
 @testset "RenewalDiD.jl" begin
     @testset "documentation tests" begin
-        @info "test docstrings"
-       # include("documenterdoctest.jl")
+        #@info "test docstrings"
+        #include("documenterdoctest.jl")
         @warn "not currently testing documenterdoctest.jl"
     end
     @testset "Aqua tests" begin
         @info "Aqua tests"
         include("aquatests.jl")
     end
+    #=
+    # there are no tests in functionsfortests_test.jl
     @testset "test functions for tests" begin
         include("functionsfortests_test.jl")
     end
+    =#
     @testset "intervention vector" begin
         @info "starting intervention vector tests"
         include("interventionvector_test.jl")
@@ -53,7 +56,7 @@ using Test
         include("plotting_testwithoutMakie.jl")
     end
     @testset "example workflow" begin
-        @info "starting example workflow"
+        #@info "starting example workflow"
         #include("exampleworkflow.jl")
         @warn "not currently testing exampleworkflow.jl"
     end
