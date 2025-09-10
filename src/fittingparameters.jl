@@ -250,10 +250,9 @@ __approxcasescalc(x, sigma) = x + sigma * sqrt(x)
 
 # put a ceiling in all instances to prevent NaN outcomes when parameters generate
 # astronomical numbers of infections
-_approxcases(x, sigma, ceiling=1e12) = __approxcases(_approxcasescalc(x, sigma), ceiling)
-
-function __approxcases(x_oneplussigma::T, ceiling) where T
-    return min(max(zero(T), x_oneplussigma), ceiling)
+function _approxcases(x, sigma, ceiling=1e12)
+    calculatedcases = _approxcasescalc(x, sigma)
+    return min(max(zero(calculatedcases), calculatedcases), ceiling)
 end
 
 function _infections(
