@@ -1,7 +1,7 @@
 # data types used by `renewaldid`
 
 """
-    AbstractRenewalDiDData{S, T}
+    AbstractRenewalDiDData{S, T, U}
 
 Abstract type of containers for data passed to `renewaldid`.
 
@@ -13,7 +13,7 @@ Two subtypes are defined:
 abstract type AbstractRenewalDiDData{S, T, U} end
 
 """
-    RenewalDiDData{S, T}
+    RenewalDiDData{S, T, U}
 
 Container for data passed to `renewaldid`.
 
@@ -21,14 +21,17 @@ Container for data passed to `renewaldid`.
 - `observedcases::Matrix{S}`: matrix of observed cases, each group is a separate column
 - `interventions::T`: array of intervention times. Time changes by row, group by column, and
     intervention in dimension 3 (see `InterventionMatrix` and `InterventionArray`) 
-- `Ns::Vector{Int}`: population size of each group
+- `Ns::U`: population size of each group
 - `exptdseedcases::Matrix{Float64}`: matrix of infections up to time `t=0` that seeds
     subsequent infection events
+- `id::String`: dataset identification
 
 # Constructors
 
-    RenewalDiDData(; observedcases, interventions, Ns, exptdseedcases=nothing, <keyword \
-        arguments>)
+    RenewalDiDData(; observedcases, interventions, Ns, exptdseedcases, id, <keyword arguments>)
+)
+
+## Default values 
 
 The constructor takes all arguments as keyword arguments.  
 
@@ -115,6 +118,53 @@ end
 
 ## simulation data
 
+"""
+    SimulationData{S, T, U, V}
+
+Container for data passed to `renewaldid`.
+
+# Fields
+- `observedcases::Matrix{S}`: matrix of observed cases, each group is a separate column
+- `interventions::T`: array of intervention times. Time changes by row, group by column, and
+    intervention in dimension 3 (see `InterventionMatrix` and `InterventionArray`) 
+- `Ns::Vector{Int}`: population size of each group
+- `exptdseedcases::Matrix{Float64}`: matrix of infections up to time `t=0` that seeds
+    subsequent infection events
+
+# Constructors
+
+    RenewalDiDData(; observedcases, interventions, Ns, exptdseedcases=nothing, <keyword \
+        arguments>)
+
+The constructor takes all arguments as keyword arguments.  
+
+The matrix `exptdseedcases` may be supplied or one is generated automatically. Remaining 
+    keyword arguments are passed to `expectedseedcases`, with that function taking its 
+    default arguments if not specified.
+
+# Examples
+```jldoctest
+julia> using StableRNGs
+
+julia> rng = StableRNG(10);
+
+julia> observedcases = rand(rng, Poisson(10), 11, 3);  # 3 groups for times 0 to 10
+
+julia> interventions = InterventionMatrix(10, 3, 7, nothing);
+
+julia> Ns = 1000 .* ones(Int, 3);
+
+julia> RenewalDiDData(; observedcases, interventions, Ns)
+RenewalDiDData{Int64, InterventionMatrix{Int64}}
+ observedcases:  [10 8 15; 20 8 11; … ; 10 6 14; 9 9 8]
+ interventions:  [0 0 0; 0 0 0; … ; 1 1 0; 1 1 0] {duration 10, starttimes [3, 7, nothing]}
+ Ns:             [1000, 1000, 1000]
+ exptdseedcases: [1.6236225474260566 1.4880770554298328 1.8607523407150066; \
+    1.7226435732203347 1.587098081224111 1.9597733665092847; … ; 2.1187276763974463 \
+    1.9831821844012225 2.3558574696863963; 2.217748702191724 2.0822032101955004 \
+    2.454878495480674]
+```
+""" 
 @auto_hash_equals struct SimulationData{S, T, U, V} <: AbstractRenewalDiDData{S, T, U}
     observedcases::Matrix{S}
     interventions::T

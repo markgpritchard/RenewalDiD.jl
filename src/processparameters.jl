@@ -2,6 +2,16 @@
 
 # structs and types ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+"""
+    SampledOutput{T, N} 
+
+Contains the number of reported infections and the basic reproduction ratio output from a 
+    model.
+
+# Fields
+- `output::Array{T, N}`: numbers of infections
+- `R0s::Array{T, N}`: time-varying basic reproduction ratio
+"""
 @auto_hash_equals struct SampledOutput{T, N} 
     output::Array{T, N}
     R0s::Array{T, N}

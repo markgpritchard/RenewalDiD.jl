@@ -2,6 +2,7 @@
 
 import ReverseDiff
 
+using DynamicPPL
 using DynamicPPL.TestUtils.AD: run_ad
 using Random
 using RenewalDiD
@@ -134,4 +135,8 @@ end
     map_df2 = map_DataFrame(map_estimate2)
     @test map_df1 isa DataFrame
     @test map_df2 isa DataFrame
+end
+
+@testset "inferred type" begin
+    @test @inferred model1.f(model1.args...) == model1.f(model1.args...)
 end

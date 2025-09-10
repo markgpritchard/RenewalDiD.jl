@@ -282,13 +282,13 @@ function _infectionsmatrix(logR_0, n_seeds)
     return _infectionsmatrix(ComplexF64, logR_0, n_seeds)
 end
 
+function _infectionsmatrix(T::Type{<:Complex}, logR_0, n_seeds)
+    return zeros(T, _ntimes(logR_0) + n_seeds, _ngroups(logR_0))
+end
+
 function _infectionsmatrix(T::DataType, logR_0, n_seeds)
-    if T <: Complex
-        return zeros(T, _ntimes(logR_0) + n_seeds, _ngroups(logR_0))
-    else 
     _realinfectionmatrixwarning(T)
-        return _infectionsmatrix(ComplexF64, logR_0, n_seeds)
-    end
+    return _infectionsmatrix(ComplexF64, logR_0, n_seeds)
 end
 
 function _infections!(g, infn, M_x, logR_0, exptdseedcases, Ns, n_seeds; kwargs...) 
@@ -482,10 +482,14 @@ end
     # Normal approximation of Binomial to avoid forcing integer values 
     np = real.(delayedinfections[n_seeds:n_seeds+ntimes, :]) .* psi
 
+    #= 
+    # this `if` loop is hopefully not needed (keep in case need to return)
     if isnan(maximum(np)) 
+        @inFo "NAN np"
         @addlogprob! -Inf
         return nothing  # exit the model evaluation early
     end
+    =#
 
     observedcases ~ arraydist(Normal.(np, sqrt.(np .* (1 - psi) .+ minsigma2)))
     return nothing
