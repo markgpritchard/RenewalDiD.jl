@@ -1,13 +1,14 @@
 name = "RenewalDiD"
 uuid = "168ba0f3-27c8-4f61-a62a-678154ba4d3f"
 authors = ["Mark Pritchard <mark.pritchard@ndm.ox.ac.uk>"]
-version = "0.0.1-DEV21"
+version = "0.0.1-DEV22"
 
 [deps]
 AutoHashEquals = "15f4f7f2-30c1-5605-9d31-71845cf9641f"
 Compat = "34da2185-b29b-5c13-b0c7-acf172513d20"
 DataFrames = "a93c6f00-e57d-5684-b7b6-d8193f3e46c0"
 DynamicPPL = "366bfd00-2699-11ea-058f-f148b4cae6d8"
+NaNMath = "77ba4419-2d1f-58cd-9bb1-8ffee604a2e3"
 PrettyTables = "08abe8d2-0d0c-5749-adfa-8a2ac140af0d"
 Random = "9a3f8284-a2c9-5f02-9a11-845980a1fd5c"
 StatsBase = "2913bbd2-ae8a-5f71-8c99-4fb6c76f3a91"
@@ -28,6 +29,7 @@ DataFrames = "1"
 Documenter = "1"
 DynamicPPL = "0.37"
 Makie = "0.20, 0.21, 0.22, 0.23, 0.24"
+NaNMath = "1.1"
 PrettyTables = "2, 3"
 Random = "1"
 ReverseDiff = "1"

@@ -1,5 +1,6 @@
 module RenewalDiD
 
+import NaNMath
 import PrettyTables  # can remove this once support for version 2 no longer needed
 
 using AutoHashEquals: @auto_hash_equals

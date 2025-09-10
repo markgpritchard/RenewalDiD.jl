@@ -252,7 +252,8 @@ __approxcasescalc(x, sigma) = x + sigma * sqrt(x)
 # astronomical numbers of infections
 function _approxcases(x, sigma, ceiling=1e12)
     calculatedcases = _approxcasescalc(x, sigma)
-    return min(max(zero(calculatedcases), calculatedcases), ceiling)
+    # if isnan(calculated), return ceiling
+    return NaNMath.min(max(zero(calculatedcases), calculatedcases), ceiling)
 end
 
 function _infections(
@@ -467,10 +468,11 @@ end
         kwargs...
     )
 
+    #=
     if isnan(maximum(real.(predictedinfections)))
         println("predictedinfections= $predictedinfections")
-
     end
+    =#
 
     # delay between infection and detection
     delayedinfections = _delayedinfections(
