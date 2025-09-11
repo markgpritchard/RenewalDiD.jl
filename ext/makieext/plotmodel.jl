@@ -315,7 +315,7 @@ function RenewalDiD.plotmodelR0!(
     kwargs...
 ) 
     axs = _plotmodeloutputaxs(gl, A; kwargs...)
-    plotmodelR0!(axs, A, t; kwargs...)
+    RenewalDiD.plotmodelR0!(axs, A, t; kwargs...)
     linkaxes!(axs...)
     return axs
 end

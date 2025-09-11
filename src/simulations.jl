@@ -39,6 +39,8 @@ positional arguments or keyword arguments. All parameters must be non-negative.
 Returns a matrix of height `duration + 1` giving numbers in each compartment at the end of 
 each day. The first row is the conditions supplied in `u0`.
 
+See `packsimulations` to generate a `SimulationData` struct.
+
 # Examples
 ```jldoctest
 julia> using StableRNGs
@@ -63,8 +65,7 @@ julia> runsimulation(rng, 10, u0; beta=0.6, mu=0.25, delta=0.33, psi=0.5, kappa=
 
 julia> mybetafunc(t) = t <= 5 ? 1 : 0.1;
 
-julia> runsimulation(rng, 10, u0;
-       beta=mybetafunc, mu=0.25, delta=0.33, psi=0.5, kappa=0.4)
+julia> runsimulation(rng, 10, u0; beta=mybetafunc, mu=0.25, delta=0.33, psi=0.5, kappa=0.4)
 11×7 Matrix{Int64}:
  100  5  0  0  0   95  0
   98  5  0  2  0   95  0
@@ -121,6 +122,16 @@ All arguments are optional.
 
 # Examples
 ```jldoctest
+julia> simulationu0()
+7-element Vector{Int64}:
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+ 0
+
 julia> simulationu0(; s=99, e=1)
 7-element Vector{Int64}:
  99
@@ -143,7 +154,7 @@ julia> simulationu0(; s=99, e=1, n=200)
 
 julia> simulationu0(; s=99, e=1, r=100, n=250)
 ERROR: ArgumentError: Inconsistent values of `n` and `r` supplied. Calculated n=200 but \
-keyword argument n=250.
+    keyword argument n=250.
 ```
 """
 function simulationu0( ; 
@@ -336,14 +347,9 @@ julia> using StableRNGs
 
 julia> rng1 = StableRNG(1);
 
-julia> rng2 = StableRNG(1);
-
 julia> u0 = simulationu0(; s=100, e=5, n=200);
 
-julia> runsimulation(rng1, 10, u0;
-       beta=0.6, mu=0.25, delta=0.33, psi=0.5, kappa=0.4);
-
-julia> simulationcases(sim)
+julia> c = simulationcases(rng1, 10, u0; beta=0.6, mu=0.25, delta=0.33, psi=0.5, kappa=0.4)
 11-element Vector{Int64}:
  0
  0
@@ -357,19 +363,12 @@ julia> simulationcases(sim)
  0
  1
 
-julia> simulationcases(rng2, 10, u0; beta=0.6, mu=0.25, delta=0.33, psi=0.5, kappa=0.4)
-11-element Vector{Int64}:
- 0
- 0
- 0
- 0
- 0
- 1
- 0
- 0
- 1
- 0
- 1
+julia> rng2 = StableRNG(1);
+
+julia> sim = runsimulation(rng2, 10, u0; beta=0.6, mu=0.25, delta=0.33, psi=0.5, kappa=0.4);
+
+julia> simulationcases(sim) == c
+true
 ```
 """
 function simulationcases(M::Matrix)
@@ -399,17 +398,16 @@ end
 """
     packsimulations([rng::AbstractRNG], duration, m1_args, args...; <keyword arguments>)
 
-Run a series of simulations and collate results into a `RenewalDiDData` struct to be passed 
-    to `renewaldid`.
+Run simulations and collate results into a `SimulationData` struct.
 
 # Arguments
-
+- `rng::AbstractRNG=Random.default_rng()``: random number generator
 - `duration`: duration of the simulation.
 - `m1_args`: a `Tuple` containing `{u0, beta, mu, delta, psi, kappa, intervention}` in 
-    order for the first group's simulation. The function `packsimulationtuple` can be used 
-    to generate this with keyword arguments
-- `args...`: equivalent Tuples for remaining groups.
-- keyword arguments are passed to `RenewalDiDData`
+    order for the first group's simulation (the function `packsimulationtuple` can be used 
+    to generate this with keyword arguments)
+- `args...`: equivalent Tuples for remaining groups
+- keyword arguments are passed to `SimulationData`
 
 # Examples
 ```jldoctest
@@ -423,27 +421,22 @@ julia> u0_2 = simulationu0(; s=200_000, e=5, i_n=3, i_f=2);
 
 julia> mu = 0.2; delta = 0.3; psi = 0.6; kappa = 0.5;
 
-julia> _beta1counter(t) = 0.4 + 0.1 * cos((t-20) * 2pi / 365);
+julia> beta1counter(t) = 0.4 + 0.1 * cos((t-20) * 2pi / 365);  # intervention-free counterfactual
 
-julia> _beta1(t) = t >= 50 ? 0.8 * _beta1counter(t) : _beta1counter(t);
+julia> beta1(t) = t >= 50 ? 0.8 * beta1counter(t) : beta1counter(t);
 
-julia> _beta2(t) = 0.72 * _beta1counter(t);
+julia> beta2(t) = 0.72 * beta1counter(t);
 
-julia> s1 = packsimulationtuple( ;
-       u0=u0_1, beta=_beta1, mu, delta, psi, kappa, intervention=50,
-       );
+julia> s1 = packsimulationtuple(; u0=u0_1, beta=beta1, mu, delta, psi, kappa, intervention=50);
 
-julia> s2 = packsimulationtuple( ;
-       u0=u0_2, beta=_beta2, mu, delta, psi, kappa, intervention=nothing,
-       );
+julia> s2 = packsimulationtuple(; u0=u0_2, beta=beta2, mu, delta, psi, kappa, intervention=nothing);
 
 julia> packsimulations(rng, 100, s1, s2)
-RenewalDiDData{Int64, InterventionMatrix{Int64}}
+SimulationData{Int64, InterventionMatrix{Int64}, Vector{Int64}}
  observedcases:  [0 0; 0 0; … ; 6 1380; 9 1414]
  interventions:  [0 0; 0 0; … ; 1 0; 1 0] {duration 100, starttimes [50, nothing]}
  Ns:             [100010, 200010]
- exptdseedcases: [0.0 0.46548963316975533; 0.024913053640556182 0.0; … ; \
-    0.4209971568176677 0.0; 0.5200181826119457 0.03451036683024468]
+ exptdseedcases: [0.0 0.0; 0.024913053640556182 0.0; … ; 0.4209971568176677 0.0; 0.5200181826119457 0.5]
 ```
 """
 function packsimulations(args...; kwargs...)
@@ -541,23 +534,16 @@ _simargs(index::Int, args...) = [a[index] for a in args]
 """
     packsimulationtuple(; u0, beta, mu, delta, psi, kappa, intervention)
 
-Return a tuple of arguments to be used with `packsimulations` or 
-    `packsimulationsunlimitedpopulation`.
+Return a tuple of arguments to be used with `packsimulations`.
 
 # Examples
 ```jldoctest
 julia> u0 = simulationu0(; s=100_000, e=5, i_n=3, i_f=2);
 
-julia> mu = 0.2; delta = 0.3; psi = 0.6; kappa = 0.5;
+julia> beta = 0.4; mu = 0.2; delta = 0.3; psi = 0.6; kappa = 0.5;
 
-julia> _beta1counter(t) = 0.4 + 0.1 * cos((t-20) * 2pi / 365);
-
-julia> _beta1(t) = t >= 50 ? 0.8 * _beta1counter(t) : _beta1counter(t);
-
-julia> packsimulationtuple( ;
-       u0, beta=_beta1, mu, delta, psi, kappa, intervention=50,
-       )
-([100000, 5, 3, 2, 0, 0, 0], _beta1, 0.2, 0.3, 0.6, 0.5, 50)
+julia> packsimulationtuple(; u0, beta, mu, delta, psi, kappa, intervention=50)
+([100000, 5, 3, 2, 0, 0, 0], 0.4, 0.2, 0.3, 0.6, 0.5, 50)
 ```
 """
 function packsimulationtuple(; u0, beta, mu, delta, psi, kappa, intervention)

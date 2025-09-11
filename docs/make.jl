@@ -1,4 +1,5 @@
 using Documenter
 using RenewalDiD
 
-makedocs(sitename="RenewalDiD.jl documentation")
+DocMeta.setdocmeta!(RenewalDiD, :DocTestSetup, :(using RenewalDiD, Turing); recursive=true)
+makedocs(sitename="RenewalDiD documentation")

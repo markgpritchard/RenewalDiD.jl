@@ -3,7 +3,6 @@ module RenewalDiD
 import NaNMath
 import PrettyTables  # can remove this once support for version 2 no longer needed
 
-using AutoHashEquals: @auto_hash_equals
 using Compat: @compat
 using DataFrames: DataFrame, insertcols!
 using DynamicPPL: @addlogprob!, @model, Model
@@ -36,14 +35,14 @@ export packsimulations, packsimulationtuple, runsimulation, simulationcases, sim
 # fittingparameters.jl
 export RenewalDiDPriors, expectedseedcases, renewaldid
 # processparameters.jl
-export SampledOutput
+export RenewalDiDModel, SampledOutput
 export map_DataFrame
 export nunique
 export quantilerenewaldidinfections
 export rankvalues
 export samplerenewaldidinfections
 # functionsfortests.jl
-@compat public testdataframe, testsimulation, tupleforsamplerenewaldidinfections
+@compat public testdataframe, testmodel, testsimulation
 # Plotting.jl 
 @compat public plotmodel, plotmodel!
 @compat public plotmodeldata, plotmodeldata!

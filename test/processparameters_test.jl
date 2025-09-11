@@ -5,7 +5,7 @@
 
 using RenewalDiD
 using RenewalDiD: testdataframe, testsimulation
-using RenewalDiD: tupleforsamplerenewaldidinfections as tfsr
+using RenewalDiD: testmodel as tfsr
 using StableRNGs
 using Test
 using Turing
@@ -520,6 +520,15 @@ end
         @test qv[:, :, i] == M
     end
     @test_nowarn quantilerenewaldidinfections(A1, [0.25, 0.5, 0.75])
+    @test quantilerenewaldidinfections(s8, [0.025, 0.05, 0.25, 0.5, 0.75, 0.95, 0.975]) == 
+        quantilerenewaldidinfections(s8)
+    qv2 = quantilerenewaldidinfections(A1)
+    SO = SampledOutput(A1, rand(20, 3, 100))
+    qv3 = quantilerenewaldidinfections(SO)
+    @testset for (i, M) in enumerate([q025, q05, q25, q5, q75, q95, q975])
+        @test qv2[:, :, i] == M
+        @test qv3.output[:, :, i] == M
+    end
 end
 
 @testset "repeat samples" begin

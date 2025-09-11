@@ -49,6 +49,8 @@ Return estimate of serial interval for SARS-CoV-2.
 
 `t` is time in days since infection.
 
+`g_covid(x)==0` for all `x<0` and `x>30`.
+
 Data from https://github.com/mrc-ide/EpiEstim/blob/master/data/covid_deaths_2020_uk.rda
 
 # Examples
@@ -56,7 +58,10 @@ Data from https://github.com/mrc-ide/EpiEstim/blob/master/data/covid_deaths_2020
 julia> g_covid(10)
 0.0382484935
 
-julia> g_covid(0)
+julia> g_covid(31)
+0.0
+
+julia> g_covid(-1)
 0.0
 ```
 """
@@ -69,7 +74,7 @@ function g_covid(t::Integer)
 end
 
 """
-    g_seir(t; mu, kappa=RenewalDiD.automatic)
+    g_seir(t; mu[, kappa])
 
 Estimate generation interval for a susceptible–exposed–infectious–recovered model.
 
@@ -87,11 +92,11 @@ Erlang-distributed SEIR epidemic model and the renewal equation. *SIAM J Appl Ma
 julia> g_seir(10; mu=0.3)
 0.04480836153107755
 
-julia> g_seir(10; mu=0.3) == g_seir(10; mu=0.3, kappa=0.3)
-true
-
 julia> g_seir(10; mu=0.3, kappa=0.5)
 0.03228684102658386
+
+julia> g_seir(10; mu=0.3) == g_seir(10; mu=0.3, kappa=0.3)
+true
 ``` 
 """
 function g_seir(t; mu, kappa=automatic)
@@ -116,13 +121,13 @@ function _gseirunequalmukappa(t, mu, kappa)
 end
 
 """
-    vectorg_seir(mu, kappa=automatic; t_max::Integer=28)
-    vectorg_seir(; mu, kappa=automatic, t_max::Integer=28)
+    vectorg_seir(mu[, kappa; t_max::Integer=28])
+    vectorg_seir(; mu[, kappa, t_max::Integer=28])
 
 Produce a vector of generation intervals for a susceptible–exposed–infectious–recovered 
     model.
 
-The length of the vector is `t_max + 1`, i.e. daily from `t=0` to `t=t_max`
+The length of the vector is `t_max + 1`, i.e. daily from `t=0` to `t=t_max`.
 
 `kappa` is the rate of progression from exposed to infectious, and `mu` is the recovery
     rate. These can be entered as positional arguments or keyword arguments.
@@ -153,14 +158,9 @@ julia> vectorg_seir(0.4, 0.5; t_max=5)
  0.1331224695160854
  0.10650056922542783
 
-julia> vectorg_seir(kappa=0.5, mu=0.4, t_max=5)
-6-element Vector{Float64}:
- 0.0
- 0.12757877264601186
- 0.1628990458915585
- 0.15612810352754444
- 0.1331224695160854
- 0.10650056922542783
+julia> vectorg_seir(0.4) == vectorg_seir(0.4, 0.4) ==
+       vectorg_seir(mu=0.4) == vectorg_seir(mu=0.4, kappa=0.4)
+true
 ``` 
 """
 vectorg_seir(; mu, kappa=automatic, kwargs...) = vectorg_seir(mu, kappa; kwargs...)
@@ -199,20 +199,19 @@ julia> myvec = [0, 0.1, 0.2];
 julia> generationtime(0; vec=myvec)
 0.0
 
-julia> generationtime(myvec, 1)
+julia> generationtime(1; vec=myvec)
 0.1
+
+julia> generationtime(1; vec=myvec) == generationtime(myvec, 1)
+true
 
 julia> myfunc(t; a) = a * t;
 
 julia> generationtime(1; func=myfunc, a=0.1)
 0.1
 
-julia> generationtime(myfunc, 2; a=0.2)
-0.4
-
-julia> generationtime(2)
-ERROR: ArgumentError: a function or vector must be passed as either a positional or keyword \
-    argument
+julia> generationtime(1; func=myfunc, a=0.2)
+0.2
 ``` 
 """
 function generationtime(t::Integer; func=automatic, vec=automatic, kwargs...)

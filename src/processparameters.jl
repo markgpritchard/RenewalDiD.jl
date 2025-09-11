@@ -12,7 +12,7 @@ Contains the number of reported infections and the basic reproduction ratio outp
 - `output::Array{T, N}`: numbers of infections
 - `R0s::Array{T, N}`: time-varying basic reproduction ratio
 """
-@auto_hash_equals struct SampledOutput{T, N} 
+struct SampledOutput{T, N} 
     output::Array{T, N}
     R0s::Array{T, N}
 
@@ -21,6 +21,24 @@ Contains the number of reported infections and the basic reproduction ratio outp
     end
 end
 
+Base.hash(x::SampledOutput, h::UInt64) = hash(x.R0s, hash(x.output, hash(:SampledOutput, h)))
+
+function Base.:(==)(a::SampledOutput, b::SampledOutput)
+    c1 = a.output == b.output 
+    c2 = a.R0s == b.R0s 
+    if c1 === false || c2 === false 
+        return false 
+    elseif ismissing(c1) || ismissing(c2)
+        return missing 
+    end
+    return true 
+end
+
+"""
+    RenewalDiDModel 
+
+Type of the model generated from the function `renewaldid`.
+"""
 const RenewalDiDModel = Model{typeof(_renewaldid)}
 
 _defaults(m::RenewalDiDModel) = m.defaults
@@ -68,8 +86,11 @@ julia> using StableRNGs
 
 julia> rng = StableRNG(100);
 
-julia> df = DataFrame(:chain => repeat([1, 2, 3]; inner=5), :iteration => repeat(1:5; \
-    outer=3), :a => rand(rng, 15));  
+julia> df = DataFrame(
+       :chain => repeat([1, 2, 3]; inner=5),
+       :iteration => repeat(1:5; outer=3),
+       :a => rand(rng, 15)
+       );
 
 julia> rankvalues(df, :a; binsize=3)
 15-element Vector{Float64}:
@@ -172,42 +193,39 @@ end
 ## take samples from DataFrame of fitted parameters and generate expected outcomes
 
 """
-    samplerenewaldidinfections(g, df, data, indexes; <keyword arguments>)
+    samplerenewaldidinfections([rng], model, fittedparameters[, indexes; <keyword arguments>])
 
-Generate expected outcomes from samples in a `DataFrame`.
+Generate expected outcomes from model using samples from distributions.    
 
 # Arguments 
-- `g`: generation interval.
-- `df::DataFrame`: outputs from parameter fitting.
-- `data::AbstractRenewalDiDData`: data used for parameter fitting.
-- `indexes::Union{<:AbstractVector{<:Integer}, <:Integer}=axes(df, 1)`: rows of DataFrame to 
-    be used.
-- Keyword arguments get passed to the generation interval function 
-
+- `rng::AbstractRNG=default_rng()`: random number generator
+- `model::RenewalDiDModel`: model being used 
+- `fittedparameters`: can be a `DataFrame`, `Chains` or `Tuple{DataFrame, <:Chains}`
+- `indexes::Union{<:AbstractVector{<:Integer}, <:Integer}`: samples to use, defaults to all 
+    samples
 
 # Examples
 ```jldoctest
-julia> using RenewalDiD.FittedParameterTestFunctions, StableRNGs
+julia> using StableRNGs
 
 julia> rng = StableRNG(1000);
 
-julia> data = testsimulation(rng);
+julia> data = RenewalDiD.testsimulation(rng);
 
-julia> df = testdataframe(rng; nchains=2, niterations=5, ngroups=3, ntimes=10, nseeds=7);
+julia> model = renewaldid(data, g_seir, RenewalDiDPriors(); mu=0.2, kappa=0.5);
 
-julia> samplerenewaldidinfections(g_seir, df, data, 1; mu=0.2, kappa=0.5)
-11×3 Matrix{Float64}:
- 0.0        0.0       0.0
- 0.114199   0.114506  0.029641
- 0.136986   0.137571  0.0285553
- 0.186847   0.188042  0.0288459
- 0.266959   0.477386  0.0299742
- 0.389018   0.828994  0.0316884
- 0.573569   1.50836   0.0600483
- 0.852888   2.78382   0.069359
- 1.27559    5.15169   0.0831346
- 1.91162    9.42535   0.101564
- 2.85361   16.5956    0.125572
+julia> df = RenewalDiD.testdataframe(
+       rng;
+       nchains=2, niterations=5, ngroups=3, ntimes=10, nseeds=7
+       );
+
+julia> samplerenewaldidinfections(rng, model, df, 1)
+SampledOutput{Float64, 2}([0.07491152793594207 0.0 0.0; 0.0 0.1577299327763031 \
+    0.2629712097378153; … ; 1.2264839609837064 2.3251829893883746 0.16039663151955016; \
+    0.740412457261556 3.8074225038310803 0.0], [1.4090694615560517 1.4090694615560517 \
+    0.0656949120738175; 1.446863906052742 1.446863906052742 0.10348935657050783; … ; \
+    1.7114250175295744 2.283489655473959 0.9401151059917245; 1.7492194620262647 \
+    2.321284099970649 0.9779095504884148])
 ```
 """
 function samplerenewaldidinfections(
@@ -370,8 +388,6 @@ function _samplerenewaldidinfections!(
     return nothing
 end
 
-
-
 function _samplerenewaldidinfections!(
     rng, output, R0s, model, fittedparameters, i::Integer, ::Nothing; 
     kwargs...
@@ -431,87 +447,98 @@ end
 ## quantiles of sampled outputs
 
 """
-    quantilerenewaldidinfections(A, q)
+    quantilerenewaldidinfections(A, q=[0.025, 0.05, 0.25, 0.5, 0.75, 0.95, 0.975])
 
 Calculate quantiles from an array of simulated outputs
 
 # Arguments 
-- `A`: array of outputs.
-- `q`: vector of quantiles.
+- `A`: array of outputs or a `SampledOutput`
+- `q`: vector of quantiles
 
 It is expected that an odd number of quantiles will be supplied, symmetrical around the 
     median (`0.5`)
 
 # Examples
 ```jldoctest
-julia> using RenewalDiD.FittedParameterTestFunctions, StableRNGs
+julia> using StableRNGs
 
 julia> rng = StableRNG(1000);
 
-julia> data = testsimulation(rng);
+julia> data = RenewalDiD.testsimulation(rng);
 
-julia> df = testdataframe(rng; nchains=2, niterations=5, ngroups=3, ntimes=10, nseeds=7);
+julia> model = renewaldid(data, g_seir, RenewalDiDPriors(); mu=0.2, kappa=0.5);
 
-julia> A = samplerenewaldidinfections(g_seir, df, data; gamma=0.2, sigma=0.5);
+julia> df = RenewalDiD.testdataframe(
+       rng;
+       nchains=2, niterations=5, ngroups=3, ntimes=10, nseeds=7
+       );
 
-julia> quantilerenewaldidinfections(A, [0.05, 0.5, 0.95])
+julia> A = samplerenewaldidinfections(rng, model, df);
+
+julia> quantilerenewaldidinfections(A.output, [0.05, 0.5, 0.95])
 11×3×3 Array{Float64, 3}:
 [:, :, 1] =
- 0.0        0.0        0.0
- 0.0330109  0.0331442  0.0153384
- 0.0424594  0.0426307  0.0159759
- 0.0506862  0.0509582  0.0164732
- 0.0640469  0.114019   0.0174583
- 0.0843459  0.159901   0.018906
- 0.113446   0.23254    0.0412647
- 0.151611   0.334978   0.0491071
- 0.0768479  0.108033   0.0195905
- 0.100981   0.1344     0.0274011
- 0.0        0.0        0.0397927
+ 0.0        0.0       0.0
+ 0.0        0.0       0.0
+ 0.0        0.0       0.0
+ 0.0        0.0       0.0
+ 0.0        0.0       0.0
+ 0.0        0.0       0.0
+ 0.131861   0.157388  0.0326495
+ 0.0        0.123517  0.0
+ 0.121198   0.759233  0.0
+ 0.600175   1.14889   0.0721785
+ 0.0508668  1.066     0.0
 
 [:, :, 2] =
- 0.0        0.0        0.0
- 0.0979914  0.0982897  0.0616108
- 0.119181   0.119662   0.0697299
- 0.165515   0.166476   0.0985363
- 0.328753   0.576721   0.177187
- 0.535071   0.949926   0.38878
- 0.839773   1.63126    0.824038
- 1.4096     2.84745    1.44794
- 1.70084    5.003      1.09146
- 2.51385    8.74408    1.62129
- 1.8444     9.59518    1.47483
+ 0.0434214  0.00689775  0.0
+ 0.0        0.0146244   0.360681
+ 0.0213385  0.0413518   0.556312
+ 0.259588   0.0         0.312482
+ 0.277872   0.3432      0.146953
+ 0.0583196  0.410323    0.242909
+ 0.812611   1.02003     0.353115
+ 1.01233    1.9329      0.324287
+ 0.820946   2.58175     0.944555
+ 1.52041    2.68924     1.29307
+ 2.10001    6.06172     1.30006
 
 [:, :, 3] =
-  0.0        0.0        0.0
-  0.289015   0.290399   0.202453
-  0.401929   0.405079   0.25646
-  0.660351   0.668552   0.371832
-  1.18571    1.61497    0.579842
-  2.27498    3.94403    0.950158
-  6.11523   19.8733     2.91164
- 13.4612    19.676      5.75056
- 20.3066    47.5492     8.25488
- 32.011     75.8905    14.145
- 20.3503    47.2522    17.3482
+  0.550498   0.105273  0.210392
+  0.687757   0.849505  1.02244
+  0.345099   1.38626   1.80516
+  0.929155   1.18127   1.69581
+  1.13479    0.865813  1.18232
+  1.84541    3.02148   1.34952
+  1.93296    2.24424   1.61729
+  3.74074    4.46247   2.0209
+  6.36694   12.2786    2.7994
+  9.85947   13.1692    5.19129
+ 12.1114    25.3388    7.85569
 
-julia> quantilerenewaldidinfections(A, [0.05, 0.5, 0.90]);
+julia> quantilerenewaldidinfections(A.output, [0.05, 0.5, 0.90]);
 ┌ Warning: (0.05, 0.9): other functions expect that credible intervals are symmetrical
 └ @ RenewalDiD 
 
-julia> quantilerenewaldidinfections(A, [0.05, 0.90]);
+julia> quantilerenewaldidinfections(A.output, [0.05, 0.90]);
 ┌ Warning: [0.05, 0.9]: other functions expect an odd number of quantiles
 └ @ RenewalDiD 
 ```
 """
-function quantilerenewaldidinfections(SO::SampledOutput, q; mutewarnings=nothing)
+function quantilerenewaldidinfections(
+    SO::SampledOutput, q=[0.025, 0.05, 0.25, 0.5, 0.75, 0.95, 0.975]; 
+    mutewarnings=nothing
+)
     return SampledOutput(
         quantilerenewaldidinfections(SO.output, q; mutewarnings),
         quantilerenewaldidinfections(SO.R0s, q; mutewarnings)
     )
 end
 
-function quantilerenewaldidinfections(A::AbstractArray, q; mutewarnings=nothing)
+function quantilerenewaldidinfections(
+    A::AbstractArray, q=[0.025, 0.05, 0.25, 0.5, 0.75, 0.95, 0.975]; 
+    mutewarnings=nothing
+)
     _quantilerenewaldidinfectionswarningset(A, q, mutewarnings)
     return _quantilerenewaldidinfections(A, q)
 end

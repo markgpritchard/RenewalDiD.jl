@@ -21,11 +21,6 @@ Container for prior distributions passed to `renewaldid`.
 - `delaydistn::X=LogNormal(log(2), log(2))`: distribution of delay times between infection 
     and diagnosis
 
-NB, attempting to fit a delay distribution has so far given NaN gradients. Function 
-    `renewaldid` currently expects a distribution to be supplied.
-
-# Constructors
-
 All arguments are optional with default values as above. The constructor takes each prior as 
     a keyword argument. 
 
@@ -34,15 +29,15 @@ All arguments are optional with default values as above. The constructor takes e
 julia> using Turing
 
 julia> RenewalDiDPriors(; psiprior=Beta(6, 4))
-RenewalDiDPriors{Normal{Float64}, Float64, Float64, Exponential{Float64}, Exponential{Float64}, Normal{Float64}, Beta{Float64}, Int64}
+RenewalDiDPriors{Normal{Float64}, Exponential{Float64}, Exponential{Float64}, \
+    Normal{Float64}, Beta{Float64}, Int64, LogNormal{Float64}}
  alphaprior:       Normal{Float64}(μ=0.0, σ=1.0)
- mu_delayprior:    0.6931471805599453
- sigma_delayprior: 1.6094379124341003
  sigma_gammaprior: Exponential{Float64}(θ=1.0)
  sigma_thetaprior: Exponential{Float64}(θ=1.0)
  tauprior:         Normal{Float64}(μ=0.0, σ=1.0)
  psiprior:         Beta{Float64}(α=6.0, β=4.0)
  omegaprior:       0
+ delaydistn:       LogNormal{Float64}(μ=0.6931471805599453, σ=0.6931471805599453)
 ```
 """ 
 @kwdef struct RenewalDiDPriors{Q, S, T, U, V, W, X}
@@ -121,11 +116,11 @@ Return a matrix of infections before time `0` to seed subsequent transmission.
 - `n_seeds=7` is the number of rows in the matrix of seed cases.
 
 # Keyword arguments 
-- `doubletime=automatic`: assumed doubling time for infections before time `0`; the default 
-    is to equal `n_seeds`
-- `sampletime=automatic`: how many rows of `observedcases` to consider when deciding on the 
-    number of infections to include in the seed matrix; default is `doubletime` if provided, 
-    otherwise `n_seeds`
+- `doubletime`: assumed doubling time for infections before time `0`; the default is to 
+    equal `n_seeds`
+- `sampletime`: how many rows of `observedcases` to consider when deciding on the number of 
+    infections to include in the seed matrix; default is `doubletime` if provided, otherwise 
+    `n_seeds`
 - `minvalue=0.5`: minimum number of infection to include in seed matrix regardless of 
     numbers in `observedcases`
 
@@ -151,9 +146,9 @@ julia> expectedseedcases(observedcases, 3; doubletime=5)
 
 julia> expectedseedcases(observedcases, 3; minvalue=10)
 3×3 Matrix{Float64}:
- 5.83765  6.45262  5.72333
+ 1.7346   1.42712  1.79176
  1.96565  1.65817  2.02281
- 2.1967   1.88921  2.25386
+ 6.29975  6.91472  6.18543
 ```
 """
 function expectedseedcases(
@@ -361,40 +356,36 @@ function _prevpropsus(infn, t, j; kwargs...)
 end
 
 """
-    renewaldid(data, g, priors; <keyword arguments>)
+    renewaldid(data::AbstractRenewalDiDData, g, priors::RenewalDiDPriors; <keyword arguments>)
 
 Return a `Turing.@model` for parameter fitting.
 
-# Arguments 
-- `data`: a `RenewalDiD.AbstractRenewalDiDData`.
-- `g`: a generation interval function 
-- `priors`: a `RenewalDiDPriors`
-- keyword arguments are passed to `g`
+`g` is a generation interval function and the keyword arguments are passed to `g`.
 
 # Examples
 ```jldoctest
-julia> using RenewalDiD.FittedParameterTestFunctions, StableRNGs
+julia> using StableRNGs
 
 julia> rng = StableRNG(1);
 
-julia> sim = testsimulation(rng);
+julia> sim = RenewalDiD.testsimulation(rng);
 
 julia> renewaldid(sim, g_seir, RenewalDiDPriors(); mu=0.2, kappa=0.5)
 DynamicPPL.Model{typeof(RenewalDiD._renewaldid), (:observedcases, :interventions, \
-    :expectedseedcases, :Ns, :g, :alphaprior, :mu_delayprior, :psiprior, :sigma_delayprior, \
-    :sigma_gammaprior, :sigma_thetaprior, :tauprior, :n_seeds, :omega), (:mu, :kappa), \
-    (), Tuple{Matrix{Int64}, InterventionMatrix{Int64}, Matrix{Float64}, Vector{Int64}, \
-    typeof(g_seir), Normal{Float64}, Float64, Beta{Float64}, Float64, Exponential{Float64}, \
-    Exponential{Float64}, Normal{Float64}, Int64, Int64}, Tuple{Float64, Float64}, \
-    DynamicPPL.DefaultContext}(RenewalDiD._renewaldid, (observedcases = [0 0 0; 0 0 0; … ; \
-    0 4 1; 1 1 4], interventions = [0 0 0; 0 0 0; … ; 0 1 1; 0 1 1] {duration 10, \
-    starttimes [nothing, 4, 6]}, expectedseedcases = [0.5 0.5 0.5; 0.0 0.0 0.0; … ; 0.0 0.0 \
-    0.0; 0.0 0.0 0.0], Ns = [100, 200, 50], g = g_seir, alphaprior = Normal{Float64}(μ=0.0, \
-    σ=1.0), mu_delayprior = 0.6931471805599453, psiprior = Beta{Float64}(α=1.0, β=1.0), \
-    sigma_delayprior = 1.6094379124341003, sigma_gammaprior = Exponential{Float64}(θ=1.0), \
-    sigma_thetaprior = Exponential{Float64}(θ=1.0), tauprior = Normal{Float64}(μ=0.0, σ=1.0), \
-    n_seeds = 7, omega = 0), (mu = 0.2, kappa = 0.5), DynamicPPL.DefaultContext())
-
+    :expectedseedcases, :Ns, :g, :alphaprior, :psiprior, :sigma_gammaprior, \
+    :sigma_thetaprior, :tauprior, :delaydistn, :n_seeds, :omega), (:mu, :kappa), (), \
+    Tuple{Matrix{Int64}, InterventionMatrix{Int64}, Matrix{Float64}, Vector{Int64}, \
+    typeof(g_seir), Normal{Float64}, Beta{Float64}, Exponential{Float64}, \
+    Exponential{Float64}, Normal{Float64}, LogNormal{Float64}, Int64, Int64}, \
+    Tuple{Float64, Float64}, DynamicPPL.DefaultContext}(RenewalDiD._renewaldid, \
+    (observedcases = [0 0 0; 0 0 0; … ; 0 4 1; 1 1 4], interventions = [0 0 0; 0 0 0; … ; \
+    0 1 1; 0 1 1] {duration 10, starttimes [nothing, 4, 6]}, expectedseedcases = [0.0 0.0 \
+    0.0; 0.0 0.0 0.0; … ; 0.0 0.0 0.0; 0.5 0.5 0.5], Ns = [100, 200, 50], g = g_seir, \
+    alphaprior = Normal{Float64}(μ=0.0, σ=1.0), psiprior = Beta{Float64}(α=1.0, β=1.0), \
+    sigma_gammaprior = Exponential{Float64}(θ=1.0), sigma_thetaprior = \
+    Exponential{Float64}(θ=1.0), tauprior = Normal{Float64}(μ=0.0, σ=1.0), delaydistn = \
+    LogNormal{Float64}(μ=0.6931471805599453, σ=0.6931471805599453), n_seeds = 7, omega = \
+    0), (mu = 0.2, kappa = 0.5), DynamicPPL.DefaultContext())
 ```
 """
 function renewaldid(
@@ -468,12 +459,6 @@ end
         kwargs...
     )
 
-    #=
-    if isnan(maximum(real.(predictedinfections)))
-        println("predictedinfections= $predictedinfections")
-    end
-    =#
-
     # delay between infection and detection
     delayedinfections = _delayedinfections(
         T, predictedinfections, delaydistn, ngroups, ntimes, n_seeds
@@ -481,15 +466,6 @@ end
 
     # Normal approximation of Binomial to avoid forcing integer values 
     np = real.(delayedinfections[n_seeds:n_seeds+ntimes, :]) .* psi
-
-    #= 
-    # this `if` loop is hopefully not needed (keep in case need to return)
-    if isnan(maximum(np)) 
-        @inFo "NAN np"
-        @addlogprob! -Inf
-        return nothing  # exit the model evaluation early
-    end
-    =#
 
     observedcases ~ arraydist(Normal.(np, sqrt.(np .* (1 - psi) .+ minsigma2)))
     return nothing
@@ -504,8 +480,8 @@ function _delayedinfections(T, predictedinfections, delaydistn, ngroups, ntimes,
 end
 
 function _delayedinfections!(
-    delayedinfections::Matrix{T}, predictedinfections, delaydistn, ngroups, ntimes, n_seeds
-) where T
+    delayedinfections, predictedinfections, delaydistn, ngroups, ntimes, n_seeds
+) 
     for t in 1:(n_seeds + ntimes) 
         for j in 1:ngroups
             newvalue = sum(

@@ -1,10 +1,11 @@
 # test that an example workflow throws no errors and returns expected types
 
+import ReverseDiff
+
 using CairoMakie
 using Random
 using RenewalDiD
 using RenewalDiD.Plotting
-using ReverseDiff
 using StatsBase
 using Test
 using Turing
@@ -48,13 +49,10 @@ model1 = renewaldid(
     mu=0.2, kappa=0.5               
 )
 
-priorschain = sample(rng, model1, Prior(), 1_000)
+priorschain = sample(rng, model1, Prior(), 1_000; progress=false)
 priorsdf = DataFrame(priorschain)
 priortraceplot = trplot(priorsdf; ncols=5, nplots=50, size=(1000, 1000))  # examine 50 variables
-priorsfittedoutputs = samplerenewaldidinfections(
-    g_seir, priorsdf, sim; 
-    mu=0.2, kappa=0.5,
-)
+priorsfittedoutputs = samplerenewaldidinfections(model1, priorsdf; mu=0.2, kappa=0.5,)
 priorsoutputquantiles = quantilerenewaldidinfections(
     priorsfittedoutputs, [0.025, 0.05, 0.25, 0.5, 0.75, 0.95, 0.975]
 )
@@ -65,7 +63,7 @@ priorsplot = plotmodel(
 
 initindices = findall(x -> x <= 4, ordinalrank(priorsdf.lp; rev=true)) 
 priorsfittedinitoutputs = samplerenewaldidinfections(
-    g_seir, priorsdf, sim, initindices; 
+    model1, priorsdf, initindices; 
     mu=0.2, kappa=0.5,
 )
 priorsoutputinitquantiles = quantilerenewaldidinfections(
@@ -75,44 +73,35 @@ priorsinitplot = plotmodel(priorsoutputinitquantiles, sim)
 
 priorinitparams = [[values(priorsdf[i, 3:430])...] for i in initindices]
 
-map_estimate = maximum_likelihood(model1; adtype=AutoReverseDiff(), maxiters=1000,)
+map_estimate = maximum_a_posteriori(model1; adtype=AutoReverseDiff(), maxtime=60)
 map_df = map_DataFrame(map_estimate)
-map_outputs = samplerenewaldidinfections(
-    g_seir, map_df, sim; 
-    mu=0.2, kappa=0.5,
-)
+map_outputs = samplerenewaldidinfections(model1, map_df; mu=0.2, kappa=0.5,)
 map_quantiles = quantilerenewaldidinfections(map_outputs, [0.5])
 map_plot = plotmodel(map_quantiles, sim)
 
+#=
+# do not test the MCMC as this takes a long time and does not add beyond existing tests
 
 shortchain = sample(
     rng, model1, NUTS(0.65; adtype=AutoReverseDiff()), MCMCThreads(), 25, 4; 
-    #rng, model1, NUTS(0.65; adtype=AutoReverseDiff()), MCMCThreads(), 20, 4; 
-    #rng, model1, NUTS(0.65; adtype=AutoReverseDiff()), MCMCThreads(), 5, 4; 
-    #initial_params=priorinitparams,
-    initial_params=repeat([map_estimate.values.array]; outer=4)
+    initial_params=repeat([map_estimate.values.array]; outer=4), progress=false,
 ) 
 shortdf = DataFrame(shortchain)
 p1 = trplot(shortdf; ncols=5, nplots=50, size=(1000, 1000))  # examine 50 variables
 p2 = tracerankplot(shortdf; binsize=5, ncols=5, nplots=50, size=(1000, 1000)) 
 
-shortfittedoutputs = samplerenewaldidinfections(
-    g_seir, shortdf, sim; 
-    mu=0.2, kappa=0.5,
-)
+shortfittedoutputs = samplerenewaldidinfections(model1, shortdf; mu=0.2, kappa=0.5,)
 shortoutputquantiles = quantilerenewaldidinfections(
     shortfittedoutputs, [0.025, 0.05, 0.25, 0.5, 0.75, 0.95, 0.975]
 )
 p3 = plotmodel(shortoutputquantiles, sim)
+=#
 
 @testset "everything ran and produced expected types" begin  # to add further tests later
-    @test rng isa Xoshiro
-    @test sim isa RenewalDiDData{Int64, InterventionArray{Int64}} 
-    @test shortchain isa Chains
-    @test shortdf isa DataFrame 
-    @test p1 isa Figure
-    @test p2 isa Figure
-    @test shortfittedoutputs isa Array{Float64, 3}
-    @test shortoutputquantiles isa Array{Float64, 3} 
-    @test p3 isa Figure
+    @test priorschain isa Chains
+    @test priorsdf isa DataFrame 
+    @test priortraceplot isa Figure 
+    @test priorsplot isa Figure 
+    @test map_df isa DataFrame
+    @test map_plot isa Figure
 end
