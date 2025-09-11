@@ -35,13 +35,13 @@ julia> RenewalDiD.testdataframe(
        nchains=3, niterations=1, ngroups=1, ntimes=1, nseeds=3, alpha=1, psi=0.2,      
        )
 3×27 DataFrame
- Row │ iteration  chain  tau[1]    alpha  sigma_gamma  sigma_theta  psi      M_x[1, 1 ⋯
-     │ Int64      Int64  Float64   Int64  Float64      Float64      Float64  Float64  ⋯
-─────┼─────────────────────────────────────────────────────────────────────────────────
-   1 │         1      1  0.226602      1    0.0481736    0.854099       0.2  0.058488 ⋯
-   2 │         1      2  0.223996      1    0.387684     0.853104       0.2  0.850963  
-   3 │         1      3  0.970676      1    0.269967     0.0550326      0.2  0.928069  
-                                                                     20 columns omitted
+ Row │ iteration  chain  tau[1]     alpha  sigma_gamma  sigma_theta  psi       ⋯
+     │ Int64      Int64  Float64    Int64  Float64      Float64      Float64   ⋯
+─────┼──────────────────────────────────────────────────────────────────────────
+   1 │         1      1  0.208041       1     0.548821     0.22052       0.2   ⋯
+   2 │         1      2  0.181642       1     0.371745     0.371992      0.2
+   3 │         1      3  0.0140921      1     0.402931     0.262554      0.2
+                                                              20 columns omitted
 ```
 """
 function testdataframe(
@@ -264,7 +264,7 @@ DynamicPPL.Model{typeof(RenewalDiD._renewaldid), (:observedcases, :interventions
     0.0 0.0; … ; 0.0 0.0 0.0; 0.0 0.0 0.0], interventions = [0.0 0.0 0.0; 0.0 0.0 0.0; … ; \
     0.0 0.0 0.0; 0.0 0.0 0.0], expectedseedcases = [0.0 0.0 0.0; 0.0 0.0 0.0; … ; 0.0 0.0 \
     0.0; 0.0 0.0 0.0], Ns = nothing, g = generationtime, delaydistn = \
-    Normal{Float64}(μ=0.0, σ=0.0), n_seeds = 7), (vec = [0.0, 0.0],), \
+    Distributions.Normal{Float64}(μ=0.0, σ=0.0), n_seeds = 7), (vec = [0.0, 0.0],), \
     DynamicPPL.DefaultContext())
 ```
 """

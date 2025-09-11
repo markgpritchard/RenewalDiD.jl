@@ -165,7 +165,7 @@ Warnings are provided if no groups have an intervention or all groups have an in
     before `duration`, unless `mutewarnings==true`.
 
 # Examples
-```jldoctest; filter = r"\@.*1045"
+```jldoctest; filter=r"RenewalDiD*.*1045"
 julia> InterventionMatrix(100, [25, 50, 200, 0, nothing])
 100×5 InterventionMatrix{Int64}
  time │ 1  2  3  4  5 
@@ -918,11 +918,11 @@ function Base.show(io::IO, M::InterventionVecOrMat)
     return nothing
 end
 
-Base.show(io::IO, A::AbstractInterventionArray3) = show(io, collect(A))
+Base.show(io::IO, A::AbstractInterventionArray3) = show(io, collect(collect(A)))
 
 function _showoneintervention(io, A, k)
     k > size(A, 3) && return nothing 
-    print("\n[:, :, $k] =\n")
+    print(io, "\n[:, :, $k] =\n")
     combinedstrings = _showcombinedstrings(A, k)
     @static if pkgversion(PrettyTables).major == 2
         return pretty_table(

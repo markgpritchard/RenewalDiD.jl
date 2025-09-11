@@ -459,7 +459,7 @@ It is expected that an odd number of quantiles will be supplied, symmetrical aro
     median (`0.5`)
 
 # Examples
-```jldoctest
+```jldoctest; filter=r"RenewalDiD*.*6"
 julia> using StableRNGs
 
 julia> rng = StableRNG(1000);
@@ -518,11 +518,11 @@ julia> quantilerenewaldidinfections(A.output, [0.05, 0.5, 0.95])
 
 julia> quantilerenewaldidinfections(A.output, [0.05, 0.5, 0.90]);
 ┌ Warning: (0.05, 0.9): other functions expect that credible intervals are symmetrical
-└ @ RenewalDiD 
+└ @ RenewalDiD yourpath.jl:627
 
 julia> quantilerenewaldidinfections(A.output, [0.05, 0.90]);
 ┌ Warning: [0.05, 0.9]: other functions expect an odd number of quantiles
-└ @ RenewalDiD 
+└ @ RenewalDiD yourpath.jl:637
 ```
 """
 function quantilerenewaldidinfections(

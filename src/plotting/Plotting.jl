@@ -44,10 +44,12 @@ julia> df = RenewalDiD.testdataframe(
        rng;
        nchains=2, niterations=5, ngroups=3, ntimes=10, nseeds=7
        );
+    
+julia> A = samplerenewaldidinfections(rng, model, df);
 
 julia> qs = quantilerenewaldidinfections(A.R0s, [0.05, 0.5, 0.95]);
 
-julia> RenewalDiD.plotmodelR0(qs)
+julia> RenewalDiD.plotmodelR0(qs);
 ```
 """
 function plotmodelR0 end 
@@ -75,9 +77,11 @@ julia> model = renewaldid(data, g_seir, RenewalDiDPriors(); mu=0.2, kappa=0.5);
 
 julia> df = RenewalDiD.testdataframe(
        rng;
-       nchains=2, niterations=5, ngroups=3, ntimes=10, nseed
+       nchains=2, niterations=5, ngroups=3, ntimes=10, nseeds=7
        );
        
+julia> A = samplerenewaldidinfections(rng, model, df);
+
 julia> qs = quantilerenewaldidinfections(A.R0s, [0.05, 0.5, 0.95]);
 
 julia> fig1 = Figure();
@@ -123,9 +127,9 @@ julia> df = RenewalDiD.testdataframe(
        nchains=4, niterations=2000, ngroups=2, ntimes=2, nseeds=5, 
        );
 
-julia> RenewalDiD.traceplot(df, Symbol("tau[1]"))
+julia> RenewalDiD.traceplot(df, Symbol("tau[1]"));
 
-julia> RenewalDiD.traceplot(df; ncols=5, nplots=25, size=(1000, 1000))
+julia> RenewalDiD.traceplot(df; ncols=5, nplots=25, size=(1000, 1000));
 ```
 """
 function traceplot end
@@ -187,9 +191,9 @@ julia> df = RenewalDiD.testdataframe(
        nchains=4, niterations=2000, ngroups=2, ntimes=2, nseeds=5, 
        );
 
-julia> RenewalDiD.tracerankplot(df, Symbol("tau[1]"))
+julia> RenewalDiD.tracerankplot(df, Symbol("tau[1]"));
 
-julia> RenewalDiD.tracerankplot(df; ncols=5, nplots=25, size=(1000, 1000))
+julia> RenewalDiD.tracerankplot(df; ncols=5, nplots=25, size=(1000, 1000));
 ```
 """
 function tracerankplot end
