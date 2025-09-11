@@ -75,11 +75,8 @@ julia> data = RenewalDiD.testsimulation(rng);
 
 julia> model = renewaldid(data, g_seir, RenewalDiDPriors(); mu=0.2, kappa=0.5);
 
-julia> df = RenewalDiD.testdataframe(
-       rng;
-       nchains=2, niterations=5, ngroups=3, ntimes=10, nseeds=7,
-       );
-       
+julia> df = RenewalDiD.testdataframe(rng; nchains=2, niterations=5, ngroups=3, ntimes=10, nseeds=7,);
+
 julia> A = samplerenewaldidinfections(rng, model, df);
 
 julia> qs = quantilerenewaldidinfections(A.R0s, [0.05, 0.5, 0.95]);
@@ -88,7 +85,7 @@ julia> fig1 = Figure();
 
 julia> RenewalDiD.plotmodelR0!(fig1, qs);
 
-julia> fig2 = Figure();
+julia> fig2 = Figure()
 
 julia> axs = [Axis(fig2[1, i]) for i in 1:3];
 
