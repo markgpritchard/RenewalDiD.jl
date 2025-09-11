@@ -264,7 +264,7 @@ DynamicPPL.Model{typeof(RenewalDiD._renewaldid), (:observedcases, :interventions
     0.0 0.0; … ; 0.0 0.0 0.0; 0.0 0.0 0.0], interventions = [0.0 0.0 0.0; 0.0 0.0 0.0; … ; \
     0.0 0.0 0.0; 0.0 0.0 0.0], expectedseedcases = [0.0 0.0 0.0; 0.0 0.0 0.0; … ; 0.0 0.0 \
     0.0; 0.0 0.0 0.0], Ns = nothing, g = generationtime, delaydistn = \
-    Distributions.Normal{Float64}(μ=0.0, σ=0.0), n_seeds = 7), (vec = [0.0, 0.0],), \
+    Normal{Float64}(μ=0.0, σ=0.0), n_seeds = 7), (vec = [0.0, 0.0],), \
     DynamicPPL.DefaultContext())
 ```
 """

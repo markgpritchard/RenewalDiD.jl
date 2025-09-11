@@ -19,7 +19,7 @@ df1 = testdataframe( ;
 )
 
 @testset "method errors" begin
-    @test_throws MethodError trplot(df1, :tau)
-    @test_throws MethodError tracerankplot(df1, :tau)
-    @test_throws MethodError plotmodeloutput(df1, :tau)
+    @test_throws MethodError trplot(df1, Symbol("tau[1]"))
+    @test_throws MethodError tracerankplot(df1, Symbol("tau[1]"))
+    @test_throws MethodError plotmodeloutput(df1, Symbol("tau[1]"))
 end
