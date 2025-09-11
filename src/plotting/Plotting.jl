@@ -42,7 +42,7 @@ julia> model = renewaldid(data, g_seir, RenewalDiDPriors(); mu=0.2, kappa=0.5);
 
 julia> df = RenewalDiD.testdataframe(
        rng;
-       nchains=2, niterations=5, ngroups=3, ntimes=10, nseeds=7
+       nchains=2, niterations=5, ngroups=3, ntimes=10, nseeds=7,
        );
     
 julia> A = samplerenewaldidinfections(rng, model, df);
@@ -77,7 +77,7 @@ julia> model = renewaldid(data, g_seir, RenewalDiDPriors(); mu=0.2, kappa=0.5);
 
 julia> df = RenewalDiD.testdataframe(
        rng;
-       nchains=2, niterations=5, ngroups=3, ntimes=10, nseeds=7
+       nchains=2, niterations=5, ngroups=3, ntimes=10, nseeds=7,
        );
        
 julia> A = samplerenewaldidinfections(rng, model, df);
