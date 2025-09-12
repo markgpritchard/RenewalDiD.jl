@@ -241,7 +241,7 @@ function __expectedinfections(g, propsus, logR_0, hx; kwargs...)
 end
 
 _approxcasescalc(x, sigma) = __approxcasescalc(max(zero(x), x), sigma)  # should never x < 0
-__approxcasescalc(x, sigma) = x + sigma * sqrt(x)
+__approxcasescalc(x, sigma) = x + sigma * NaNMath.sqrt(x)
 
 # put a ceiling in all instances to prevent NaN outcomes when parameters generate
 # astronomical numbers of infections
@@ -381,11 +381,14 @@ DynamicPPL.Model{typeof(RenewalDiD._renewaldid), (:observedcases, :interventions
     (observedcases = [0 0 0; 0 0 0; … ; 0 4 1; 1 1 4], interventions = [0 0 0; 0 0 0; … ; \
     0 1 1; 0 1 1] {duration 10, starttimes [nothing, 4, 6]}, expectedseedcases = [0.0 0.0 \
     0.0; 0.0 0.0 0.0; … ; 0.0 0.0 0.0; 0.5 0.5 0.5], Ns = [100, 200, 50], g = g_seir, \
-    alphaprior = Normal{Float64}(μ=0.0, σ=1.0), psiprior = Beta{Float64}(α=1.0, β=1.0), \
-    sigma_gammaprior = Exponential{Float64}(θ=1.0), sigma_thetaprior = \
-    Exponential{Float64}(θ=1.0), tauprior = Normal{Float64}(μ=0.0, σ=1.0), delaydistn = \
-    LogNormal{Float64}(μ=0.6931471805599453, σ=0.6931471805599453), n_seeds = 7, omega = \
-    0), (mu = 0.2, kappa = 0.5), DynamicPPL.DefaultContext())
+    alphaprior = Distributions.Normal{Float64}(μ=0.0, σ=1.0), psiprior = \
+    Distributions.Beta{Float64}(α=1.0, β=1.0), sigma_gammaprior = \
+    Distributions.Exponential{Float64}(θ=1.0), sigma_thetaprior = \
+    Distributions.Exponential{Float64}(θ=1.0), tauprior = \
+    Distributions.Normal{Float64}(μ=0.0, σ=1.0), delaydistn = \
+    Distributions.LogNormal{Float64}(μ=0.6931471805599453, \
+    σ=0.6931471805599453), n_seeds = 7, omega = 0), (mu = 0.2, kappa = 0.5), \
+    DynamicPPL.DefaultContext())
 ```
 """
 function renewaldid(
@@ -467,7 +470,7 @@ end
     # Normal approximation of Binomial to avoid forcing integer values 
     np = real.(delayedinfections[n_seeds:n_seeds+ntimes, :]) .* psi
 
-    observedcases ~ arraydist(Normal.(np, sqrt.(np .* (1 - psi) .+ minsigma2)))
+    observedcases ~ arraydist(Normal.(np, NaNMath.sqrt.(np .* (1 - psi) .+ minsigma2)))
     return nothing
 end
 

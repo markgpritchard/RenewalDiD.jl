@@ -282,7 +282,7 @@ Checks that the sum of outputs will be `≤ 1` and that no outputs will be negat
 Other keyword arguments are passed to the function provided. 
 
 # Examples
-```jldoctest
+```jldoctest; filter=[r"50050.*: sum"]
 julia> myvec1 = [0, 0.1, 0.2];
 
 julia> testgenerationtime(myvec1)
@@ -298,7 +298,7 @@ ERROR: ArgumentError: 1.1: sum of all generation times must be ≤ 1
 julia> myfunc(t; a) = a * t;
 
 julia> testgenerationtime(myfunc; a=0.1)
-ERROR: ArgumentError: 50050.00000000001: sum of all generation times must be ≤ 1 (function \
+ERROR: ArgumentError: 50050.0: sum of all generation times must be ≤ 1 (function \
     tested on x ∈ {0, 1, …, 1000})
 
 julia> testgenerationtime(myfunc; a=0.1, t_max=3)
