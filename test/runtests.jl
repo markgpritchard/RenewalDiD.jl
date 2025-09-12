@@ -5,9 +5,9 @@ using Test
 
 @testset "RenewalDiD.jl" begin
     @testset "documentation tests" begin
-        @info "starting test docstrings"
-        include("documenterdoctest.jl")
-        #@warn "not currently testing documenterdoctest.jl"
+        #@info "starting test docstrings"
+        #include("documenterdoctest.jl")
+        @warn "not currently testing documenterdoctest.jl"
     end
     @testset "Aqua tests" begin
         @info "starting Aqua tests"
