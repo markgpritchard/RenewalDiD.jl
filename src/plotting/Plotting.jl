@@ -85,7 +85,7 @@ julia> fig1 = Figure();
 
 julia> RenewalDiD.plotmodelR0!(fig1, qs);
 
-julia> fig2 = Figure()
+julia> fig2 = Figure();
 
 julia> axs = [Axis(fig2[1, i]) for i in 1:3];
 
