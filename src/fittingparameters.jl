@@ -241,7 +241,7 @@ function __expectedinfections(g, propsus, logR_0, hx; kwargs...)
 end
 
 _approxcasescalc(x, sigma) = __approxcasescalc(max(zero(x), x), sigma)  # should never x < 0
-__approxcasescalc(x, sigma) = x + sigma * sqrt(x)
+__approxcasescalc(x, sigma) = x + sigma * NaNMath.sqrt(x)
 
 # put a ceiling in all instances to prevent NaN outcomes when parameters generate
 # astronomical numbers of infections
@@ -470,7 +470,7 @@ end
     # Normal approximation of Binomial to avoid forcing integer values 
     np = real.(delayedinfections[n_seeds:n_seeds+ntimes, :]) .* psi
 
-    observedcases ~ arraydist(Normal.(np, sqrt.(np .* (1 - psi) .+ minsigma2)))
+    observedcases ~ arraydist(Normal.(np, NaNMath.sqrt.(np .* (1 - psi) .+ minsigma2)))
     return nothing
 end
 
