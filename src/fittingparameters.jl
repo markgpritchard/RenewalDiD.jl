@@ -267,9 +267,7 @@ end
 # `_infectionsmatrix` will always return a `Matrix{<:Complex}` and will give a warning if 
 # something different is requested
 
-function _infectionsmatrix(logR_0, n_seeds) 
-    return _infectionsmatrix(ComplexF64, logR_0, n_seeds)
-end
+_infectionsmatrix(logR_0, n_seeds) = _infectionsmatrix(ComplexF64, logR_0, n_seeds)
 
 function _infectionsmatrix(T::Type{<:Complex}, logR_0, n_seeds)
     return zeros(T, _ntimes(logR_0) + n_seeds, _ngroups(logR_0))
