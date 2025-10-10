@@ -312,11 +312,30 @@ end
 end
 
 @testset "generate vector of theta values" begin
-    @test RenewalDiD._thetavec(zeros(3), 1) == zeros(4)
-    @test RenewalDiD._thetavec(zeros(4), 1) == zeros(5)
-    @test RenewalDiD._thetavec(ones(3), 1) == [0, 1, 2, 3]
-    @test RenewalDiD._thetavec(ones(3), 0.5) == [0, 0.5, 1, 1.5]
-    @test RenewalDiD._thetavec([-2.5, 0.5, 0.5], 0.5) == [0, -1.25, -1, -0.75]
+    @test RenewalDiD._assemblethetavec(zeros(3), 1, 4, RenewalDiD.automatic) == zeros(4)
+    @test RenewalDiD._assemblethetavec(zeros(3), 1, 4, 1) == zeros(4)
+    @test RenewalDiD._assemblethetavec(zeros(3), 1, 4, 1, 0) == zeros(4)
+    @test_throws DimensionMismatch RenewalDiD._assemblethetavec(zeros(3), 1, 3, 1)
+    @test_throws ArgumentError RenewalDiD._assemblethetavec(zeros(3), 1, 4, 0)
+    @test_throws ArgumentError RenewalDiD._assemblethetavec(zeros(3), 1, 4, -1)
+    @test RenewalDiD._assemblethetavec([1, 2, 3], 1, 6, 2) == [0, 0.5, 1, 1.5, 2, 3] 
+    @test RenewalDiD._assemblethetavec([1, 2, 3], 1, 7, 2) == 0:0.5:3
+    @test_throws DimensionMismatch RenewalDiD._thetavec(zeros(3), 1, 3)
+    @test RenewalDiD._thetavec(zeros(3), 1, 4) == zeros(4)
+    @test RenewalDiD._thetavec(zeros(4), 1, 5) == zeros(5)
+    @test RenewalDiD._thetavec(ones(3), 1, 4) == [0, 1, 2, 3]
+    @test RenewalDiD._thetavec(ones(3), 0.5, 4) == [0, 0.5, 1, 1.5]
+    @test RenewalDiD._thetavec([-2.5, 0.5, 0.5], 0.5, 4) == [0, -1.25, -1, -0.75]
+    @test RenewalDiD._thetavec([-2.5, 0.5, 0.5], 0.5, 4; thetainterval=RenewalDiD.automatic) == 
+        [0, -1.25, -1, -0.75]
+    @test RenewalDiD._thetavec([-2.5, 0.5, 0.5], 0.5, 4; thetainterval=1) == 
+        [0, -1.25, -1, -0.75]
+    @test RenewalDiD._thetavec([1, 2, 3], 1, 6; thetainterval=2) == 
+        [0, 0.5, 1.5, 3, 5, 8] 
+    @test RenewalDiD._thetavec([1, 2, 3], 1, 7; thetainterval=2) == 
+        [0, 0.5, 1.5, 3, 5, 7.5, 10.5]
+    @test RenewalDiD._thetavec([1, 2, 3], 0.5, 7; thetainterval=2) == 
+        [0, 0.25, 0.75, 1.5, 2.5, 3.75, 5.25]
 end
 
 @testset "generate matrix of log R_0 values" begin

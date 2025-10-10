@@ -177,7 +177,8 @@ end
 function _thetavec(df::DataFrame, i, ntimes)
     return _thetavec(  # call version in `fittingparameters.jl`
         [getproperty(df, Symbol("thetas_raw[$j]"))[i] for j in 1:(ntimes - 1)], 
-        df.sigma_theta[i]
+        df.sigma_theta[i],
+        ntimes,
     )
 end  
 

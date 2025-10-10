@@ -76,6 +76,8 @@ end
 _ntimes(A::AbstractArray) = size(A, 1)
 _ngroups(A::AbstractArray) = size(A, 2)
 _ninterventions(A::AbstractArray) = size(A, 3)
+_nthetas(ntimes, ::Automatic) = ntimes - 1
+_nthetas(ntimes, thetainterval::Integer) = round(Int, (ntimes - 1) / thetainterval, RoundUp)
 
 # the mean of all gamma values is zero, ensured by setting the final value in the vector as 
 # `-sum` of other values
@@ -86,10 +88,61 @@ _gammavec(gammas_raw, sigma_gamma) = [gammas_raw; -sum(gammas_raw)] .* sigma_gam
 # each subsequent theta differs from the previous one as a multiple of the standard 
 # deviation. `sigma_theta` is the standard deviation. The output of this function is the 
 # time-varying `theta` at each time as a cumulative random walk. 
-function _thetavec(thetas_raw::AbstractVector{S}, sigma_theta::T) where {S, T}
-    theta_0 = zero(S) * zero(T)
-    return cumsum([theta_0; thetas_raw .* sigma_theta])
+function _thetavec(thetas_raw::AbstractVector, sigma_theta, ntimes; thetainterval=automatic) 
+    rawthetavec = _assemblethetavec(thetas_raw, sigma_theta, ntimes, thetainterval) 
+    return cumsum(rawthetavec)
 end  # a second version of this function is given in `processparameters.jl`
+
+function _assemblethetavec(
+    thetas_raw, 
+    sigma_theta, 
+    ntimes, 
+    ::Automatic, 
+    theta_0=_thetaveczero(thetas_raw, sigma_theta)
+)
+    length(thetas_raw) == ntimes - 1 || throw(_thetaveclengthmismatch(thetas_raw, ntimes))
+    return [theta_0; thetas_raw .* sigma_theta]
+end
+
+function _assemblethetavec(
+    thetas_raw, 
+    sigma_theta, 
+    ntimes, 
+    thetainterval::Integer, 
+    theta_0=_thetaveczero(thetas_raw, sigma_theta, thetainterval)
+) 
+    if thetainterval == 1  
+        return _assemblethetavec(thetas_raw, sigma_theta, ntimes, automatic, theta_0)
+    elseif thetainterval <= 0 
+        throw(ArgumentError("$thetainterval: thetainterval must be a positive integer"))
+    else
+        return __assemblethetavec(thetas_raw, sigma_theta, ntimes, thetainterval, theta_0)
+    end
+end
+
+function __assemblethetavec(thetas_raw, sigma_theta, ntimes, thetainterval, ::T) where T
+    thetavec = zeros(T, ntimes)
+    k = 1 
+    ℓ = zero(T)
+
+    while k < ntimes
+        for (j, v) in enumerate(thetas_raw)
+            thetavec[k] = ℓ * sigma_theta
+            k += 1
+            for n in 1:(thetainterval - 1)
+                thetavec[k] = (ℓ * (thetainterval - n) + v * n) * sigma_theta / thetainterval 
+                k += 1
+            end
+            ℓ = v 
+        end
+    end
+
+    thetavec[ntimes] = last(thetas_raw) * sigma_theta
+    return thetavec
+end
+
+_thetaveczero(::AbstractVector{S}, ::T) where {S, T} = zero(S) * zero(T)
+_thetaveczero(::AbstractVector{S}, ::T, ::U) where {S, T, U} = zero(S) * zero(T) / one(U)
 
 function _predictedlogR_0(alpha, gammavec, thetavec, tau, interventions)
     _predictedlogR_0assertions(gammavec, thetavec, interventions)
@@ -354,11 +407,14 @@ function _prevpropsus(infn, t, j; kwargs...)
 end
 
 """
-    renewaldid(data::AbstractRenewalDiDData, g, priors::RenewalDiDPriors; <keyword arguments>)
+    renewaldid(data::AbstractRenewalDiDData, g, priors::RenewalDiDPriors; [thetainterval], <keyword arguments>)
 
 Return a `Turing.@model` for parameter fitting.
 
 `g` is a generation interval function and the keyword arguments are passed to `g`.
+
+`thetainterval` is the interval between independently sampled time-varying parameters. If 
+    `thetainterval==1` (the default) a new value is entered each day.
 
 # Examples
 ```jldoctest
@@ -391,7 +447,7 @@ DynamicPPL.Model{typeof(RenewalDiD._renewaldid), (:observedcases, :interventions
 """
 function renewaldid(
     data::AbstractRenewalDiDData, g, priors::RenewalDiDPriors{Q, S, T, U, V, W, X}; 
-    kwargs...
+    thetainterval=automatic, kwargs...
 ) where {
     Q <: Distribution, 
     S <: Distribution, 
@@ -414,7 +470,8 @@ function renewaldid(
         priors.tauprior,
         priors.delaydistn,
         _nseeds(data),
-        priors.omegaprior;
+        priors.omegaprior,
+        thetainterval;
         kwargs...
     )
 end
@@ -432,12 +489,14 @@ end
     tauprior,
     delaydistn,
     n_seeds,
-    omega;
+    omega,
+    thetainterval;
     kwargs...
 )
     ngroups = _ngroups(interventions)
     ntimes = _ntimes(interventions)
     ninterventions = _ninterventions(interventions)
+    nthetas = _nthetas(ntimes, thetainterval)
 
     tau ~ filldist(tauprior, ninterventions)
     alpha ~ alphaprior
@@ -450,7 +509,7 @@ end
     minsigma2 ~ Beta(1, 2)
 
     gammavec = _gammavec(gammas_raw, sigma_gamma)
-    thetavec = _thetavec(thetas_raw, sigma_theta)
+    thetavec = _thetavec(thetas_raw, sigma_theta, ntimes; thetainterval)
     predictedlogR_0 = _predictedlogR_0(alpha, gammavec, thetavec, tau, interventions)
 
     T = Complex{typeof(predictedlogR_0[1, 1])}
@@ -596,6 +655,12 @@ _propsusargumenterror(propsus) = ArgumentError("$propsus: must satisfy 0 ≤ pro
 
 function _R_0_dimensionmismatch(len, vec, dim, size)
     return _vm_dimensionmismatch(len, vec, dim, "interventions", size)
+end
+
+function _thetaveclengthmismatch(thetas_raw, ntimes)
+    len = length(thetas_raw) 
+    expted = ntimes - 1
+    return DimensionMismatch("thetas_raw length = $len, expected $expted")
 end
 
 function _vm_dimensionmismatch(len, vec, dim, mat, size)
