@@ -338,6 +338,8 @@ end
         [0, 0.25, 0.75, 1.5, 2.5, 3.75, 5.25]
     # test length as shorthand for testing it successfully generates vector
     @test length(RenewalDiD._thetavec(rand(15), rand(), 100; thetainterval=7)) == 100
+    @test_throws ArgumentError RenewalDiD._thetavec(rand(14), rand(), 100; thetainterval=7)
+    @test_throws ArgumentError RenewalDiD._thetavec(rand(16), rand(), 100; thetainterval=7)
 end
 
 @testset "generate matrix of log R_0 values" begin

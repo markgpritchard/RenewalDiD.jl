@@ -114,28 +114,28 @@ function _assemblethetavec(
     if thetainterval == 1  
         return _assemblethetavec(thetas_raw, sigma_theta, ntimes, automatic, theta_0)
     elseif thetainterval <= 0 
-        throw(ArgumentError("$thetainterval: thetainterval must be a positive integer"))
+        throw(_assemblethetavecnonintegererror(thetainterval))
     else
         return __assemblethetavec(thetas_raw, sigma_theta, ntimes, thetainterval, theta_0)
     end
 end
 
 function __assemblethetavec(thetas_raw, sigma_theta, ntimes, thetainterval, ::T) where T
+    _assemblethetavecassertion(thetas_raw, ntimes, thetainterval)
     thetavec = zeros(T, ntimes)
     k = 1 
     ℓ = zero(T)
 
-    while k < ntimes
-        for (j, v) in enumerate(thetas_raw)
-            thetavec[k] = ℓ * sigma_theta
+    for (j, v) in enumerate(thetas_raw)
+        k >= ntimes && continue  # avoid trying to allocate beyond end of vector
+        thetavec[k] = ℓ * sigma_theta
+        k += 1
+        for n in 1:(thetainterval - 1)
+            k >= ntimes && continue  # avoid trying to allocate beyond end of vector
+            thetavec[k] = (ℓ * (thetainterval - n) + v * n) * sigma_theta / thetainterval 
             k += 1
-            for n in 1:(thetainterval - 1)
-                k >= ntimes && continue  # avoid trying to allocate beyond end of vector
-                thetavec[k] = (ℓ * (thetainterval - n) + v * n) * sigma_theta / thetainterval 
-                k += 1
-            end
-            ℓ = v 
         end
+        ℓ = v 
     end
 
     thetavec[ntimes] = last(thetas_raw) * sigma_theta
@@ -565,6 +565,13 @@ end
 
 # Assertions ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
+function _assemblethetavecassertion(thetas_raw, ntimes, thetainterval)
+    leng = length(thetas_raw) 
+    requiredlength = _nthetas(ntimes, thetainterval)
+    leng == requiredlength || throw(_assemblethetaveclengthrerror(leng, requiredlength))
+    return nothing 
+end
+
 function _diddataassertions(observedcases, interventions, exptdseedcases) 
     _ngroups(observedcases) == _ngroups(interventions) || throw(
         _ngroupsdimensionmismatch("observedcases", "interventions")
@@ -618,6 +625,14 @@ function _realinfectionmatrixwarning(T)
 end
 
 # Error messages ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+
+function _assemblethetaveclengthrerror(leng, requiredlength)
+    return ArgumentError("$leng): length of thetas_raw must be $requiredlength")
+end
+
+function _assemblethetavecnonintegererror(thetainterval)
+    return ArgumentError("$thetainterval: thetainterval must be a positive integer") 
+end
 
 function _infectionsnseedserror()
     return DimensionMismatch("height of `exptdseedcases` must equal `n_seeds`")
