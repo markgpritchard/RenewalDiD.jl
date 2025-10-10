@@ -336,6 +336,8 @@ end
         [0, 0.5, 1.5, 3, 5, 7.5, 10.5]
     @test RenewalDiD._thetavec([1, 2, 3], 0.5, 7; thetainterval=2) == 
         [0, 0.25, 0.75, 1.5, 2.5, 3.75, 5.25]
+    # test length as shorthand for testing it successfully generates vector
+    @test length(enewalDiD._thetavec(rand(15), rand(), 100; thetainterval=7)) == 100
 end
 
 @testset "generate matrix of log R_0 values" begin

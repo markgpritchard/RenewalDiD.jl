@@ -130,6 +130,7 @@ function __assemblethetavec(thetas_raw, sigma_theta, ntimes, thetainterval, ::T)
             thetavec[k] = ℓ * sigma_theta
             k += 1
             for n in 1:(thetainterval - 1)
+                k >= ntimes && continue  # avoid trying to allocate beyond end of vector
                 thetavec[k] = (ℓ * (thetainterval - n) + v * n) * sigma_theta / thetainterval 
                 k += 1
             end
