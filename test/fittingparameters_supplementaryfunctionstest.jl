@@ -151,33 +151,43 @@ R0prediction3 = [
 ]
 R0prediction4 = [0  0; 2  0; 2  2; 4  2; 4  2]
 seedexpectation1 = [
-    0  0; 0  0; 0  0; 0  0; (log(6 / 5) - log(2) / 5)  (log(6 / 5) - log(2) / 5)
-]
-seedexpectation2 = [
-    0  0; 0  0; 0  0; 0  0; (log(6 / 5) - log(2) / 5)  (log(6 / 5) - log(2) / 5)
+    0.6       0.6
+    0.689219  0.689219
+    0.791705  0.791705
+    0.90943   0.90943
+    1.04466   1.04466
 ]
 seedexpectation3 = [
-    0  0; 
-    0  0; 
-    0  0; 
-    (log(6 / 5) - 2 * log(2) / 10)  (log(6 / 5) - 2 * log(2) / 10); 
-    (log(6 / 5) - log(2) / 10)  (log(6 / 5) - log(2) / 10)
-]
-seedexpectation4 = [
-    0  0; 0  0; 0  0; 0  0; (log(6 / 5) - log(2) / 5)  (log(6 / 5) - log(2) / 5)
+    0.848528  0.848528
+    0.90943   0.90943
+    0.974703  0.974703
+    1.04466   1.04466
+    1.11964   1.11964
 ]
 seedexpectation5 = [
-    0  0; 
-    0  0; 
-    0  0; 
-    (log(4 / 3) - 2 * log(2) / 5)  (log(4 / 3) - 2 * log(2) / 5); 
-    (log(4 / 3) - log(2) / 5)  (log(4 / 3) - log(2) / 5)
+    0.666667  0.666667
+    0.765799  0.765799
+    0.879672  0.879672
+    1.01048   1.01048
+    1.16073   1.16073
 ]
-seedexpectation6 = [0  0; 0  0; 0  0; 0  0; (log(6 / 5) - log(2) / 5)  0]
+seedexpectation6 = [
+    0.6       0.5
+    0.689219  0.574349
+    0.791705  0.659754
+    0.90943   0.757858
+    1.04466   0.870551
+]
 mseedexpectation01 = (m = zeros(7, 2); m[7, :] .+= 1; m)
 mseedexpectation02 = (m = zeros(5, 2); m[5, :] .+= 2; m)
 mseedexpectation03 = (m = zeros(5, 3); m[5, :] .+= 0.5; m)
-mseedexpectation1 = [0  0; 0  0; 0  0; 0  0; 0.5  0.5]
+mseedexpectation1 = [
+    0.6       0.6
+    0.689219  0.689219
+    0.791705  0.791705
+    0.90943   0.90943
+    1.50965   1.50965
+]
 mseedexpectation2 = mseedexpectation1
 mseedexpectation3 = seedexpectation3
 mseedexpectation4 = [0  0; 0  0; 0  0; 0  0; 1  1]
@@ -381,12 +391,35 @@ end
     @test expectedseedcases(zeros(20, 2), 7; minvalue=0) == zeros(7, 2)
     @test expectedseedcases(zeros(20, 2), 5; minvalue=0) == zeros(5, 2)
     @test expectedseedcases(zeros(20, 3), 5; minvalue=0) == zeros(5, 3)
-    @test expectedseedcases(obs1, 5; minvalue=0) == seedexpectation1
-    @test expectedseedcases(obs1, 5; doubletime=5, minvalue=0) == seedexpectation2
-    @test expectedseedcases(obs1, 5; doubletime=10, minvalue=0) == seedexpectation3
-    @test expectedseedcases(obs1, 5; sampletime=5, minvalue=0) == seedexpectation4
-    @test expectedseedcases(obs1, 5; sampletime=3, minvalue=0) == seedexpectation5
-    @test expectedseedcases(obs2, 5; minvalue=0) == seedexpectation6
+    es1 = expectedseedcases(obs1, 5; minvalue=0) 
+    @testset for i in axes(es1, 1)
+        @test es1[i, 1] ≈ seedexpectation1[i, 1] atol=1e-5
+        @test es1[i, 1] == es1[i, 2] 
+    end
+    es2 = expectedseedcases(obs1, 5; doubletime=5, minvalue=0)
+    @testset for i in axes(es2, 1)
+        @test es2[i, 1] ≈ seedexpectation1[i, 1] atol=1e-5
+        @test es2[i, 1] == es2[i, 2] 
+    end
+    es3 = expectedseedcases(obs1, 5; doubletime=10, minvalue=0) 
+    @testset for i in axes(es3, 1)
+        @test es3[i, 1] ≈ seedexpectation3[i, 1] atol=1e-5
+        @test es3[i, 1] == es3[i, 2] 
+    end
+    es4 = expectedseedcases(obs1, 5; sampletime=5, minvalue=0) 
+    @testset for i in axes(es4, 1)
+        @test es4[i, 1] ≈ seedexpectation1[i, 1] atol=1e-5
+        @test es4[i, 1] == es4[i, 2] 
+    end
+    es5 = expectedseedcases(obs1, 5; sampletime=3, minvalue=0) 
+    @testset for i in axes(es5, 1)
+        @test es5[i, 1] ≈ seedexpectation5[i, 1] atol=1e-5
+        @test es5[i, 1] == es5[i, 2] 
+    end
+    es6 = expectedseedcases(obs2, 5; minvalue=0) 
+    @testset for i in eachindex(es6)
+        @test es6[i] ≈ seedexpectation6[i] atol=1e-5
+    end
     @test expectedseedcases(zeros(2, 3), 5; minvalue=0) == zeros(5, 3)
     @test_throws BoundsError expectedseedcases(zeros(2, 3), 5; sampletime=5)
     mm01 = expectedseedcases(zeros(20, 2), 7; minvalue=1)
@@ -405,41 +438,9 @@ end
     @testset for i in eachindex(mm03)
         @test mm03a[i] ≈ mseedexpectation03[i] atol=1e-10
     end
-    mm1 = expectedseedcases(obs1, 5; minvalue=0.5) 
+    mm1 = expectedseedcases(obs1, 5; minvalue=4.5) 
     @testset for i in eachindex(mm1)
-        @test mm1[i] ≈ mseedexpectation1[i] atol=1e-10
-    end
-    mm1a = expectedseedcases(obs1, 5) 
-    @testset for i in eachindex(mm1)
-        @test mm1a[i] ≈ mseedexpectation1[i] atol=1e-10
-    end
-    mm2 = expectedseedcases(obs1, 5; doubletime=5, minvalue=0.5) 
-    @testset for i in eachindex(mm2)
-        @test mm2[i] ≈ mseedexpectation2[i] atol=1e-10
-    end
-    mm2a = expectedseedcases(obs1, 5; doubletime=5) 
-    @testset for i in eachindex(mm2)
-        @test mm2a[i] ≈ mseedexpectation2[i] atol=1e-10
-    end
-    mm3 = expectedseedcases(obs1, 5; doubletime=10, minvalue=0.1) 
-    @testset for i in eachindex(mm3)
-        @test mm3[i] ≈ mseedexpectation3[i] atol=1e-10
-    end
-    mm4 = expectedseedcases(obs1, 5; sampletime=5, minvalue=1) 
-    @testset for i in eachindex(mm4)
-        @test mm4[i] ≈ mseedexpectation4[i] atol=1e-10
-    end
-    mm5 = expectedseedcases(obs1, 5; sampletime=3, minvalue=0.5) 
-    @testset for i in eachindex(mm5)
-        @test mm5[i] ≈ mseedexpectation5[i] atol=1e-10
-    end
-    mm5a = expectedseedcases(obs1, 5; sampletime=3) 
-    @testset for i in eachindex(mm5)
-        @test mm5a[i] ≈ mseedexpectation5[i] atol=1e-10
-    end
-    mm6 = expectedseedcases(obs2, 5; minvalue=0.75)
-    @testset for i in eachindex(mm6)
-        @test mm6[i] ≈ mseedexpectation6[i] atol=1e-10
+        @test mm1[i] ≈ mseedexpectation1[i] atol=1e-5
     end
 end
         

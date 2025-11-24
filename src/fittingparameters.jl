@@ -231,10 +231,7 @@ function _expectedseedcases!(exptdseedcases, observedcases, n_seeds, doubletime,
     for g in 1:_ngroups(observedcases)
         tot = sum(@view observedcases[1:sampletime, g]) / sampletime
         for t in 1:n_seeds
-            exptdseedcases[t, g] = max(
-                0,
-                log(tot) - (n_seeds + 1 - t) * log(2) / doubletime
-            )
+            exptdseedcases[t, g] = exp(log(tot) - (n_seeds + 1 - t) * log(2) / doubletime)
         end
     end
     return nothing
