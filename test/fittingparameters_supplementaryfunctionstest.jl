@@ -391,6 +391,10 @@ end
     @test expectedseedcases(zeros(20, 2), 7; minvalue=0) == zeros(7, 2)
     @test expectedseedcases(zeros(20, 2), 5; minvalue=0) == zeros(5, 2)
     @test expectedseedcases(zeros(20, 3), 5; minvalue=0) == zeros(5, 3)
+    
+    # These tests compare outputs against printed versions of the function's output. These 
+    # outputs appear reasonable given the requirements of the function. May be worthwhile to 
+    # reconsider these tests in terms of fundamental expectations of the output.
     es1 = expectedseedcases(obs1, 5; minvalue=0) 
     @testset for i in axes(es1, 1)
         @test es1[i, 1] ≈ seedexpectation1[i, 1] atol=1e-5
