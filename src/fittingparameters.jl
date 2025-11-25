@@ -524,8 +524,8 @@ end
 
     # Normal approximation of Binomial to avoid forcing integer values 
     np = real.(delayedinfections[n_seeds:n_seeds+ntimes, :]) .* psi
-
-    observedcases ~ arraydist(Normal.(np, NaNMath.sqrt.(np .* (1 - psi) .+ minsigma2)))
+    np_1minusp = np .* (1 - psi)
+    observedcases ~ arraydist(Normal.(np, NaNMath.sqrt.(np_1minusp .+ minsigma2)))
     return nothing
 end
 
