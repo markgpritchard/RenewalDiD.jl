@@ -217,21 +217,20 @@ SimulationData{Int64, InterventionMatrix{Int64}, Vector{Int64}}
 ```
 """
 function testsimulation(rng::AbstractRNG=default_rng())
-    u0_1 = simulationu0(; s=98, e=2)
-    u0_2 = simulationu0(; s=198, e=2)
-    u0_3 = simulationu0(; s=48, e=2)
-    mu = 0.2
-    delta = 0.3
-    psi = 0.6
-    kappa = 0.5
+    u0_1 = simulationu0(; S=98, E=2)
+    u0_2 = simulationu0(; S=198, E=2)
+    u0_3 = simulationu0(; S=48, E=2)
+    eta = 0.2
+    phi = 0.6
+    sigma = 0.5
     s1 = packsimulationtuple( ; 
-        u0=u0_1, beta=_testsimulationbeta1, mu, delta, psi, kappa, intervention=nothing,
+        u0=u0_1, beta=_testsimulationbeta1, sigma, eta, phi, intervention=nothing,
     )
     s2 = packsimulationtuple( ; 
-        u0=u0_2, beta=_testsimulationbeta2, mu, delta, psi, kappa, intervention=4,
+        u0=u0_2, beta=_testsimulationbeta2, sigma, eta, phi, intervention=4,
     )
     s3 = packsimulationtuple( ; 
-        u0=u0_3, beta=_testsimulationbeta3, mu, delta, psi, kappa, intervention=6,
+        u0=u0_3, beta=_testsimulationbeta3, sigma, eta, phi, intervention=6,
     )
     return packsimulations(rng, 10, s1, s2, s3)
 end

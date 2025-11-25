@@ -13,25 +13,24 @@ using Turing
 rng = Xoshiro(1729)
 
 sim = let 
-    u0_1 = simulationu0(; s=100_000, e=5, i_n=3, i_f=2)
-    u0_2 = simulationu0(; s=200_000, e=5, i_n=3, i_f=2)
-    u0_3 = simulationu0(; s=50_000, e=5, i_n=3, i_f=2)
-    mu = 0.2
-    delta = 0.3
-    psi = 0.6
-    kappa = 0.5
+    u0_1 = simulationu0(; S=100_000, E=5, I=5)
+    u0_2 = simulationu0(; S=200_000, E=5, I=5)
+    u0_3 = simulationu0(; S=50_000, E=5, I=5)
+    eta = 0.2
+    phi = 0.6
+    sigma = 0.5
     _beta1counter(t) = 0.4 + 0.1 * cos((t - 20) * 2pi / 365) 
     _beta1(t) = t >= 50 ? 0.8 * _beta1counter(t) : _beta1counter(t)
     _beta2(t) = t >= 30 ? 0.72 * _beta1counter(t) : 0.9 * _beta1counter(t)
     _beta3(t) = 1.05 * _beta1counter(t)
     s1 = packsimulationtuple( ; 
-        u0=u0_1, beta=_beta1, mu, delta, psi, kappa, intervention=[50, 70],
+        u0=u0_1, beta=_beta1, sigma, eta, phi, intervention=[50, 70],
     )
     s2 = packsimulationtuple( ; 
-        u0=u0_2, beta=_beta2, mu, delta, psi, kappa, intervention=[30, nothing],
+        u0=u0_2, beta=_beta2, sigma, eta, phi, intervention=[30, nothing],
     )
     s3 = packsimulationtuple( ; 
-        u0=u0_3, beta=_beta3, mu, delta, psi, kappa, intervention=[nothing, 40],
+        u0=u0_3, beta=_beta3, sigma, eta, phi, intervention=[nothing, 40],
     )
     packsimulations(rng, 100, s1, s2, s3; sampletime=14)
 end
@@ -79,23 +78,7 @@ map_outputs = samplerenewaldidinfections(model1, map_df; mu=0.2, kappa=0.5,)
 map_quantiles = quantilerenewaldidinfections(map_outputs, [0.5])
 map_plot = plotmodel(map_quantiles, sim)
 
-#=
 # do not test the MCMC as this takes a long time and does not add beyond existing tests
-
-shortchain = sample(
-    rng, model1, NUTS(0.65; adtype=AutoReverseDiff()), MCMCThreads(), 25, 4; 
-    initial_params=repeat([map_estimate.values.array]; outer=4), progress=false,
-) 
-shortdf = DataFrame(shortchain)
-p1 = trplot(shortdf; ncols=5, nplots=50, size=(1000, 1000))  # examine 50 variables
-p2 = tracerankplot(shortdf; binsize=5, ncols=5, nplots=50, size=(1000, 1000)) 
-
-shortfittedoutputs = samplerenewaldidinfections(model1, shortdf; mu=0.2, kappa=0.5,)
-shortoutputquantiles = quantilerenewaldidinfections(
-    shortfittedoutputs, [0.025, 0.05, 0.25, 0.5, 0.75, 0.95, 0.975]
-)
-p3 = plotmodel(shortoutputquantiles, sim)
-=#
 
 @testset "everything ran and produced expected types" begin  # to add further tests later
     @test priorschain isa Chains

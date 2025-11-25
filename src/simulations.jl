@@ -3,24 +3,23 @@
 # `runsimulation` is the main function in this file. All parameters and compartments have
 #  the meanings described in this function's documentation.
 """
-    runsimulation([rng], duration, u0; beta, mu, delta, psi, kappa)
-    runsimulation([rng], duration, u0, beta, mu, delta, psi, kappa)
+    runsimulation([rng], duration, u0; beta, sigma, eta, phi)
+    runsimulation([rng], duration, u0, beta, sigma, eta, phi)
 
 Generate simulated data.
 
 Model uses Gillespie's stochastic continuous time method with 6 compartments:
-- `s`: susceptible 
-- `e`: exposed (infected but not yet infectious)
-- `i_n`: infectious and will never be diagnosed 
-- `i_f`: infectious and will be diagnosed before recovery 
-- `i_d`: infectious and diagnosed 
-- `r`: recovered
+- `S`: susceptible 
+- `E`: exposed (infected but not yet infectious)
+- `I`: infectious and undiagnosed 
+- `I′`: infectious and diagnosed 
+- `R`: recovered
 
-A 7th compartment in the model records the cumulative number of diagnoses.
+A 6th compartment in the model records the cumulative number of diagnoses.
 
-Parameters `beta`, `mu`, `delta` `psi` and `kappa` may be numbers, or may be functions 
-taking time as their only argument to give time-varying values. They can be entered as 
-positional arguments or keyword arguments. All parameters must be non-negative.
+Parameters `beta`, `sigma`, `eta` and `phi` may be numbers, or may be functions taking time 
+as their only argument to give time-varying values. They can be entered as positional 
+arguments or keyword arguments. All parameters must be non-negative.
 
 # Arguments
 - `rng::AbstractRNG=Random.default_rng()`: random number generator
@@ -28,12 +27,9 @@ positional arguments or keyword arguments. All parameters must be non-negative.
 - `u0::AbstractVector{<:Integer}`: initial conditions, must be of length 7 describing
     compartments in the order above
 - `beta`: transmission parameter
-- `mu`: recovery rate
-- `delta`: diagnosis rate (i.e. for those who will be diagnosed, how quickly does it 
-    happen?); must satisfy `delta > mu` (i.e. must be diagnosed before the end of the 
-    infectious period)
-- `psi`: proportion diagnosed; must satisfy `0 ≤ psi ≤ 1`
-- `kappa`: rate of progression from exposed to infectious
+- `sigma`: rate of progression from exposed to infectious
+- `eta`: recovery rate
+- `phi`: proportion diagnosed; must satisfy `0 ≤ phi ≤ 1`
 
 # Returns
 Returns a matrix of height `duration + 1` giving numbers in each compartment at the end of 
@@ -85,13 +81,12 @@ function runsimulation end
 # Constants ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 const _SEIREVENTSMATRIX = [  # matrix of movements between compartments 
-    # s    e    i_n  i_f  i_d  r    cumulativediagnoses
-     -1    1    0    0    0    0    0  # infections
-      0   -1    1    0    0    0    0  # disease progression, subset who won't be diagnosed
-      0   -1    0    1    0    0    0  # disease progression, subset who will be diagnosed
-      0    0    0   -1    1    0    1  # diagnosis
-      0    0   -1    0    0    1    0  # recovery from i_n
-      0    0    0    0   -1    1    0  # recovery from i_d
+    # S   E   I   I′  R   cumulativediagnoses
+     -1   1   0   0   0   0  # infections
+      0  -1   1   0   0   0  # disease progression
+      0   0  -1   1   0   1  # diagnosis
+      0   0  -1   0   1   0  # recovery from I
+      0   0   0  -1   1   0  # recovery from I′
 ]
 
 
@@ -100,22 +95,21 @@ const _SEIREVENTSMATRIX = [  # matrix of movements between compartments
 ## Simulation u0
 
 """
-    simulationu0(; s, e, i_n, i_d, i_f, r, n)
+    simulationu0(; S, E, I, Iprime, R, N)
 
 Produce vector of initial conditions for simulation.
 
 # Keyword arguments 
 The following represent the model compartments, 
-- `s::Integer=0`: susceptible 
-- `e::Integer=0`: exposed (infected but not yet infectious)
-- `i_n::Integer=0`: infectious and will never be diagnosed 
-- `i_f::Integer=0`: infectious and will be diagnosed before recovery 
-- `i_d::Integer=0`: infectious and diagnosed 
-- `r::Union{<:Integer, Automatic}=automatic`: recovered
+- `S::Integer=0`: susceptible 
+- `E::Integer=0`: exposed (infected but not yet infectious)
+- `I::Integer=0`: infectious and undiagnosed 
+- `Iprime::Integer=0`: infectious and diagnosed 
+- `R::Union{<:Integer, Automatic}=automatic`: recovered
 
-The argument `n::Union{<:Integer, Nothing}=nothing` is the population size. If `n` is 
-    provided and `r` is not then the remaining population not assigned to other compartments 
-    will be assigned to `r`. An error is thrown if a unique non-negative value of `r` cannot
+The argument `N::Union{<:Integer, Nothing}=nothing` is the population size. If `N` is 
+    provided and `R` is not then the remaining population not assigned to other compartments 
+    will be assigned to `R`. An error is thrown if a unique non-negative value of `R` cannot
     be calculated.
 
 All arguments are optional.
@@ -130,9 +124,8 @@ julia> simulationu0()
  0
  0
  0
- 0
 
-julia> simulationu0(; s=99, e=1)
+julia> simulationu0(; S=99, E=1)
 7-element Vector{Int64}:
  99
   1
@@ -140,54 +133,49 @@ julia> simulationu0(; s=99, e=1)
   0
   0
   0
-  0
 
-julia> simulationu0(; s=99, e=1, n=200)
+julia> simulationu0(; S=99, E=1, N=200)
 7-element Vector{Int64}:
   99
    1
    0
    0
-   0
  100
    0
 
-julia> simulationu0(; s=99, e=1, r=100, n=250)
+julia> simulationu0(; S=99, E=1, R=100, N=250)
 ERROR: ArgumentError: Inconsistent values of `n` and `r` supplied. Calculated n=200 but \
     keyword argument n=250.
 ```
 """
 function simulationu0( ; 
-    s::Integer=0, 
-    e::Integer=0, 
-    i_n::Integer=0, 
-    i_d::Integer=0, 
-    i_f::Integer=0, 
-    r::Union{<:Integer, Automatic}=automatic,
-    n::Union{<:Integer, Nothing}=nothing,
+    S::Integer=0, 
+    E::Integer=0, 
+    I::Integer=0, 
+    Iprime::Integer=0, 
+    R::Union{<:Integer, Automatic}=automatic,
+    N::Union{<:Integer, Nothing}=nothing,
 )
-    return _simulationu0(s, e, i_n, i_f, i_d, r, n)
+    return _simulationu0(S, E, I, Iprime, R, N)
 end
 
-function _simulationu0(s, e, i_n, i_f, i_d, ::Automatic, ::Nothing)
-    return _simulationu0(s, e, i_n, i_f, i_d, 0, nothing)
+function _simulationu0(S, E, I, Iprime, ::Automatic, ::Nothing)
+    return _simulationu0(S, E, I, Iprime, 0, nothing)
 end
 
-function _simulationu0(s, e, i_n, i_f, i_d, ::Automatic, n::Integer)
-    r = n - (s + e + i_n + i_f + i_d)
-    r >= 0 || throw(_simulationu0_n_error(n, n - r))
-    return _simulationu0(s, e, i_n, i_f, i_d, r, nothing)
+function _simulationu0(S, E, I, Iprime, ::Automatic, N::Integer)
+    R = N - (S + E + I + Iprime)
+    R >= 0 || throw(_simulationu0_n_error(N, N - R))
+    return _simulationu0(S, E, I, Iprime, R, nothing)
 end
 
-function _simulationu0(s, e, i_n, i_f, i_d, r::Integer, n::Integer)
-    s + e + i_n + i_f + i_d + r == n || throw(
-        _simulationu0_nr_error(n, s + e + i_n + i_f + i_d + r)
-    )
-    return _simulationu0(s, e, i_n, i_f, i_d, r, nothing)
+function _simulationu0(S, E, I, Iprime, R::Integer, N::Integer)
+    S + E + I + Iprime + R == N || throw(_simulationu0_nr_error(N, S + E + I + Iprime + R))
+    return _simulationu0(S, E, I, Iprime, R, nothing)
 end
 
-function _simulationu0(s, e, i_n, i_f, i_d, r::Integer, ::Nothing)
-    u0 = [s, e, i_n, i_f, i_d, r, 0]
+function _simulationu0(S, E, I, Iprime, R::Integer, ::Nothing)
+    u0 = [S, E, I, Iprime, R, 0]
     minimum(u0) >= 0 || throw(_simulationu0_negativeerror(minimum(u0)))
     return u0
 end
@@ -210,67 +198,42 @@ end
 __parameter(x, ::Any, ::Any, ::Nothing) = x
 
 function __parameter(x, t, symbol, upper)
-    x <= upper || throw(_parametermaximumerrorexception(x, t, symbol, upper))
+    x < upper || throw(_parametermaximumerrorexception(x, t, symbol, upper))
     return x
 end
 
 _pbeta(beta, t) = _parameter(beta, t, :beta)
-_pdelta(delta, t) = _parameter(delta, t, :delta)
-_pmu(mu, t) = _parameter(mu, t, :mu)
-_pkappa(kappa, t) = _parameter(kappa, t, :kappa)
-_ppsi(psi, t) = _parameter(psi, t, :psi; upper=1)  # psi is a proportion 0 ≤ ψ ≤ 1
+_peta(eta, t) = _parameter(eta, t, :eta)
+_psigma(sigma, t) = _parameter(sigma, t, :sigma)
+_pphi(phi, t) = _parameter(phi, t, :phi; upper=1)  # phi is a proportion 0 < φ < 1
 
 ## Force of infection 
 
 # i_n, i_f and i_d assumed to be equally infectious
-_foi(beta, i_n, i_f, i_d, n, t) = _pbeta(beta, t) * (i_n + i_f + i_d) / n
+_foi(beta, I, Iprime, N, t) = _pbeta(beta, t) * (I + Iprime) / N
 
 ## Event rates
 
-_simulatedinfections(beta, s, i_n, i_f, i_d, n, t) = s * _foi(beta, i_n, i_f, i_d, n, t)
-
-function _diseaseprogression_to_i_n(x, psi, kappa, t)
-    return x * (1 - _ppsi(psi, t)) * _pkappa(kappa, t)
-end
-
-_diseaseprogression_to_i_f(x, psi, kappa, t) = x * _ppsi(psi, t) * _pkappa(kappa, t)
-_diagnosis(x, delta, t) = x * _pdelta(delta, t)
-_recovery(x, mu, t) = x * _pmu(mu, t)
-
-# diagnosed individuals have already been infectious for a period represented by `1/delta`
-# so recover after a period `1/mu - 1/delta`
-function _recovery(x, mu, delta, t) 
-    timetodiagnosis = 1 / _pdelta(delta, t)
-    timetorecovery = 1 / _pmu(mu, t)
-    if isinf(timetorecovery)
-        # no need for error message about time taken to diagnosis if recovery never happens
-        remainingtime = timetorecovery
-    else 
-        timetodiagnosis < timetorecovery || throw(
-            _recoveryerrorexception(timetodiagnosis, timetorecovery)
-        )
-        remainingtime = timetorecovery - timetodiagnosis
-    end
-    remainingrate = 1 / remainingtime
-    return x * remainingrate
-end
+_simulatedinfections(beta, S, I, Iprime, N, t) = S * _foi(beta, I, Iprime, N, t)
+_diseaseprogression(E, sigma, t) = E * _psigma(sigma, t)
+_diagnosis(I, eta, phi, t) = I * _peta(eta, t) * _pphi(phi, t) / (1 - _pphi(phi, t))
+_recovery(x, eta, t) = x * _peta(eta, t)
 
 function _n_seir(u::AbstractVector{<:Integer})
-    length(u) == 7 || throw(_ulengtherror(u))
+    length(u) == 6 || throw(_ulengtherror(u))
     minimum(u) >= 0 || throw(_negativeuerror(u))
-    return sum(@view u[1:6])  # s, e, i_n, i_f, i_d, r 
+    return sum(@view u[1:5])  # S, E, I, Iprime, R
 end
 
-function _seirrates(u::AbstractVector{<:Integer}, t, beta, mu, delta, psi, kappa)
-    n = _n_seir(u)
-    s, e, i_n, i_f, i_d, = u
+function _seirrates(u::AbstractVector{<:Integer}, t, beta, sigma, eta, phi)
+    N = _n_seir(u)
+    S, E, I, Iprime, R, = u
     return [
-        _simulatedinfections(beta, s, i_n, i_f, i_d, n, t),  # infections
-        _diseaseprogression_to_i_n(e, psi, kappa, t),  # disease progression, not diagnosed
-        _diseaseprogression_to_i_f(e, psi, kappa, t),  # disease progression, to be diagnosed
-        _diagnosis(i_f, delta, t),  # diagnosis
-        _recovery(i_n, mu, t),  # recovery from i_n
-        _recovery(i_d, mu, delta, t)  # recovery from i_d
+        _simulatedinfections(beta, S, I, Iprime, N, t),  # infections
+        _diseaseprogression(E, sigma, t),  # disease progression 
+        _diagnosis(I, eta, phi, t),  # diagnosis
+        _recovery(I, eta, t),  # recovery from I
+        _recovery(Iprime, eta, t),  # recovery from I′
     ]
 end
 
@@ -278,7 +241,7 @@ end
 
 _tstep(rng, rates) = -log(rand(rng)) / sum(rates)
 _nextevent(rates) = _nextevent(default_rng(), rates)  
-# `_nextevent(rates)` is not used by any functions expect the tests -- may be worth changing 
+# `_nextevent(rates)` is not used by any functions except the tests -- may be worth changing 
 # the tests and removing this method
 _nextevent(rng, rates) = sample(rng, eachindex(rates), Weights(rates))
 _updateevent!(u, nextevent) = u .+= _SEIREVENTSMATRIX[nextevent, :]
@@ -287,16 +250,19 @@ _updateevent!(u, nextevent) = u .+= _SEIREVENTSMATRIX[nextevent, :]
 
 _simulateday!(args...) = _simulateday!(default_rng(), args...)
 
-function _simulateday!(rng::AbstractRNG, u, t, beta, mu, delta, psi, kappa)
+function _simulateday!(rng::AbstractRNG, u, t, beta, sigma, eta, phi)
     nextday = t + 1 
+
     while t < nextday
-        rates = _seirrates(u, t, beta, mu, delta, psi, kappa)
+        rates = _seirrates(u, t, beta, sigma, eta, phi)
         nextevent = _nextevent(rng, rates)
         t += _tstep(rng, rates)
+
         if t < nextday 
             _updateevent!(u, nextevent) 
         end
     end
+
     return u 
 end
 
@@ -304,26 +270,26 @@ end
 
 runsimulation(args...; kwargs...) = runsimulation(default_rng(), args...; kwargs...) 
 
-function runsimulation(rng::AbstractRNG, duration, u0; beta, mu, delta, psi, kappa)
-    return _runsimulation(rng, duration, u0, beta, mu, delta, psi, kappa)
+function runsimulation(rng::AbstractRNG, duration, u0; beta, sigma, eta, phi)
+    return _runsimulation(rng, duration, u0, beta, sigma, eta, phi)
 end
 
-function runsimulation(rng::AbstractRNG, duration, u0, beta, mu, delta, psi, kappa)
-    return _runsimulation(rng, duration, u0, beta, mu, delta, psi, kappa) 
+function runsimulation(rng::AbstractRNG, duration, u0, beta, sigma, eta, phi)
+    return _runsimulation(rng, duration, u0, beta, sigma, eta, phi) 
 end
 
-function _runsimulation(rng, duration, u0, beta, mu, delta, psi, kappa)
+function _runsimulation(rng, duration, u0, beta, sigma, eta, phi)
     duration >= 1 || throw(_negativedurationerror(duration))
-    output = zeros(Int, duration + 1, 7)
+    output = zeros(Int, duration + 1, 6)
     u = deepcopy(u0)
     output[1, :] = u
-    _runsimulationdays!(rng, output, duration, u, beta, mu, delta, psi, kappa)
+    _runsimulationdays!(rng, output, duration, u, beta, sigma, eta, phi)
     return output 
 end
 
-function _runsimulationdays!(rng, output, duration, u, beta, mu, delta, psi, kappa)
+function _runsimulationdays!(rng, output, duration, u, beta, sigma, eta, phi)
     for t in 1:duration 
-        _simulateday!(rng, u, t, beta, mu, delta, psi, kappa)
+        _simulateday!(rng, u, t, beta, sigma, eta, phi)
         output[t+1, :] = u
     end
     return nothing
@@ -331,8 +297,8 @@ end
 
 """
     simulationcases(M::Matrix)
-    simulationcases([rng], duration, u0, beta, mu, delta, psi, kappa)
-    simulationcases([rng], duration, u0; beta, mu, delta, psi, kappa)
+    simulationcases([rng], duration, u0, beta, sigma, eta, phi)
+    simulationcases([rng], duration, u0; beta, sigma, eta, phi)
 
 Produce a vector of simulated diagnosed infections.
 
@@ -372,7 +338,7 @@ true
 ```
 """
 function simulationcases(M::Matrix)
-    size(M, 2) == 7 || throw(_simmatrixwidtherror(M))
+    size(M, 2) == 6 || throw(_simmatrixwidtherror(M))
     duration = size(M, 1) - 1
     return _simulationcases(M, duration)
 end
@@ -386,9 +352,9 @@ end
 
 function _simulationcases(M::Matrix{T}, duration) where T
     xs = zeros(T, duration + 1)
-    xs[1] == M[1, 7]
+    xs[1] == M[1, 6]
     for t in 2:(duration + 1)
-        xs[t] = M[t, 7] - M[t-1, 7]
+        xs[t] = M[t, 6] - M[t-1, 6]
     end
     return xs
 end
@@ -475,7 +441,7 @@ function _siminterventionarray(duration, interventiontimes::Matrix)
 end
 
 function _packsimulationsinterventiontimesarray(m1_args)
-    return __packsimulationsinterventiontimesarray(m1_args[7])
+    return __packsimulationsinterventiontimesarray(m1_args[6])
 end
 
 function __packsimulationsinterventiontimesarray(::Number)
@@ -505,12 +471,12 @@ function _packsimulation!(
 end
 
 function __packsimulation!(rng, interventiontimes, Ns, observedcases, duration, args::Tuple)
-    u0, beta, mu, delta, psi, kappa, intervention = args
-    n = _n_seir(u0)
-    cases = simulationcases(rng, duration, u0, beta, mu, delta, psi, kappa)
+    u0, beta, sigma, eta, phi, intervention = args
+    N = _n_seir(u0)
+    cases = simulationcases(rng, duration, u0, beta, sigma, eta, phi)
     observedcases = hcat(observedcases, cases)
     interventiontimes = _packsimulationinterventiontimes(interventiontimes, intervention)
-    push!(Ns, n)
+    push!(Ns, N)
     return (interventiontimes, Ns, observedcases)
 end
 
@@ -522,7 +488,7 @@ function _packsimulationinterventiontimes(interventiontimes::Vector, interventio
     return vcat(interventiontimes, intervention)
 end
 
-const _SIMARGSORDER = [:u0, :beta, :mu, :delta, :psi, :kappa]
+const _SIMARGSORDER = [:u0, :beta, :eta, :sigma, :phi]
 
 function _simargs(parameter::Symbol, args...)
     index = findfirst(x -> x == parameter, _SIMARGSORDER)
@@ -546,8 +512,8 @@ julia> packsimulationtuple(; u0, beta, mu, delta, psi, kappa, intervention=50)
 ([100000, 5, 3, 2, 0, 0, 0], 0.4, 0.2, 0.3, 0.6, 0.5, 50)
 ```
 """
-function packsimulationtuple(; u0, beta, mu, delta, psi, kappa, intervention)
-    return (u0, beta, mu, delta, psi, kappa, intervention)
+function packsimulationtuple(; u0, beta, sigma, eta, phi, intervention)
+    return (u0, beta, sigma, eta, phi, intervention)
 end
 
 
@@ -561,7 +527,7 @@ function _parameterzeroerrorexception(x, t, symbol)
 end
 
 function _parametermaximumerrorexception(x, t, symbol, upper)
-    return ErrorException("$x: $symbol must be ≤ $upper (error at time $t)")
+    return ErrorException("$x: $symbol must be < $upper (error at time $t)")
 end
 
 function _recoveryerrorexception(timetodiagnosis, timetorecovery)
@@ -570,7 +536,7 @@ function _recoveryerrorexception(timetodiagnosis, timetorecovery)
     return ErrorException(m)
 end
 
-_simmatrixwidtherror(M) = ArgumentError("size $(size(M)): expecting a Matrix of width 7")
+_simmatrixwidtherror(M) = ArgumentError("size $(size(M)): expecting a Matrix of width 6")
 
 function _simulationu0_n_error(n, sm)
     m = "$n: when keyword argument `n` is supplied it must be at least as large as the sum \
@@ -580,10 +546,10 @@ end
 
 _simulationu0_negativeerror(x) = ArgumentError("$x: compartment sizes cannot be negative")
 
-function _simulationu0_nr_error(n, calcn)
-    m = "Inconsistent values of `n` and `r` supplied. Calculated n=$calcn but keyword \
-        argument n=$n."
-    return ArgumentError(m)
+function _simulationu0_nr_error(N, calcn)
+    msg = "Inconsistent values of `N` and `R` supplied. Calculated N=$calcn but keyword \
+        argument N=$N."
+    return ArgumentError(msg)
 end
 
-_ulengtherror(u) = ArgumentError("$u, u must be a vector of 7 integers")
+_ulengtherror(u) = ArgumentError("$u, u must be a vector of 6 integers")
