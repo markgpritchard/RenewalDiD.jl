@@ -500,7 +500,7 @@ end
     alpha ~ alphaprior
     sigma_gamma ~ sigma_gammaprior
     gammas_raw ~ filldist(Normal(0, 1), ngroups - 1)
-    thetas_raw ~ filldist(Normal(0, 1), ntimes - 1)
+    thetas_raw ~ filldist(Normal(0, 1), nthetas)
     sigma_theta ~ sigma_thetaprior
     psi ~ psiprior
     M_x ~ filldist(Normal(0, 1), ntimes + n_seeds, ngroups)
@@ -624,7 +624,7 @@ end
 # Error messages ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 function _assemblethetaveclengthrerror(leng, requiredlength)
-    return ArgumentError("$leng): length of thetas_raw must be $requiredlength")
+    return ArgumentError("$leng: length of thetas_raw must be $requiredlength")
 end
 
 function _assemblethetavecnonintegererror(thetainterval)
