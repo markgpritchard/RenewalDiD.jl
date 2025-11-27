@@ -1,22 +1,17 @@
 module RenewalDiD
 
 import NaNMath
-import PrettyTables  # can remove this once support for version 2 no longer needed
 
 using Compat: @compat
 using DataFrames: DataFrame, insertcols!
+using Distributions: Beta, Distribution, Exponential, LogNormal, Normal
+using Distributions: cdf, product_distribution, truncated
+using DistributionsAD: arraydist, filldist
 using DynamicPPL: @addlogprob!, @model, Model
+using MCMCChains: Chains
+using PrettyTables: @text__no_horizontal_lines, TextTableFormat, pretty_table
 using Random: AbstractRNG, default_rng
 using StatsBase: Weights, coef, coefnames, mean, ordinalrank, quantile, sample
-using Turing: Beta, Chains, Distribution, Exponential, LogNormal, Normal
-using Turing: arraydist, cdf, filldist, product_distribution, truncated
-using Turing.Optimisation: ModeResult
-
-@static if pkgversion(PrettyTables).major == 2
-    using PrettyTables: pretty_table
-else 
-    using PrettyTables: @text__no_horizontal_lines, TextTableFormat, pretty_table
-end
 
 # re-export from `DataFrames`
 export DataFrame
@@ -33,14 +28,10 @@ export AbstractRenewalDiDData, RenewalDiDData, SimulationData
 # simulations.jl
 export packsimulations, packsimulationtuple, runsimulation, simulationcases, simulationu0
 # fittingparameters.jl
-export RenewalDiDPriors, expectedseedcases, renewaldid
+export RenewalDiDPriors
+export expectedseedcases, renewaldid, renewaldidpredmodel, renewaldidpredmodelnointervention
 # processparameters.jl
-export RenewalDiDModel, SampledOutput
-export map_DataFrame
-export nunique
-export quantilerenewaldidinfections
-export rankvalues
-export samplerenewaldidinfections
+export RenewalDiDModel, nunique, quantilerenewaldidinfections, rankvalues
 # functionsfortests.jl
 @compat public testdataframe, testmodel, testsimulation
 # Plotting.jl 

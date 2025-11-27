@@ -1,10 +1,10 @@
 # test functions that aid `RenewalDiD._renewaldid`
 
+using Distributions: Normal
+using Random: Xoshiro
 using RenewalDiD
-using Test
-using Random
 using StatsBase: mean, var
-using Turing: Normal
+using Test
 
 M1 = InterventionMatrix(4, [2, 3, nothing]) 
 M2 = InterventionMatrix(5, Vector{Nothing}(nothing, 2); mutewarnings=true) 

@@ -150,7 +150,7 @@ function _addtaustotestdataframe!(
     ::AbstractRNG, df, ninterventions, ::Int, kws, tauvalues::AbstractVector
 )
     for k in 1:ninterventions
-        _addtotestdataframe!(df, Symbol("tau[$k]"), kws, tauvalues)
+        _addtotestdataframe!(df, Symbol("logtau[$k]"), kws, tauvalues)
     end
     return nothing
 end

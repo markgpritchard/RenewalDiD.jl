@@ -1,6 +1,6 @@
 # tests of Plotting module without loading Makie 
 
-using DataFrames
+#using DataFrames
 using RenewalDiD
 using RenewalDiD: testdataframe
 using RenewalDiD.Plotting

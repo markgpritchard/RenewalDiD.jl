@@ -6,9 +6,8 @@
 using RenewalDiD
 using RenewalDiD: testdataframe, testsimulation
 using RenewalDiD: testmodel as tfsr
-using StableRNGs
+using StableRNGs: StableRNG
 using Test
-using Turing
 
 rng1 = StableRNG(1)
 _r1 = rand()
@@ -263,6 +262,10 @@ data3mb = RenewalDiDData( ;
     interventions=zeros(2, 2), 
     exptdseedcases=[0  0; 1  1],
 )
+#= 
+# remove these tests as no longer using DataFrames for this -- are using a function from 
+# `StatsAPI.jl` instead`
+
 s1 = samplerenewaldidinfections(tfsr(data1; vec=zeros(2)), df1, 2).output
 s2 = samplerenewaldidinfections(tfsr(data2; vec=zeros(2)), df2, 2).output
 s3 = samplerenewaldidinfections(tfsr(data3; vec=[0, 1]), df3, 1).output
@@ -285,6 +288,7 @@ s8r = samplerenewaldidinfections(tfsr(data8; vec=zeros(2)), df8; repeatsamples=3
 s3mar = samplerenewaldidinfections(tfsr(data3ma; vec=zeros(2)), df3; repeatsamples=3).output
 s3mbr = samplerenewaldidinfections(tfsr(data3mb; vec=[0, 1]), df3).output
 s3mcr = samplerenewaldidinfections(tfsr(data3mb; vec=[0, 1]), df3, 4:6).output
+=#
 
 rv16a = let
     _rvs = rankvalues(rankvaluedf16, :tau)
@@ -332,7 +336,7 @@ end
     @test rankvalues(rankvaluedf16, :tau) == rv16a
     @test rankvalues(rankvaluedf16, :tau; binsize=7) == rv16b
 end
-
+#=
 @testset "samples with no infections" begin
     @test s1 == zeros(11, 3)
     @test s2 == zeros(13, 4)
@@ -357,7 +361,7 @@ end
     @test s3mb == repeat([1  1; 1  1; 1  1;;;]; outer=(1, 1, 10))
     @test s3mc == repeat([1  1; 1  1; 1  1;;;]; outer=(1, 1, 3))
 end
-
+=#
 @testset "sampling errors" begin
     # tests updated as some dimension mismatch errors should now be caught while calling 
     # `RenewalDiDData`
@@ -386,18 +390,20 @@ end
         Ns=(100 .* ones(3)), 
         exptdseedcases=zeros(7, 3),
     )
-    @test_throws DimensionMismatch samplerenewaldidinfections(tfsr(data13; vec=zeros(2)), df1, 2) 
+    #@test_throws DimensionMismatch samplerenewaldidinfections(tfsr(data13; vec=zeros(2)), df1, 2) 
     data14 = RenewalDiDData( ; 
         observedcases=zeros(12, 3), 
         interventions=zeros(11, 3), 
         Ns=(100 .* ones(3)), 
         exptdseedcases=zeros(7, 3),
     )
+    #=
     @test_throws DimensionMismatch samplerenewaldidinfections(tfsr(data14; vec=zeros(2)), df1, 2) 
     @test_throws BoundsError samplerenewaldidinfections(tfsr(data1; vec=zeros(2)), df1, 3) 
     @test_throws MethodError samplerenewaldidinfections(tfsr(data3; vec=[0, 1]), df3, 4.0:6)
     @test_throws MethodError samplerenewaldidinfections(tfsr(data3; vec=[0, 1]), df3, 4:0.5:6)
     @test_throws BoundsError samplerenewaldidinfections(tfsr(data3; vec=[0, 1]), df3, 4:16)  # df3 is 10 rows long
+    =#
     @test_throws DimensionMismatch RenewalDiDData( ; 
         observedcases=zeros(11, 3), 
         interventions=zeros(10, 3), 
@@ -410,14 +416,14 @@ end
         Ns=(100 .* ones(3)), 
         exptdseedcases=zeros(8, 3),
     ) 
-    @test_throws DimensionMismatch samplerenewaldidinfections(tfsr(data16; vec=zeros(2)), df1) 
+    #@test_throws DimensionMismatch samplerenewaldidinfections(tfsr(data16; vec=zeros(2)), df1) 
     data17 = RenewalDiDData( ; 
         observedcases=zeros(11, 3), 
         interventions=zeros(10, 3), 
         Ns=(100 .* ones(3)), 
         exptdseedcases=zeros(6, 3),
     ) 
-    @test_throws DimensionMismatch samplerenewaldidinfections(tfsr(data17; vec=zeros(2)), df1) 
+    #@test_throws DimensionMismatch samplerenewaldidinfections(tfsr(data17; vec=zeros(2)), df1) 
     @test_throws DimensionMismatch RenewalDiDData( ; 
         observedcases=zeros(11, 2), 
         interventions=zeros(10, 2), 
@@ -436,16 +442,17 @@ end
         Ns=(100 .* ones(3)), 
         exptdseedcases=zeros(7, 3),
     ) 
-    @test_throws DimensionMismatch samplerenewaldidinfections(tfsr(data18; vec=zeros(2)), df1) 
+    #@test_throws DimensionMismatch samplerenewaldidinfections(tfsr(data18; vec=zeros(2)), df1) 
     data19 = RenewalDiDData( ; 
         observedcases=zeros(12, 3), 
         interventions=zeros(11, 3), 
         Ns=(100 .* ones(3)), 
         exptdseedcases=zeros(7, 3),
     ) 
-    @test_throws DimensionMismatch samplerenewaldidinfections(tfsr(data19; vec=zeros(2)), df1) 
+    #@test_throws DimensionMismatch samplerenewaldidinfections(tfsr(data19; vec=zeros(2)), df1) 
 end
 
+#=
 @testset "quantiles of a single sample return a warning and the input" begin
     wm = "only a single sample provided to `quantilerenewaldidinfections`; input returned \
         unchanged for any value of `q`"
@@ -544,7 +551,7 @@ end
     @test s8r == zeros(11, 3, 48)
     @test s3mar == repeat([_r1  _r2; 0  0; 0  0;;;]; outer=(1, 1, 30))
 end
-
+=#
 @testset "intervention starttimes" begin
     _im1 = InterventionMatrix(100, [40, 80, nothing, -1, 101])
     _im2 = InterventionMatrix{Bool}(100, [40, 80, nothing, -1, 101])

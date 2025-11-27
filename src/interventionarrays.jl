@@ -864,30 +864,19 @@ interventioncat(args...; kwargs...) = _cat(Val{3}(), args...; kwargs...)
 
 function Base.show(io::IO, ::MIME"text/plain", A::InterventionVecOrMat) 
     combinedstrings = _showcombinedstrings(A, nothing)
-    @static if pkgversion(PrettyTables).major == 2
-        return pretty_table(
-            io, combinedstrings; 
-            header=_showheader(A),
-            hlines=[1], 
-            show_row_number=false, 
-            title=summary(A), 
-            vlines=[1], 
-        )
-    else 
-        return pretty_table(
-            io, combinedstrings; 
-            column_labels=_showheader(A),
-            row_labels=nothing, 
-            title=summary(A), 
-            table_format=TextTableFormat( ;
-                @text__no_horizontal_lines,
-                horizontal_line_after_column_labels=true,
-                vertical_line_at_beginning=false,
-                vertical_lines_at_data_columns=[1], 
-                vertical_line_after_data_columns=false,
-            ),
-        )
-    end
+    return pretty_table(
+        io, combinedstrings; 
+        column_labels=_showheader(A),
+        row_labels=nothing, 
+        title=summary(A), 
+        table_format=TextTableFormat( ;
+            @text__no_horizontal_lines,
+            horizontal_line_after_column_labels=true,
+            vertical_line_at_beginning=false,
+            vertical_lines_at_data_columns=[1], 
+            vertical_line_after_data_columns=false,
+        ),
+    )
 end
 
 function Base.show(io::IO, ::MIME"text/plain", A::AbstractInterventionArray3) 
@@ -924,29 +913,18 @@ function _showoneintervention(io, A, k)
     k > size(A, 3) && return nothing 
     print(io, "\n[:, :, $k] =\n")
     combinedstrings = _showcombinedstrings(A, k)
-    @static if pkgversion(PrettyTables).major == 2
-        return pretty_table(
-            io, combinedstrings; 
-            header=_showheader(A),
-            hlines=[1], 
-            show_row_number=false, 
-            vlines=[1], 
-        )
-    else 
-        return pretty_table(
-            io, combinedstrings; 
-            column_labels=_showheader(A),
-            row_labels=nothing, 
-            table_format=TextTableFormat( ;
-                @text__no_horizontal_lines,
-                horizontal_line_after_column_labels=true,
-                vertical_line_at_beginning=false,
-                vertical_lines_at_data_columns=[1], 
-                vertical_line_after_data_columns=false,
-            ),
-        )
-    end
-
+    return pretty_table(
+        io, combinedstrings; 
+        column_labels=_showheader(A),
+        row_labels=nothing, 
+        table_format=TextTableFormat( ;
+            @text__no_horizontal_lines,
+            horizontal_line_after_column_labels=true,
+            vertical_line_at_beginning=false,
+            vertical_lines_at_data_columns=[1], 
+            vertical_line_after_data_columns=false,
+        ),
+    )
 end
 
 _showliststarttimes(M) = [x > M.duration ? nothing : x for x in M.starttimes]

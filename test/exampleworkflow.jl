@@ -1,14 +1,11 @@
 # test that an example workflow throws no errors and returns expected types
 
-import ReverseDiff
-
-using CairoMakie
-using Random
+using CairoMakie: Figure
+using Random: Xoshiro
 using RenewalDiD
 using RenewalDiD.Plotting
-using StatsBase
 using Test
-using Turing
+using Turing: Beta, Chains, Exponential, LogNormal, Normal, Prior, predict, sample
 
 rng = Xoshiro(1729)
 
@@ -51,32 +48,50 @@ model1 = renewaldid(
 priorschain = sample(rng, model1, Prior(), 1_000; progress=false)
 priorsdf = DataFrame(priorschain)
 priortraceplot = trplot(priorsdf; ncols=5, nplots=50, size=(1000, 1000))  # examine 50 variables
-priorsfittedoutputs = samplerenewaldidinfections(model1, priorsdf; mu=0.2, kappa=0.5,)
+
+predmodel1 = renewaldidpredmodel(                      
+    sim, 
+    g_seir, 
+    RenewalDiDPriors( ; 
+        alphaprior=Normal(log(2.5), 1), 
+        sigma_gammaprior=Exponential(0.2),
+        sigma_thetaprior=Exponential(0.075), 
+        psiprior=Beta(6, 4),
+        delaydistn=LogNormal(log(5), log(2)),
+    );                          
+    mu=0.2, kappa=0.5               
+)
+priorsfittedoutputs = predict(rng, predmodel1, priorschain)
 priorsoutputquantiles = quantilerenewaldidinfections(
-    priorsfittedoutputs, [0.025, 0.05, 0.25, 0.5, 0.75, 0.95, 0.975]
+    predmodel1, priorsfittedoutputs, [0.025, 0.05, 0.25, 0.5, 0.75, 0.95, 0.975]
 )
 priorsplot = plotmodel(
     priorsoutputquantiles, sim; 
     linewidth=1, interventionlinestyle=(:dot, :dense)
 )
 
-initindices = findall(x -> x <= 4, ordinalrank(priorsdf.lp; rev=true)) 
-priorsfittedinitoutputs = samplerenewaldidinfections(
-    model1, priorsdf, initindices; 
-    mu=0.2, kappa=0.5,
+predmodel1nointervention = renewaldidpredmodelnointervention(                      
+    sim, 
+    g_seir, 
+    RenewalDiDPriors( ; 
+        alphaprior=Normal(log(2.5), 1), 
+        sigma_gammaprior=Exponential(0.2),
+        sigma_thetaprior=Exponential(0.075), 
+        psiprior=Beta(6, 4),
+        delaydistn=LogNormal(log(5), log(2)),
+    );                          
+    mu=0.2, kappa=0.5               
 )
-priorsoutputinitquantiles = quantilerenewaldidinfections(
-    priorsfittedinitoutputs, [0.025, 0.05, 0.25, 0.5, 0.75, 0.95, 0.975]
+priorsfittedoutputsnointervention = predict(rng, predmodel1nointervention, priorschain)
+priorsoutputquantilesnointervention = quantilerenewaldidinfections(
+    predmodel1nointervention, 
+    priorsfittedoutputsnointervention, 
+    [0.025, 0.05, 0.25, 0.5, 0.75, 0.95, 0.975]
 )
-priorsinitplot = plotmodel(priorsoutputinitquantiles, sim)
-
-priorinitparams = [[values(priorsdf[i, 3:430])...] for i in initindices]
-
-map_estimate = maximum_a_posteriori(model1; adtype=AutoReverseDiff(), maxtime=60)
-map_df = map_DataFrame(map_estimate)
-map_outputs = samplerenewaldidinfections(model1, map_df; mu=0.2, kappa=0.5,)
-map_quantiles = quantilerenewaldidinfections(map_outputs, [0.5])
-map_plot = plotmodel(map_quantiles, sim)
+priorsplotnointervention = plotmodel(
+    priorsoutputquantilesnointervention, sim; 
+    linewidth=1, interventionlinestyle=(:dot, :dense)
+)
 
 # do not test the MCMC as this takes a long time and does not add beyond existing tests
 
@@ -85,6 +100,5 @@ map_plot = plotmodel(map_quantiles, sim)
     @test priorsdf isa DataFrame 
     @test priortraceplot isa Figure 
     @test priorsplot isa Figure 
-    @test map_df isa DataFrame
-    @test map_plot isa Figure
+    @test priorsplotnointervention isa Figure 
 end

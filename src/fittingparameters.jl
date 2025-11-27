@@ -445,7 +445,12 @@ DynamicPPL.Model{typeof(RenewalDiD._renewaldid), (:observedcases, :interventions
 """
 function renewaldid(
     data::AbstractRenewalDiDData, g, priors::RenewalDiDPriors{Q, S, T, U, V, W, X}; 
-    thetainterval=automatic, kwargs...
+    observedcases=automatic,
+    interventions=automatic,
+    exptdseedcases=automatic,
+    Ns=automatic,
+    thetainterval=automatic, 
+    kwargs...
 ) where {
     Q <: Distribution, 
     S <: Distribution, 
@@ -456,10 +461,10 @@ function renewaldid(
     X <: Distribution, 
 }
     return _renewaldid(
-        _observedcases(data),
-        _interventions(data),
-        _expectedseedcases(data),
-        _ns(data),
+        _observedcases(observedcases, data),
+        _interventions(interventions, data),
+        _expectedseedcases(exptdseedcases, data),
+        _ns(Ns, data),
         g,    
         priors.alphaprior,
         priors.psiprior,
@@ -472,6 +477,54 @@ function renewaldid(
         thetainterval;
         kwargs...
     )
+end
+
+function renewaldidpredmodel(data, g, priors; kwargs...) 
+    return renewaldid(data, g, priors; observedcases=missing, kwargs...)
+end
+
+function renewaldidpredmodelnointervention(data, g, priors; kwargs...) 
+    datainterventions = _interventions(data)
+    return _renewaldidpredmodelnointervention(datainterventions, data, g, priors; kwargs...) 
+end
+
+function _renewaldidpredmodelnointervention(
+    datainterventions::T, data, g, priors; 
+    mutewarnings=true, kwargs...
+) where T <: AbstractInterventionMatrix
+    duration = _duration(datainterventions)
+    ngroups = _ngroups(interventions)
+    nullinterventionmatrix = T(duration, repeat(nothing, ngroups); mutewarnings)
+    return renewaldidpredmodel(
+        data, g, priors; 
+        interventions=nullinterventionmatrix, kwargs...
+    )
+end
+
+function _renewaldidpredmodelnointervention(
+    datainterventions::T, data, g, priors; 
+    interventionindex=1, mutewarnings=true, kwargs...
+) where T <: AbstractInterventionArray
+    duration = _duration(datainterventions)
+    offset = datainterventions.offset
+
+    originalrawstarttimes = _nointerventionarray(datainterventions.rawstarttimes)
+
+    for i in axes(originalrawstarttimes, 1)
+        originalrawstarttimes[i, interventionindex] = nothing 
+    end
+
+    nullinterventionarray = T(duration, offset, originalrawstarttimes; mutewarnings)
+    return renewaldidpredmodel(
+        data, g, priors; 
+        interventions=nullinterventionarray, kwargs...
+    )
+end
+
+_nointerventionarray(rawstarttimes::Matrix{<:Union{<:Integer, Nothing}}) = rawstarttimes
+
+function _nointerventionarray(rawstarttimes::Matrix{T}) where T <: Integer
+    return convert(Matrix{Union{T, Nothing}}, rawstarttimes)
 end
 
 @model function _renewaldid(
@@ -496,7 +549,7 @@ end
     ninterventions = _ninterventions(interventions)
     nthetas = _nthetas(ntimes, thetainterval)
 
-    tau ~ filldist(tauprior, ninterventions)
+    logtau ~ filldist(tauprior, ninterventions)
     alpha ~ alphaprior
     sigma_gamma ~ sigma_gammaprior
     gammas_raw ~ filldist(Normal(0, 1), ngroups - 1)
@@ -508,7 +561,7 @@ end
 
     gammavec = _gammavec(gammas_raw, sigma_gamma)
     thetavec = _thetavec(thetas_raw, sigma_theta, ntimes; thetainterval)
-    predictedlogR_0 = _predictedlogR_0(alpha, gammavec, thetavec, tau, interventions)
+    predictedlogR_0 = _predictedlogR_0(alpha, gammavec, thetavec, logtau, interventions)
 
     T = Complex{typeof(predictedlogR_0[1, 1])}
     predictedinfections = _infectionsmatrix(T, predictedlogR_0, n_seeds)

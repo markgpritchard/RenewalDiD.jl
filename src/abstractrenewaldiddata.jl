@@ -271,3 +271,12 @@ _ns(d::AbstractRenewalDiDData) = d.Ns
 _nseeds(d::AbstractRenewalDiDData) = size(_expectedseedcases(d), 1)
 _ntimes(d::AbstractRenewalDiDData) = _ntimes(_interventions(d))
 _observedcases(d::AbstractRenewalDiDData) = d.observedcases 
+
+### versions that allow an alternative value to be submitted 
+
+for op in [:_expectedseedcases, :_interventions, :_ns, :_observedcases]
+    eval(quote
+        $op(::Automatic, d) = $op(d)  # `automatic` to use value from struct
+        $op(v, ::Any) = v
+    end)
+end

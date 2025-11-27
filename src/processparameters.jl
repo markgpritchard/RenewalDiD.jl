@@ -3,38 +3,6 @@
 # structs and types ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 """
-    SampledOutput{T, N} 
-
-Contains the number of reported infections and the basic reproduction ratio output from a 
-    model.
-
-# Fields
-- `output::Array{T, N}`: numbers of infections
-- `R0s::Array{T, N}`: time-varying basic reproduction ratio
-"""
-struct SampledOutput{T, N} 
-    output::Array{T, N}
-    R0s::Array{T, N}
-
-    function SampledOutput(output::Array{T, N}, R0s::Array{T, N}) where {T, N}
-        return new{T, N}(output, R0s)
-    end
-end
-
-Base.hash(x::SampledOutput, h::UInt64) = hash(x.R0s, hash(x.output, hash(:SampledOutput, h)))
-
-function Base.:(==)(a::SampledOutput, b::SampledOutput)
-    c1 = a.output == b.output 
-    c2 = a.R0s == b.R0s 
-    if c1 === false || c2 === false 
-        return false 
-    elseif ismissing(c1) || ismissing(c2)
-        return missing 
-    end
-    return true 
-end
-
-"""
     RenewalDiDModel 
 
 Type of the model generated from the function `renewaldid`.
@@ -165,286 +133,6 @@ function __rankvaluebininds(start, binsize, iterationend)
     return start:stop
 end
 
-## versions of gamma and theta vector functions taking a `DataFrame` of fitted parameters
-
-function _gammavec(df::DataFrame, i, ngroups)
-    return _gammavec(  # call version in `fittingparameters.jl`
-        [getproperty(df, Symbol("gammas_raw[$j]"))[i] for j in 1:(ngroups - 1)], 
-        df.sigma_gamma[i]
-    )
-end 
-
-function _thetavec(df::DataFrame, i, ntimes)
-    return _thetavec(  # call version in `fittingparameters.jl`
-        [getproperty(df, Symbol("thetas_raw[$j]"))[i] for j in 1:(ntimes - 1)], 
-        df.sigma_theta[i],
-        ntimes,
-    )
-end  
-
-function _tauvec(df, i, ninterventions)
-    return [getproperty(df, Symbol("tau[$k]"))[i] for k in 1:ninterventions]
-end  
-
-function _mxmatrix(df, i, ngroups, ntimes, n_seeds)
-    totaltimes = ntimes + n_seeds
-    return [getproperty(df, Symbol("M_x[$t, $j]"))[i] for t in 1:totaltimes, j in 1:ngroups]
-end
-
-## take samples from DataFrame of fitted parameters and generate expected outcomes
-
-"""
-    samplerenewaldidinfections([rng], model, fittedparameters[, indexes; <keyword arguments>])
-
-Generate expected outcomes from model using samples from distributions.    
-
-# Arguments 
-- `rng::AbstractRNG=default_rng()`: random number generator
-- `model::RenewalDiDModel`: model being used 
-- `fittedparameters`: can be a `DataFrame`, `Chains` or `Tuple{DataFrame, <:Chains}`
-- `indexes::Union{<:AbstractVector{<:Integer}, <:Integer}`: samples to use, defaults to all 
-    samples
-
-# Examples
-```jldoctest
-julia> using StableRNGs
-
-julia> rng = StableRNG(1000);
-
-julia> data = RenewalDiD.testsimulation(rng);
-
-julia> model = renewaldid(data, g_seir, RenewalDiDPriors(); mu=0.2, kappa=0.5);
-
-julia> df = RenewalDiD.testdataframe(
-       rng;
-       nchains=2, niterations=5, ngroups=3, ntimes=10, nseeds=7
-       );
-
-julia> samplerenewaldidinfections(rng, model, df, 1)
-SampledOutput{Float64, 2}([0.07491152793594207 0.0 0.0; 0.0 0.1577299327763031 \
-    0.2629712097378153; … ; 1.2264839609837064 2.3251829893883746 0.16039663151955016; \
-    0.740412457261556 3.8074225038310803 0.0], [1.4090694615560517 1.4090694615560517 \
-    0.0656949120738175; 1.446863906052742 1.446863906052742 0.10348935657050783; … ; \
-    1.7114250175295744 2.283489655473959 0.9401151059917245; 1.7492194620262647 \
-    2.321284099970649 0.9779095504884148])
-```
-"""
-function samplerenewaldidinfections(
-    model::RenewalDiDModel, fittedparameters, indexes=automatic; 
-    kwargs...
-)
-    return samplerenewaldidinfections(
-        default_rng(), model, fittedparameters, indexes; 
-        kwargs...
-    )
-end
-
-function samplerenewaldidinfections(
-    rng::AbstractRNG, 
-    model::RenewalDiDModel, 
-    fittedparameters::Tuple{DataFrame, <:Chains}, 
-    indexes=automatic; 
-    kwargs...
-)
-    return samplerenewaldidinfections(rng, model, fittedparameters[1], indexes; kwargs...)
-end
-
-function samplerenewaldidinfections(
-    rng::AbstractRNG, model::RenewalDiDModel, fittedparameters::Chains, indexes=automatic; 
-    kwargs...
-)
-    return samplerenewaldidinfections(
-        rng, model, DataFrame(fittedparameters), indexes; 
-        kwargs...
-    )
-end
-
-function samplerenewaldidinfections(
-    rng::AbstractRNG, model::RenewalDiDModel, fittedparameters::DataFrame, indexes=automatic; 
-    repeatsamples=nothing, kwargs...
-)
-    return _samplerenewaldidinfections(
-        rng, model, fittedparameters, indexes, repeatsamples; 
-        kwargs...
-    )
-end
-
-function samplerenewaldidinfections(
-    ::AbstractRNG, ::RenewalDiDModel, fittedparameters, x=nothing; 
-    kwargs...
-) 
-    throw(_dftypeerror(fittedparameters))
-    return nothing
-end
-
-function _samplerenewaldidinfections(
-    rng, model, fittedparameters, ::Automatic, repeatsamples; 
-    kwargs...
-) 
-    return _samplerenewaldidinfections(
-        rng, model, fittedparameters, axes(fittedparameters, 1), repeatsamples; 
-        kwargs...
-    )
-end
-
-function _samplerenewaldidinfections(
-    rng, model, fittedparameters, indexes, repeatsamples; 
-    kwargs...
-)
-    ngroups = _ngroups(model)
-    ntimes = _ntimes(model)
-    R0s = _samplerenewaldidinitialoutput(ntimes - 1, ngroups, indexes, repeatsamples)
-    output = _samplerenewaldidinitialoutput(ntimes, ngroups, indexes, repeatsamples)
-    _samplerenewaldidinfections!(
-        rng, output, R0s, model, fittedparameters, indexes, repeatsamples; 
-        kwargs...
-    )
-    return SampledOutput(output, R0s)
-end
-
-function _samplerenewaldidinitialoutput(ntimes, ngroups, ::Integer, ::Nothing)
-    return zeros(ntimes + 1, ngroups)
-end
-
-function _samplerenewaldidinitialoutput(
-    ntimes, ngroups, indexes::AbstractVector{<:Integer}, ::Nothing
-)
-    return zeros(ntimes + 1, ngroups, length(indexes))
-end
-
-function _samplerenewaldidinitialoutput(ntimes, ngroups, ::Integer, repeatsamples::Integer)
-    return zeros(ntimes + 1, ngroups, repeatsamples)
-end
-
-function _samplerenewaldidinitialoutput(
-    ntimes, ngroups, indexes::AbstractVector{<:Integer}, repeatsamples::Integer
-)
-    return zeros(ntimes + 1, ngroups, length(indexes) * repeatsamples)
-end
-
-function _samplerenewaldidinfections!(
-    rng, output, R0s, model, fittedparameters, indexes::AbstractVector{<:Integer}, ::Nothing; 
-    kwargs...
-)
-    for (r, i) in enumerate(indexes)
-        _samplerenewaldidinfections!(
-            rng, 
-            (@view output[:, :, r]), 
-            (@view R0s[:, :, r]), 
-            model, 
-            fittedparameters, 
-            i, 
-            nothing; 
-            kwargs...
-        )
-    end
-    return nothing
-end
-
-function _samplerenewaldidinfections!(
-    rng,
-    output, 
-    R0s,
-    model, 
-    fittedparameters, 
-    indexes::AbstractVector{<:Integer}, 
-    repeatsamples::Number; 
-    kwargs...
-)
-    r = 1
-    for i in indexes
-        for _ in 1:repeatsamples 
-            _samplerenewaldidinfections!(
-                rng, 
-                (@view output[:, :, r]), 
-                (@view R0s[:, :, r]), 
-                model, 
-                fittedparameters, 
-                i, 
-                nothing; 
-                kwargs...
-            )
-            r += 1
-        end
-    end
-    return nothing
-end
-
-function _samplerenewaldidinfections!(
-    rng, output, R0s, model, fittedparameters, i::Integer, repeatsamples::Number; 
-    kwargs...
-)
-    for r in 1:repeatsamples 
-        _samplerenewaldidinfections!(
-            rng, 
-            (@view output[:, :, r]), 
-            (@view R0s[:, :, r]), 
-            model, 
-            fittedparameters, 
-            i, 
-            nothing; 
-            kwargs...
-        )
-    end
-    return nothing
-end
-
-function _samplerenewaldidinfections!(
-    rng, output, R0s, model, fittedparameters, i::Integer, ::Nothing; 
-    kwargs...
-)
-    ngroups = _ngroups(model)
-    ntimes = _ntimes(model)
-    _samplerenewaldidinfectionsassertions(
-        fittedparameters, _expectedseedcases(model), i, ngroups, ntimes
-    )
-    alpha = fittedparameters.alpha[i]
-    gammavec = _gammavec(fittedparameters, i, ngroups)
-    thetavec = _thetavec(fittedparameters, i, ntimes)
-    tau = _tauvec(fittedparameters, i, _ninterventions(model))
-    psi = fittedparameters.psi[i]
-    minsigma2 = fittedparameters.minsigma2[i]
-    M_x = _mxmatrix(fittedparameters, i, ngroups, ntimes, _nseeds(model))
-    R0s .= _predictedlogR_0(alpha, gammavec, thetavec, tau, _interventions(model))
-    T = Complex{typeof(R0s[1, 1])}
-    predictedinfections = _infectionsmatrix(T, R0s, _nseeds(model))
-    _infections!(
-        _generationtimefunction(model), 
-        predictedinfections, 
-        M_x, 
-        R0s, 
-        _expectedseedcases(model), 
-        _ns(model), 
-        _nseeds(model); 
-        _defaults(model)...
-    )
-    delayedinfections = _delayedinfections(
-        T, predictedinfections, _delaydistn(model), ngroups, ntimes, _nseeds(model)
-    )
-    np = real.(delayedinfections[_nseeds(model):(_nseeds(model) + ntimes), :]) .* psi
-    isnan(maximum(np)) && return _halt_samplerenewaldidinfections(i)  # exit early 
-    output .= _predictobservedinfections(rng, np, psi, minsigma2)
-    return nothing
-end
-
-function _predictobservedinfections(rng, np::AbstractMatrix, psi, minsigma2)
-    return [
-        __predictobservedinfections(rng, np[t, g], psi, minsigma2) 
-        for t in axes(np, 1), g in axes(np, 2)
-    ]
-end
-
-function __predictobservedinfections(rng, np::Number, psi, minsigma2)
-    v = rand(rng, Normal(np, sqrt(np * (1 - psi) + minsigma2)))
-    v > 0 || return zero(v)
-    return v
-end
-
-function _halt_samplerenewaldidinfections(i) 
-    @warn "Parameters in row $i give `NaN` predicted infections"
-    return nothing 
-end
-
 ## quantiles of sampled outputs
 
 """
@@ -527,61 +215,28 @@ julia> quantilerenewaldidinfections(A.output, [0.05, 0.90]);
 ```
 """
 function quantilerenewaldidinfections(
-    SO::SampledOutput, q=[0.025, 0.05, 0.25, 0.5, 0.75, 0.95, 0.975]; 
-    mutewarnings=nothing
+    predmodel, chains::Chains, q=[0.025, 0.05, 0.25, 0.5, 0.75, 0.95, 0.975]; 
+    #mutewarnings=nothing
 )
-    return SampledOutput(
-        quantilerenewaldidinfections(SO.output, q; mutewarnings),
-        quantilerenewaldidinfections(SO.R0s, q; mutewarnings)
-    )
-end
+    outputarray = Array(chains)
+    ngroups = _ngroups(predmodel.args.interventions)
+    ntimes = _ntimes(predmodel.args.interventions)
+    ngroups * (ntimes + 1) == size(chains, 2) || throw(ErrorException("to do, $ngroups * $(ntimes + 1) == $(size(chains, 2))"))
+    outputquantiles = zeros(ntimes + 1, ngroups, length(q))
 
-function quantilerenewaldidinfections(
-    A::AbstractArray, q=[0.025, 0.05, 0.25, 0.5, 0.75, 0.95, 0.975]; 
-    mutewarnings=nothing
-)
-    _quantilerenewaldidinfectionswarningset(A, q, mutewarnings)
-    return _quantilerenewaldidinfections(A, q)
-end
-
-_quantilerenewaldidinfections(M::AbstractMatrix, ::Any) = M
-
-function _quantilerenewaldidinfections(A::Array{T, 3}, q) where T
-    outputnumbertype = typeof(zero(T) / 1)
-    return __quantilerenewaldidinfections(outputnumbertype, A, q)
-end
-
-function __quantilerenewaldidinfections(outputnumbertype, A, q::Real)
-    output = zeros(outputnumbertype, size(A, 1), size(A, 2))
-    for t in axes(A, 1), j in axes(A, 2)
-        output[t, j] = quantile((@view A[t, j, :]), q)
+    i = 1
+    for g in 1:ngroups, t in 1:(ntimes + 1)
+        outputquantiles[t, g, :] .= max.(0, quantile(skipmissing(outputarray[:, i]), q))
+        i += 1
     end
-    return output
-end
 
-function __quantilerenewaldidinfections(outputnumbertype, A, q::AbstractVector{<:Real}) 
-    output = zeros(outputnumbertype, size(A, 1), size(A, 2), length(q))
-    for (i, qi) in enumerate(q), t in axes(A, 1), j in axes(A, 2)
-        output[t, j, i] = quantile((@view A[t, j, :]), qi)
-    end
-    return output
+    return outputquantiles
 end
 
 ## list the intervention times
 
 # other versions of this function are in `interventionmatrix.jl`
 _interventionstarttimes(M::AbstractMatrix, i) = findfirst(x -> x == 1, M[:, i])
-
-## DataFrame of mode estimates
-
-#function map_DataFrame(result::ModeResult)
-function map_DataFrame(result)
-    df = DataFrame()
-    for (n, v) in zip(coefnames(result), coef(result))
-        insertcols!(df, n => v)
-    end
-    return df
-end
 
 
 # Warnings ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

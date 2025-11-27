@@ -1,13 +1,12 @@
 # test the function `renewaldid`
 
-import ReverseDiff
+import ReverseDiff  # `Mooncake` performs very slowly in this set of tests
 
-using DynamicPPL
 using DynamicPPL.TestUtils.AD: run_ad
-using Random
+using Random: Xoshiro
 using RenewalDiD
 using Test
-using Turing
+using Turing: AutoReverseDiff, Beta, Exponential, LogNormal, Normal, Prior, sample
 
 rng = Xoshiro(1729)
 
@@ -112,15 +111,6 @@ end
     result = run_ad(model3, adtype; rng=Xoshiro(2000), test=false, verbose=false,);
     @test sum(isnan.(result.grad_actual)) == 0
     @test isnothing(findfirst(isnan, result.grad_actual))
-end
-
-@testset "mode estimate" begin
-    map_estimate1 = maximum_a_posteriori(model1; adtype=AutoReverseDiff(), maxtime=30)
-    map_estimate2 = maximum_a_posteriori(model2; adtype=AutoReverseDiff(), maxtime=30)
-    map_df1 = map_DataFrame(map_estimate1)
-    map_df2 = map_DataFrame(map_estimate2)
-    @test map_df1 isa DataFrame
-    @test map_df2 isa DataFrame
 end
 
 @testset "inferred type" begin

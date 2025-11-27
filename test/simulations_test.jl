@@ -1,7 +1,7 @@
 # test functions that generate simulations 
 
 using RenewalDiD
-using StableRNGs
+using StableRNGs: StableRNG
 using Test
 
 function testseirrates(u, t; beta=0, sigma=0, eta=0, phi=0)
