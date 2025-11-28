@@ -219,9 +219,22 @@ function quantilerenewaldidinfections(
     #mutewarnings=nothing
 )
     outputarray = Array(chains)
-    ngroups = _ngroups(predmodel.args.interventions)
-    ntimes = _ntimes(predmodel.args.interventions)
+    ngroups = _ngroups(predmodel)
+    ntimes = _ntimes(predmodel)
     ngroups * (ntimes + 1) == size(chains, 2) || throw(ErrorException("to do, $ngroups * $(ntimes + 1) == $(size(chains, 2))"))
+    return _quantilerenewaldidinfections(outputarray, ngroups, ntimes, q; )
+end
+
+function quantilerenewaldidinfections(
+    ::Any, array::Array{<:Any, 3}, q=[0.025, 0.05, 0.25, 0.5, 0.75, 0.95, 0.975]; 
+    #mutewarnings=nothing
+)
+    ngroups = size(array, 3)
+    ntimes = size(array, 2) - 1
+    return _quantilerenewaldidinfections(array, ngroups, ntimes, q; )
+end
+
+function _quantilerenewaldidinfections(outputarray::Array{<:Any, 2}, ngroups, ntimes, q; )
     outputquantiles = zeros(ntimes + 1, ngroups, length(q))
 
     i = 1
@@ -233,10 +246,72 @@ function quantilerenewaldidinfections(
     return outputquantiles
 end
 
+function _quantilerenewaldidinfections(outputarray::Array{<:Any, 3}, ngroups, ntimes, q; )
+    outputquantiles = zeros(ntimes + 1, ngroups, length(q))
+    for g in 1:ngroups, t in 1:(ntimes + 1)
+        outputquantiles[t, g, :] .= max.(0, quantile(skipmissing(outputarray[:, t, g]), q))
+    end
+    return outputquantiles
+end
+
 ## list the intervention times
 
 # other versions of this function are in `interventionmatrix.jl`
 _interventionstarttimes(M::AbstractMatrix, i) = findfirst(x -> x == 1, M[:, i])
+
+## versions of gamma and theta vector functions taking a `DataFrame` of fitted parameters
+
+function _gammavec(df::DataFrame, i, ngroups)
+    return _gammavec(  # call version in `fittingparameters.jl`
+        [getproperty(df, Symbol("gammas_raw[$j]"))[i] for j in 1:(ngroups - 1)], 
+        df.sigma_gamma[i]
+    )
+end 
+
+function _thetavec(df::DataFrame, i, ntimes; thetainterval=automatic)
+    nthetas = _nthetas(ntimes, thetainterval)
+    return _thetavec(  # call version in `fittingparameters.jl`
+        [getproperty(df, Symbol("thetas_raw[$j]"))[i] for j in 1:nthetas], 
+        df.sigma_theta[i],
+        ntimes;
+        thetainterval,
+    )
+end  
+
+function _tauvec(df, i, ninterventions)
+    return [getproperty(df, Symbol("logtau[$k]"))[i] for k in 1:ninterventions]
+end  
+
+function _mxmatrix(df, i, ngroups, ntimes, n_seeds)
+    totaltimes = ntimes + n_seeds
+    return [getproperty(df, Symbol("M_x[$t, $j]"))[i] for t in 1:totaltimes, j in 1:ngroups]
+end
+
+function predictedR_0(model::RenewalDiDModel, chain::Chains)
+    chaindf = DataFrame(chain)
+    return _modelpredictedR_0(model, chaindf)
+end
+
+function _modelpredictedR_0(model, chaindf)
+    nsamples = size(chaindf, 1)
+    ntimes = _ntimes(model)
+    ngroups = _ngroups(model)
+    ninterventions = _ninterventions(model)
+
+    R0s = zeros(nsamples, ntimes, ngroups)
+    
+    for i in 1:nsamples 
+        alpha = chaindf.alpha[i]
+        gammavec = _gammavec(chaindf, i, ngroups)
+        thetavec = _thetavec(chaindf, i, ntimes; thetainterval=model.args.thetainterval)
+        tau = _tauvec(chaindf, i, ninterventions)
+        R0s[i, :, :] .= exp.(
+            _predictedlogR_0(alpha, gammavec, thetavec, tau, model.args.interventions)
+        )
+    end
+
+    return R0s
+end
 
 
 # Warnings ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~

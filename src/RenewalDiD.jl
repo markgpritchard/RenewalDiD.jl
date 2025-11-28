@@ -31,7 +31,7 @@ export packsimulations, packsimulationtuple, runsimulation, simulationcases, sim
 export RenewalDiDPriors
 export expectedseedcases, renewaldid, renewaldidpredmodel, renewaldidpredmodelnointervention
 # processparameters.jl
-export RenewalDiDModel, nunique, quantilerenewaldidinfections, rankvalues
+export RenewalDiDModel, nunique, predictedR_0, quantilerenewaldidinfections, rankvalues
 # functionsfortests.jl
 @compat public testdataframe, testmodel, testsimulation
 # Plotting.jl 

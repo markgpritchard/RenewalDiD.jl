@@ -21,6 +21,18 @@ function RenewalDiD.plotmodel!(
 end
 
 function RenewalDiD.plotmodel!(
+    gl::FigOrGridLayout, R0s::AbstractArray, modeloutputs::AbstractArray, args...; 
+    kwargs...
+) 
+    r0axs = _plotmodeloutputaxs(gl, R0s; kwargs...)
+    outputaxs = _plotmodeloutputaxs(gl, modeloutputs; row=2, kwargs...)
+    _plotmodel2!(r0axs, outputaxs, R0s, modeloutputs, args...; kwargs...)
+    linkaxes!(r0axs...)
+    linkaxes!(outputaxs...)
+    return nothing
+end
+
+function RenewalDiD.plotmodel!(
     gl::FigOrGridLayout, data::AbstractRenewalDiDData, args...; 
     kwargs...
 ) 
@@ -94,6 +106,29 @@ function _plotmodel!(axs, modeloutputs, observedcases, interventions, t; kwargs.
     RenewalDiD.plotmodeldata!(axs, observedcases, t; kwargs...)
     RenewalDiD.plotmodelintervention!(axs, interventions; kwargs...)
     return axs
+end
+
+function _plotmodel2!(
+    r0axs, outputaxs, R0s, modeloutputs, data::AbstractRenewalDiDData, t=automatic; 
+    kwargs...
+) 
+    observedcases = data.observedcases
+    interventions = data.interventions
+    Ns = data.Ns
+    return _plotmodel2!(
+        r0axs, outputaxs, R0s, modeloutputs, observedcases, interventions, t=automatic; 
+        kwargs...
+    ) 
+end
+
+function _plotmodel2!(
+    r0axs, outputaxs, R0s, modeloutputs, observedcases, interventions, t=automatic; 
+    kwargs...
+) 
+    RenewalDiD.plotmodelR0!(r0axs, R0s; kwargs...)
+    RenewalDiD.plotmodelintervention!(r0axs, interventions; kwargs...)
+    _plotmodel!(outputaxs, modeloutputs, observedcases, interventions, t; kwargs...) 
+    return nothing
 end
 
 function _plotmodeloutputaxs(gl, A::AbstractArray; row=1, kwargs...)
