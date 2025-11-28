@@ -303,15 +303,18 @@ function _approxcases(x, sigma, ceiling=1e12)
 end
 
 function _infections(
-    g, M_x, logR_0::Matrix{T}, exptdseedcases, Ns, n_seeds; 
+    g, M_x, logR_0::Matrix{T}, exptdseedcases, Ns, n_seeds, psi; 
     kwargs...
 ) where T
-    return _infections(g, T, M_x, logR_0, exptdseedcases, Ns, n_seeds; kwargs...)
+    return _infections(g, T, M_x, logR_0, exptdseedcases, Ns, n_seeds, psi; kwargs...)
 end
 
-function _infections(g, T::DataType, M_x, logR_0, exptdseedcases, Ns, n_seeds; kwargs...) 
+function _infections(
+    g, T::DataType, M_x, logR_0, exptdseedcases, Ns, n_seeds, psi; 
+    kwargs...
+) 
     infn = _infectionsmatrix(T, logR_0, n_seeds)
-    _infections!(g, infn, M_x, logR_0, exptdseedcases, Ns, n_seeds; kwargs...) 
+    _infections!(g, infn, M_x, logR_0, exptdseedcases, Ns, n_seeds, psi; kwargs...) 
     return infn
 end
 
@@ -329,15 +332,18 @@ function _infectionsmatrix(T::DataType, logR_0, n_seeds)
     return _infectionsmatrix(ComplexF64, logR_0, n_seeds)
 end
 
-function _infections!(g, infn, M_x, logR_0, exptdseedcases, Ns, n_seeds; kwargs...) 
+function _infections!(g, infn, M_x, logR_0, exptdseedcases, Ns, n_seeds, psi; kwargs...) 
     _infectionsassertions(infn, M_x, logR_0, exptdseedcases, Ns, n_seeds)
-    _infections_seed!(infn, M_x, exptdseedcases, Ns, n_seeds; kwargs...) 
+    # need to account for `exptdseedcases` being an expected number of diagnoses but this 
+    # function needs to provide a true incidence 
+    adjustedseedcases = exptdseedcases ./ psi
+    _infections_seed!(infn, M_x, adjustedseedcases, Ns, n_seeds; kwargs...) 
     _infections_transmitted!(g, infn, M_x, logR_0, Ns, n_seeds; kwargs...)
     return nothing
 end
 
 function _infections_seed!(infn, M_x, exptdseedcases, ::Nothing, n_seeds; kwargs...) 
-    return __infections_seed!(infn, M_x, exptdseedcases, n_seeds; kwargs...) 
+    return __infections_seed!(infn, M_x, adjustedseedcases, n_seeds; kwargs...) 
 end
 
 # version that tracks proportion susceptible
@@ -566,7 +572,7 @@ end
     T = Complex{typeof(predictedlogR_0[1, 1])}
     predictedinfections = _infectionsmatrix(T, predictedlogR_0, n_seeds)
     _infections!(
-        g, predictedinfections, M_x, predictedlogR_0, expectedseedcases, Ns, n_seeds; 
+        g, predictedinfections, M_x, predictedlogR_0, expectedseedcases, Ns, n_seeds, psi; 
         kwargs...
     )
 
