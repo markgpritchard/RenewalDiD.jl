@@ -343,7 +343,7 @@ function _infections!(g, infn, M_x, logR_0, exptdseedcases, Ns, n_seeds, psi; kw
 end
 
 function _infections_seed!(infn, M_x, exptdseedcases, ::Nothing, n_seeds; kwargs...) 
-    return __infections_seed!(infn, M_x, adjustedseedcases, n_seeds; kwargs...) 
+    return __infections_seed!(infn, M_x, exptdseedcases, n_seeds; kwargs...) 
 end
 
 # version that tracks proportion susceptible
