@@ -368,7 +368,7 @@ function __plotmodelR0!(axs, A, t, nquantiles; ceiling=20, modelcolor=Cycled(1),
         i >= medquantile && continue 
         _plotmodeloutputband!(
             axs, 
-            exp.(A), 
+            A, 
             t, 
             i,  # qlow
             nquantiles + 1 - i,  # qhigh
@@ -380,7 +380,7 @@ function __plotmodelR0!(axs, A, t, nquantiles; ceiling=20, modelcolor=Cycled(1),
         )
     end
     _plotmodeloutputmedian!(
-        axs, exp.(A), t, medquantile; 
+        axs, A, t, medquantile; 
         ceiling, modelcolor, denoms=ones(Int, length(axs)), kwargs...
     )
     return axs
