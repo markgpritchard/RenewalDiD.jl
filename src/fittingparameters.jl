@@ -302,17 +302,35 @@ function _approxcases(x, sigma, ceiling=1e12)
     return NaNMath.min(max(zero(calculatedcases), calculatedcases), ceiling)
 end
 
+# type constraints added to `_infections` to make errors in arguments easier to identify
 function _infections(
-    g, M_x, logR_0::Matrix{T}, exptdseedcases, Ns, n_seeds, psi; 
+    g, 
+    M_x::Matrix, 
+    logR_0::Matrix{T}, 
+    exptdseedcase::Matrix, 
+    Ns, 
+    n_seeds::Number, 
+    psi::Number; 
     kwargs...
 ) where T
-    return _infections(g, T, M_x, logR_0, exptdseedcases, Ns, n_seeds, psi; kwargs...)
+    return __infections(g, T, M_x, logR_0, exptdseedcases, Ns, n_seeds, psi; kwargs...)
 end
 
 function _infections(
-    g, T::DataType, M_x, logR_0, exptdseedcases, Ns, n_seeds, psi; 
+    g, 
+    T::DataType, 
+    M_x::Matrix, 
+    logR_0::Matrix, 
+    exptdseedcases::Matrix, 
+    Ns, 
+    n_seeds::Number, 
+    psi::Number; 
     kwargs...
 ) 
+    return __infections(g, T, M_x, logR_0, exptdseedcases, Ns, n_seeds, psi; kwargs...)
+end
+
+function __infections(g, T, M_x, logR_0, exptdseedcases, Ns, n_seeds, psi; kwargs...)
     infn = _infectionsmatrix(T, logR_0, n_seeds)
     _infections!(g, infn, M_x, logR_0, exptdseedcases, Ns, n_seeds, psi; kwargs...) 
     return infn

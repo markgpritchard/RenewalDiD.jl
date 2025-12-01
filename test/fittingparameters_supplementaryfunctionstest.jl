@@ -6,6 +6,37 @@ using RenewalDiD
 using StatsBase: mean, var
 using Test
 
+function testinfections( ; 
+    g, 
+    T=RenewalDiD.Automatic, 
+    M_x, 
+    logR_0, 
+    exptdseedcases, 
+    Ns, 
+    n_seeds, 
+    psi=1,  # original tests assumed psi=1 so set as default for those tests 
+    kwargs...
+)
+    return _testinfections(g, T, M_x, logR_0, exptdseedcases, Ns, n_seeds, psi; kwargs...)
+end
+
+function _testinfections(
+    g, ::RenewalDiD.Automatic, M_x, logR_0, exptdseedcases, Ns, n_seeds, psi; 
+    kwargs...
+)
+    return RenewalDiD._infections(
+        g, M_x, logR_0, exptdseedcases, Ns, n_seeds, psi; 
+        kwargs...
+    )
+end
+
+function _testinfections(g, T, M_x, logR_0, exptdseedcases, Ns, n_seeds, psi; kwargs...)
+    return RenewalDiD._infections(
+        g, T, M_x, logR_0, exptdseedcases, Ns, n_seeds, psi; 
+        kwargs...
+    )
+end
+
 M1 = InterventionMatrix(4, [2, 3, nothing]) 
 M2 = InterventionMatrix(5, Vector{Nothing}(nothing, 2); mutewarnings=true) 
 A1 = InterventionArray(4, [2, 3, nothing], Vector{Nothing}(nothing, 3))
@@ -68,66 +99,90 @@ calcseedinfections10 = let
     RenewalDiD._infections_seed!(infectionsmatrix, M_x1, seedinfections1, [50, 100], 2)
     infectionsmatrix
 end
-calcinfections1 = RenewalDiD._infections(
-    g_covid, ComplexF64, zeros(5, 2), log.(zeros(3, 2)), zeros(2, 2), nothing, 2
+calcinfections1 = testinfections( ;
+    g=g_covid, 
+    T=ComplexF64, 
+    M_x=zeros(5, 2), 
+    logR_0=log.(zeros(3, 2)), 
+    exptdseedcases=zeros(2, 2), 
+    Ns=nothing, 
+    n_seeds=2, 
 )
-calcinfections2 = RenewalDiD._infections(
-    g_covid, ComplexF64, zeros(6, 2), log.(zeros(4, 2)), zeros(2, 2), nothing, 2
+calcinfections2 = testinfections( ;
+    g=g_covid, 
+    T=ComplexF64, 
+    M_x=zeros(6, 2), 
+    logR_0=log.(zeros(4, 2)), 
+    exptdseedcases=zeros(2, 2), 
+    Ns=nothing, 
+    n_seeds=2, 
 )
-calcinfections3 = RenewalDiD._infections(
-    generationtime, 
-    ComplexF64, 
-    zeros(5, 2), 
-    log.(zeros(3, 2)), 
-    seedinfections1,  
-    nothing,  # tests below assume no change in susceptibility 
-    2;
+calcinfections3 = testinfections( ;
+    g=generationtime, 
+    T=ComplexF64, 
+    M_x=zeros(5, 2), 
+    logR_0=log.(zeros(3, 2)), 
+    exptdseedcases=seedinfections1,  
+    Ns=nothing,  # tests below assume no change in susceptibility 
+    n_seeds=2,
     vec=[0, 1],
 )
-calcinfections4 = RenewalDiD._infections(
-    generationtime, 
-    ComplexF64, 
-    zeros(5, 2), 
-    log.(1.5 .* ones(3, 2)), 
-    seedinfections1, 
-    nothing,  # tests below assume no change in susceptibility 
-    2;
+calcinfections4 = testinfections( ;
+    g=generationtime, 
+    T=ComplexF64, 
+    M_x=zeros(5, 2), 
+    logR_0=log.(1.5 .* ones(3, 2)), 
+    exptdseedcases=seedinfections1, 
+    Ns=nothing,  # tests below assume no change in susceptibility 
+    n_seeds=2,
     vec=[0, 1],
 )
-calcinfections5 = RenewalDiD._infections(
-    generationtime, 
-    ComplexF64, 
-    M_x1, 
-    log.(ones(3, 2)), 
-    seedinfections1, 
-    nothing,  # tests below assume no change in susceptibility 
-    2;
+calcinfections5 = testinfections( ;
+    g=generationtime, 
+    T=ComplexF64, 
+    M_x=M_x1, 
+    logR_0=log.(ones(3, 2)), 
+    exptdseedcases=seedinfections1, 
+    Ns=nothing,  # tests below assume no change in susceptibility 
+    n_seeds=2,
     vec=[0, 1]
 )
-calcinfections6 = RenewalDiD._infections(
-    g_covid, ComplexF64, zeros(5, 2), log.(zeros(3, 2)), zeros(2, 2), [10, 10], 2
+calcinfections6 = testinfections( ;
+    g=g_covid, 
+    T=ComplexF64, 
+    M_x=zeros(5, 2), 
+    logR_0=log.(zeros(3, 2)), 
+    exptdseedcases=zeros(2, 2), 
+    Ns=[10, 10], 
+    n_seeds=2, 
 )
-calcinfections7 = RenewalDiD._infections(
-    g_covid, ComplexF64, zeros(6, 2), log.(zeros(4, 2)), zeros(2, 2), [10, 10], 2
+calcinfections7 = testinfections( ;
+    g=g_covid, 
+    T=ComplexF64, 
+    M_x=zeros(6, 2), 
+    logR_0=log.(zeros(4, 2)), 
+    exptdseedcases=zeros(2, 2), 
+    Ns=[10, 10], 
+    n_seeds=2, 
 )
-calcinfections8 = RenewalDiD._infections(
-    generationtime, 
-    ComplexF64, 
-    zeros(5, 2), 
-    log.(zeros(3, 2)), 
-    seedinfections1, 
-    [10, 10], 
-    2;
+calcinfections8 = testinfections( ;
+    g=generationtime, 
+    T=ComplexF64, 
+    M_x=zeros(5, 2), 
+    logR_0=log.(zeros(3, 2)), 
+    exptdseedcases=seedinfections1, 
+    Ns=[10, 10], 
+    n_seeds=2,
     vec=[0, 1],
 )
-calcinfections9 = RenewalDiD._infections(
-    generationtime, 
-    ComplexF64, 
-    zeros(5, 2), 
-    log.(1.5 * ones(3, 2)), 
-    seedinfections1, 
-    [10, 10], 
-    2;
+calcinfections9 = testinfections( ;
+    g=generationtime, 
+    T=ComplexF64, 
+    M_x=zeros(5, 2), 
+    logR_0=log.(1.5 * ones(3, 2)), 
+    exptdseedcases=seedinfections1, 
+    Ns=[10, 10], 
+    n_seeds=2,
     vec=[0, 1],
 )
 
@@ -523,20 +578,50 @@ end
 @testset "calculate numbers of infections in study period" begin
     @test calcinfections1 == zeros(5, 2)
     @test calcinfections2 == zeros(6, 2)
-    @test_throws DimensionMismatch RenewalDiD._infections(
-        g_covid, ComplexF64, zeros(5, 2), log.(zeros(3, 3)), zeros(2, 2), zeros(2), 2
+    @test_throws DimensionMismatch testinfections( ;
+        g=g_covid, 
+        T=ComplexF64, 
+        M_x=zeros(5, 2), 
+        logR_0=log.(zeros(3, 3)), 
+        exptdseedcases=zeros(2, 2), 
+        Ns=zeros(2), 
+        n_seeds=2,
     ) 
-    @test_throws DimensionMismatch RenewalDiD._infections(
-        g_covid, ComplexF64, zeros(5, 2), log.(zeros(3, 2)), zeros(2, 3), zeros(2), 2
+    @test_throws DimensionMismatch testinfections( ;
+        g=g_covid, 
+        T=ComplexF64, 
+        M_x=zeros(5, 2), 
+        logR_0=log.(zeros(3, 2)), 
+        exptdseedcases=zeros(2, 3), 
+        Ns=zeros(2), 
+        n_seeds=2,
     ) 
-    @test_throws DimensionMismatch RenewalDiD._infections(
-        g_covid, ComplexF64, zeros(5, 2), log.(zeros(3, 2)), zeros(2, 2), zeros(3), 2
+    @test_throws DimensionMismatch testinfections( ;
+        g=g_covid, 
+        T=ComplexF64, 
+        M_x=zeros(5, 2), 
+        logR_0=log.(zeros(3, 2)), 
+        exptdseedcases=zeros(2, 2), 
+        Ns=zeros(3), 
+        n_seeds=2,
     ) 
-    @test_throws DimensionMismatch RenewalDiD._infections(
-        g_covid, ComplexF64, zeros(5, 2), log.(zeros(4, 2)), zeros(2, 2), zeros(2), 2
+    @test_throws DimensionMismatch testinfections( ;
+        g=g_covid, 
+        T=ComplexF64, 
+        M_x=zeros(5, 2),
+        logR_0=log.(zeros(4, 2)), 
+        exptdseedcases=zeros(2, 2), 
+        Ns=zeros(2), 
+        n_seeds=2,
     ) 
-    @test_throws DimensionMismatch RenewalDiD._infections(
-        g_covid, ComplexF64, zeros(5, 2), log.(zeros(3, 2)), zeros(2, 2), zeros(2), 3
+    @test_throws DimensionMismatch testinfections( ;
+        g=g_covid, 
+        T=ComplexF64, 
+        M_x=zeros(5, 2), 
+        logR_0=log.(zeros(3, 2)), 
+        exptdseedcases=zeros(2, 2), 
+        Ns=zeros(2), 
+        n_seeds=3,
     ) 
     @test calcinfections3 == predictedinfections3
     @test calcinfections4 == predictedinfections4
@@ -580,20 +665,50 @@ end
 @testset "calculate numbers of infections in study period with proportion susceptible" begin
     @test calcinfections6 == ones(5, 2) * (0 + 1im)
     @test calcinfections7 == ones(6, 2) * (0 + 1im)
-        @test_throws DimensionMismatch RenewalDiD._infections(
-        g_covid, ComplexF64, zeros(5, 2), log.(zeros(3, 3)), zeros(2, 2), ones(2), 2
+    @test_throws DimensionMismatch testinfections( ;
+        g=g_covid, 
+        T=ComplexF64, 
+        M_x=zeros(5, 2), 
+        logR_0=log.(zeros(3, 3)), 
+        exptdseedcases=zeros(2, 2), 
+        Ns=ones(2), 
+        n_seeds=2,
     ) 
-    @test_throws DimensionMismatch RenewalDiD._infections(
-        g_covid, ComplexF64, zeros(5, 2), log.(zeros(3, 2)), zeros(2, 3), ones(2), 2
+    @test_throws DimensionMismatch testinfections( ;
+        g=g_covid, 
+        T=ComplexF64, 
+        M_x=zeros(5, 2), 
+        logR_0=log.(zeros(3, 2)), 
+        exptdseedcases=zeros(2, 3), 
+        Ns=ones(2), 
+        n_seeds=2,
     ) 
-    @test_throws DimensionMismatch RenewalDiD._infections(
-        g_covid, ComplexF64, zeros(5, 2), log.(zeros(3, 2)), zeros(2, 2), ones(3), 2
+    @test_throws DimensionMismatch testinfections( ;
+        g=g_covid, 
+        T=ComplexF64, 
+        M_x=zeros(5, 2), 
+        logR_0=log.(zeros(3, 2)), 
+        exptdseedcases=zeros(2, 2), 
+        Ns=ones(3), 
+        n_seeds=2,
     ) 
-    @test_throws DimensionMismatch RenewalDiD._infections(
-        g_covid, ComplexF64, zeros(5, 2), log.(zeros(4, 2)), zeros(2, 2), ones(2), 2
+    @test_throws DimensionMismatch testinfections( ;
+        g=g_covid, 
+        T=ComplexF64, 
+        M_x=zeros(5, 2), 
+        logR_0=log.(zeros(4, 2)), 
+        exptdseedcases=zeros(2, 2), 
+        Ns=ones(2), 
+        n_seeds=2,
     ) 
-    @test_throws DimensionMismatch RenewalDiD._infections(
-        g_covid, ComplexF64, zeros(5, 2), log.(zeros(3, 2)), zeros(2, 2), ones(2), 3
+    @test_throws DimensionMismatch testinfections( ;
+        g=g_covid, 
+        T=ComplexF64, 
+        M_x=zeros(5, 2), 
+        logR_0=log.(zeros(3, 2)), 
+        exptdseedcases=zeros(2, 2), 
+        Ns=ones(2), 
+        n_seeds=3,
     ) 
     @test calcinfections8 == predictedinfections8
     @testset for j in 1:2 
