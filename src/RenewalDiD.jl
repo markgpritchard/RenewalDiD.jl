@@ -1,6 +1,7 @@
 module RenewalDiD
 
 import NaNMath
+import PrettyTables  # can remove this once support for version 2 no longer needed
 
 using Compat: @compat
 using DataFrames: DataFrame, insertcols!
@@ -9,9 +10,14 @@ using Distributions: cdf, product_distribution, truncated
 using DistributionsAD: arraydist, filldist
 using DynamicPPL: @addlogprob!, @model, Model
 using MCMCChains: Chains
-using PrettyTables: @text__no_horizontal_lines, TextTableFormat, pretty_table
 using Random: AbstractRNG, default_rng
 using StatsBase: Weights, coef, coefnames, mean, ordinalrank, quantile, sample
+
+@static if pkgversion(PrettyTables).major == 2
+    using PrettyTables: pretty_table
+else 
+    using PrettyTables: @text__no_horizontal_lines, TextTableFormat, pretty_table
+end
 
 # re-export from `DataFrames`
 export DataFrame
