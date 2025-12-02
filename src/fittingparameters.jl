@@ -566,6 +566,7 @@ end
     n_seeds,
     omega,
     thetainterval;
+    maxdelay=automatic,
     kwargs...
 )
     ngroups = _ngroups(interventions)
@@ -596,7 +597,7 @@ end
 
     # delay between infection and detection
     delayedinfections = _delayedinfections(
-        T, predictedinfections, delaydistn, ngroups, ntimes, n_seeds
+        T, predictedinfections, delaydistn, ngroups, ntimes, n_seeds, maxdelay
     )
 
     # Normal approximation of Binomial to avoid forcing integer values 
@@ -607,20 +608,52 @@ end
 end
 
 function _delayedinfections(T, predictedinfections, delaydistn, ngroups, ntimes, n_seeds)
+    return _delayedinfections(
+        T, predictedinfections, delaydistn, ngroups, ntimes, n_seeds, automatic
+    )
+end
+
+function _delayedinfections(
+    T, predictedinfections, delaydistn, ngroups, ntimes, n_seeds, ::Automatic
+)
+    maxdelay = round(Int, quantile(delaydistn, 0.999), RoundUp)
+    return _delayedinfections(
+        T, predictedinfections, delaydistn, ngroups, ntimes, n_seeds, maxdelay
+    )
+end
+
+function _delayedinfections(
+    T, predictedinfections, delaydistn, ngroups, ntimes, n_seeds, maxdelay
+)
     delayedinfections = zeros(T, n_seeds + ntimes, ngroups)
     _delayedinfections!(
-        delayedinfections, predictedinfections, delaydistn, ngroups, ntimes, n_seeds
+        delayedinfections, 
+        predictedinfections, 
+        delaydistn, 
+        ngroups, 
+        ntimes, 
+        n_seeds, 
+        maxdelay,
     )
     return delayedinfections
 end
 
 function _delayedinfections!(
-    delayedinfections, predictedinfections, delaydistn, ngroups, ntimes, n_seeds
+    delayedinfections, 
+    predictedinfections, 
+    delaydistn, 
+    ngroups, 
+    ntimes, 
+    n_seeds, 
+    maxdelay::Integer,
 ) 
     for t in 1:(n_seeds + ntimes) 
         for j in 1:ngroups
             newvalue = sum(
-                [__delayedinfections(predictedinfections, delaydistn, x, t, j) for x in 1:t]
+                [
+                    __delayedinfections(predictedinfections, delaydistn, x, t, j) 
+                    for x in max(1, t - maxdelay):t
+                ]
             )
             delayedinfections[t, j] += newvalue 
         end
