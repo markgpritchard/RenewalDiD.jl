@@ -602,19 +602,21 @@ end
 
     # Normal approximation of Binomial to avoid forcing integer values 
     np = real.(delayedinfections[n_seeds:n_seeds+ntimes, :]) .* psi
-    np_1minusp = np .* (1 - psi)
-    observedcases ~ arraydist(Normal.(np, NaNMath.sqrt.(np_1minusp .+ minsigma2)))
+    # include the square root here so no `NaN` values go to `Normal`; # add `minsigma2` to 
+    # ensure `np_1minusp > 0`
+    sqrtnp_1minusp = NaNMath.sqrt.(np .* (1 - psi) .+ minsigma2)  
+
+    if isnan(maximum(sqrtnp_1minusp))
+        @addlogprob! (; loglikelihood=-Inf)
+        return nothing
+    end
+
+    observedcases ~ arraydist(Normal.(np, sqrtnp_1minusp))
     return nothing
 end
 
-function _delayedinfections(T, predictedinfections, delaydistn, ngroups, ntimes, n_seeds)
-    return _delayedinfections(
-        T, predictedinfections, delaydistn, ngroups, ntimes, n_seeds, automatic
-    )
-end
-
 function _delayedinfections(
-    T, predictedinfections, delaydistn, ngroups, ntimes, n_seeds, ::Automatic
+    T, predictedinfections, delaydistn, ngroups, ntimes, n_seeds, ::Automatic=automatic
 )
     maxdelay = round(Int, quantile(delaydistn, 0.999), RoundUp)
     return _delayedinfections(
