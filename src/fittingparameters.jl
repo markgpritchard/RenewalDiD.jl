@@ -81,8 +81,12 @@ _nthetas(ntimes, thetainterval::Integer) = round(Int, (ntimes - 1) / thetainterv
 
 # the mean of all gamma values is zero, ensured by setting the final value in the vector as 
 # `-sum` of other values
-_gammavec(gammas_raw, sigma_gamma) = [gammas_raw; -sum(gammas_raw)] .* sigma_gamma
+_gammavec(gammas_raw, sigma_gamma) = _myvcat(gammas_raw, -sum(gammas_raw)) .* sigma_gamma
 # a second version of this function is given in `processparameters.jl`
+
+# local vcat function being made as a temporary fix with an ambiguous error arising with `ReverseDiff`
+_myvcat(args...; kwargs...) = vcat(args...; kwargs...)
+# alternative version with `ReverseDiff` will be added to `ext`
 
 # The value of theta at time 0 is fixed to 0. `thetas_raw` is a vector representing how much 
 # each subsequent theta differs from the previous one as a multiple of the standard 
