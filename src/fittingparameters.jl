@@ -277,165 +277,6 @@ function __expectedseedcasesifneeded(observedcases, n_seeds; kwargs...)
     return expectedseedcases(observedcases, n_seeds; kwargs...)
 end
 
-function _expectedinfections(g, args...; kwargs...) 
-    # `_expectedinfections` will accept a function or a vector in the keyword argument `func`
-    return _expectedinfections(generationtime, args...; func=g, kwargs...)
-end
-
-function _expectedinfections(g::_Useablegenerationfunctions, logR_0, hx; kwargs...)
-    return __expectedinfections(g, 1, logR_0, hx; kwargs...)  # assume propsus = 1
-end
-
-function _expectedinfections(
-    g::_Useablegenerationfunctions, inputpropsus, logR_0, hx; 
-    kwargs...
-) 
-    propsus = min(1, max(0, inputpropsus))  # enforce 0 <= propsus <= 1 
-    return __expectedinfections(g, propsus, logR_0, hx; kwargs...) 
-end
-
-function __expectedinfections(g, propsus, logR_0, hx; kwargs...) 
-    t = length(hx) + 1
-    return sum(exp(logR_0) .* propsus .* [hx[x] * g(t - x; kwargs...) for x in eachindex(hx)])
-end
-
-_approxcasescalc(x, sigma) = __approxcasescalc(max(zero(x), x), sigma)  # should never x < 0
-__approxcasescalc(x, sigma) = x + sigma * NaNMath.sqrt(x)
-
-# put a ceiling in all instances to prevent NaN outcomes when parameters generate
-# astronomical numbers of infections
-function _approxcases(x, sigma, ceiling=1e12)
-    calculatedcases = _approxcasescalc(x, sigma)
-    # if isnan(calculated), return ceiling
-    return NaNMath.min(max(zero(calculatedcases), calculatedcases), ceiling)
-end
-
-# type constraints added to `_infections` to make errors in arguments easier to identify
-function _infections(
-    g, 
-    M_x::Matrix, 
-    logR_0::Matrix{T}, 
-    exptdseedcase::Matrix, 
-    Ns, 
-    n_seeds::Number, 
-    psi::Number; 
-    kwargs...
-) where T
-    return __infections(g, T, M_x, logR_0, exptdseedcases, Ns, n_seeds, psi; kwargs...)
-end
-
-function _infections(
-    g, 
-    T::DataType, 
-    M_x::Matrix, 
-    logR_0::Matrix, 
-    exptdseedcases::Matrix, 
-    Ns, 
-    n_seeds::Number, 
-    psi::Number; 
-    kwargs...
-) 
-    return __infections(g, T, M_x, logR_0, exptdseedcases, Ns, n_seeds, psi; kwargs...)
-end
-
-function __infections(g, T, M_x, logR_0, exptdseedcases, Ns, n_seeds, psi; kwargs...)
-    infn = _infectionsmatrix(T, logR_0, n_seeds)
-    _infections!(g, infn, M_x, logR_0, exptdseedcases, Ns, n_seeds, psi; kwargs...) 
-    return infn
-end
-
-# `_infectionsmatrix` will always return a `Matrix{<:Complex}` and will give a warning if 
-# something different is requested
-
-_infectionsmatrix(logR_0, n_seeds) = _infectionsmatrix(ComplexF64, logR_0, n_seeds)
-
-function _infectionsmatrix(T::Type{<:Complex}, logR_0, n_seeds)
-    return zeros(T, _ntimes(logR_0) + n_seeds, _ngroups(logR_0))
-end
-
-function _infectionsmatrix(T::DataType, logR_0, n_seeds)
-    _realinfectionmatrixwarning(T)
-    return _infectionsmatrix(ComplexF64, logR_0, n_seeds)
-end
-
-function _infections!(g, infn, M_x, logR_0, exptdseedcases, Ns, n_seeds, psi; kwargs...) 
-    _infectionsassertions(infn, M_x, logR_0, exptdseedcases, Ns, n_seeds)
-    # need to account for `exptdseedcases` being an expected number of diagnoses but this 
-    # function needs to provide a true incidence 
-    adjustedseedcases = exptdseedcases ./ psi
-    _infections_seed!(infn, M_x, adjustedseedcases, Ns, n_seeds; kwargs...) 
-    _infections_transmitted!(g, infn, M_x, logR_0, Ns, n_seeds; kwargs...)
-    return nothing
-end
-
-function _infections_seed!(infn, M_x, exptdseedcases, ::Nothing, n_seeds; kwargs...) 
-    return __infections_seed!(infn, M_x, exptdseedcases, n_seeds; kwargs...) 
-end
-
-# version that tracks proportion susceptible
-function _infections_seed!(infn, M_x, exptdseedcases, Ns, n_seeds; kwargs...) 
-    minimum(Ns) > 0 || throw(_zeropopulationerror(Ns))
-    __infections_seed!(infn, M_x, exptdseedcases, n_seeds; kwargs...) 
-    for j in 1:_ngroups(M_x), t in 1:n_seeds
-        # previous proportion susceptible
-        prevsus = _prevpropsus(infn, t, j; kwargs...) * Ns[j]  
-        if real(infn[t, j]) > prevsus  # use this as a maximum 
-            infn[t, j] = prevsus + 0im 
-        else  # add new proportion susceptible
-            infn[t, j] += ((prevsus - real(infn[t, j])) / Ns[j])im
-        end
-    end
-    return infn
-end
-
-function __infections_seed!(infn, M_x, exptdseedcases, n_seeds; kwargs...)
-    for j in 1:_ngroups(M_x), t in 1:n_seeds
-        infn[t, j] = _approxcases(exptdseedcases[t, j], M_x[t, j])
-    end 
-    return infn
-end
-
-function _infections_transmitted!(g, infn, M_x, logR_0, ::Nothing, n_seeds; kwargs...) 
-    for j in 1:_ngroups(M_x), t in 1:_ntimes(logR_0)
-        infn[t+n_seeds, j] = _approxcases(
-            _expectedinfections(
-                g, logR_0[t, j], real.(@view infn[1:t+n_seeds-1, j]); 
-                kwargs...
-            ), 
-            M_x[t+n_seeds, j]
-        )
-    end
-    return nothing
-end
-
-function _infections_transmitted!(g, infn, M_x, logR_0, Ns, n_seeds; kwargs...) 
-    for j in 1:_ngroups(M_x), t in 1:_ntimes(logR_0)
-        prevsus = _prevpropsus(infn, t + n_seeds, j; kwargs...) * Ns[j] 
-        expectednewcases = _approxcases(
-            _expectedinfections(
-                g, 
-                prevsus / Ns[j], 
-                logR_0[t, j], 
-                real.(@view infn[1:t+n_seeds-1, j]); 
-                kwargs...
-            ), 
-            M_x[t+n_seeds, j],
-            prevsus
-        )
-        newcases = min(expectednewcases, prevsus)
-        infn[t+n_seeds, j] = newcases + ((prevsus - newcases) / Ns[j])im
-    end
-    return nothing
-end
-
-function _prevpropsus(infn, t, j; kwargs...)
-    if t == 1 
-        return one(_prevpropsus(infn, 2, j))
-    end
-    propsus = imag(infn[t-1, j])
-    return propsus
-end
-
 """
     renewaldid(data::AbstractRenewalDiDData, g, priors::RenewalDiDPriors; [thetainterval], <keyword arguments>)
 
@@ -618,10 +459,7 @@ end
                     s
             end
 
-            s = smoothmaxunit(
-                zero(T), s - predictedinfections[t, j] / Ns[j]; 
-                epsilon=smoothmaxepsilon
-            )
+            s = _track_s(s, predictedinfections, Ns, t, j; epsilon=smoothmaxepsilon)
         end
     end
 
@@ -635,7 +473,7 @@ end
         negbinom_r, delayedinfections[n_seeds:(n_seeds + ntimes), :] .* psi
     )
     
-    if isnan(max(maximum(negbinom_r), negbinom_p))
+    if isnan(max(negbinom_r, maximum(negbinom_p)))
         @addlogprob! (; loglikelihood=-Inf)
         return nothing
     end
@@ -645,6 +483,15 @@ end
 end
 
 _negbinom_p(r, k) = r ./ (r .+ k)
+
+function _track_s(
+    s, predictedinfections::Array{T}, Ns::AbstractVector, t, j; 
+    epsilon
+) where T
+    return smoothmaxunit(zero(T), s - predictedinfections[t, j] / Ns[j]; epsilon)
+end
+
+_track_s(::T, ::Array{<:Any}, ::Nothing, ::Any, ::Any; kwargs...) where T = one(T)
 
 function _delayedinfections(
     T, predictedinfections, delaydistn, ngroups, ntimes, n_seeds, ::Automatic=automatic
