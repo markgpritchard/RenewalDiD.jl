@@ -1,5 +1,7 @@
 # test functions that generate simulations 
 
+import Random
+
 using RenewalDiD
 using StableRNGs: StableRNG
 using Test
@@ -248,7 +250,7 @@ end
         @test RenewalDiD._tstep(StableRNG(1), [80, 10, 50, 30, 20]) == expectedv1
     end
     @testset "identifying next event" begin
-        @test RenewalDiD._nextevent([100, 0, 0, 0, 0]) == 1
+        @test RenewalDiD._nextevent(Random.default_rng(), [100, 0, 0, 0, 0]) == 1
         @test RenewalDiD._nextevent(StableRNG(1), [0, 0, 100, 0, 0]) == 3
         @test RenewalDiD._nextevent(StableRNG(1), [100, 10, 50, 30, 60]) == 3
         @test RenewalDiD._nextevent(StableRNG(2), [100, 10, 50, 30, 60]) == 5

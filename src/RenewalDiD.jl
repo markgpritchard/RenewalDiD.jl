@@ -5,7 +5,7 @@ import PrettyTables  # can remove this once support for version 2 no longer need
 
 using Compat: @compat
 using DataFrames: DataFrame, insertcols!
-using Distributions: Beta, Distribution, Exponential, LogNormal, Normal
+using Distributions: Beta, Distribution, Exponential, LogNormal, NegativeBinomial, Normal
 using Distributions: cdf, product_distribution, truncated
 using DistributionsAD: arraydist, filldist
 using DynamicPPL: @addlogprob!, @model, Model
@@ -36,6 +36,7 @@ export packsimulations, packsimulationtuple, runsimulation, simulationcases, sim
 # fittingparameters.jl
 export RenewalDiDPriors
 export expectedseedcases, renewaldid, renewaldidpredmodel, renewaldidpredmodelnointervention
+export smoothmaxunit
 # processparameters.jl
 export RenewalDiDModel, nunique, predictedR_0, quantilerenewaldidinfections, rankvalues
 # functionsfortests.jl

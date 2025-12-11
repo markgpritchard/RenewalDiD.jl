@@ -240,16 +240,10 @@ end
 ## Effect the next event
 
 _tstep(rng, rates) = -log(rand(rng)) / sum(rates)
-_nextevent(rates) = _nextevent(default_rng(), rates)  
-# `_nextevent(rates)` is not used by any functions except the tests -- may be worth changing 
-# the tests and removing this method
 _nextevent(rng, rates) = sample(rng, eachindex(rates), Weights(rates))
 _updateevent!(u, nextevent) = u .+= _SEIREVENTSMATRIX[nextevent, :]
 
 ## Simulate a day
-
-_simulateday!(args...) = _simulateday!(default_rng(), args...)
-
 function _simulateday!(rng::AbstractRNG, u, t, beta, sigma, eta, phi)
     nextday = t + 1 
 
