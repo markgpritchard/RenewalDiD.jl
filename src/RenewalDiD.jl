@@ -36,6 +36,7 @@ export packsimulations, packsimulationtuple, runsimulation, simulationcases, sim
 # fittingparameters.jl
 export RenewalDiDPriors
 export expectedseedcases, renewaldid, renewaldidpredmodel, renewaldidpredmodelnointervention
+export smoothmaxunit
 # processparameters.jl
 export RenewalDiDModel, nunique, predictedR_0, quantilerenewaldidinfections, rankvalues
 # functionsfortests.jl

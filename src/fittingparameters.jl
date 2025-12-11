@@ -40,7 +40,7 @@ RenewalDiDPriors{Normal{Float64}, Exponential{Float64}, Exponential{Float64}, \
  delaydistn:       LogNormal{Float64}(μ=0.6931471805599453, σ=0.6931471805599453)
 ```
 """ 
-@kwdef struct RenewalDiDPriors{Q, S, T, U, V, W, X}
+@kwdef struct RenewalDiDPriors{Q, S, T, U, V, W, X, Y}
     # attempting to fit a delay distribution has so far given NaN gradients. Function 
     # `renewaldid` currently expects a distribution to be supplied 
     alphaprior::Q=Normal(0, 1)
@@ -49,21 +49,23 @@ RenewalDiDPriors{Normal{Float64}, Exponential{Float64}, Exponential{Float64}, \
     tauprior::U=Normal(0, 1)
     psiprior::V=Beta(1, 1)
     omegaprior::W=0
-    delaydistn::X=LogNormal(log(2), log(2))
+    negbinom_rprior::X=truncated(Normal(0, 1), 0, Inf)
+    delaydistn::Y=LogNormal(log(2), log(2))
 end
 
 function Base.show(
-    io::IO, ::MIME"text/plain", p::RenewalDiDPriors{Q, S, T, U, V, W, X}
-) where {Q, S, T, U, V, W, X}
+    io::IO, ::MIME"text/plain", p::RenewalDiDPriors{Q, S, T, U, V, W, X, Y}
+) where {Q, S, T, U, V, W, X, Y}
     print(
         io,
-        "RenewalDiDPriors{$Q, $S, $T, $U, $V, $W, $X}",
+        "RenewalDiDPriors{$Q, $S, $T, $U, $V, $W, $X, $Y}",
         "\n alphaprior:       ", p.alphaprior,
         "\n sigma_gammaprior: ", p.sigma_gammaprior,
         "\n sigma_thetaprior: ", p.sigma_thetaprior,
         "\n tauprior:         ", p.tauprior,
         "\n psiprior:         ", p.psiprior,
         "\n omegaprior:       ", p.omegaprior,
+        "\n negbinom_rprior:  ", p.negbinom_rprior,
         "\n delaydistn:       ", p.delaydistn
     )
 end
@@ -72,6 +74,8 @@ end
 # Functions ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~ 
 
 ## Functions called by `_renewaldid`
+
+smoothmaxunit(a, b; epsilon=0.1) = (a + b + sqrt((a - b)^2 + epsilon)) / 2 
 
 _ntimes(A::AbstractArray) = size(A, 1)
 _ngroups(A::AbstractArray) = size(A, 2)
@@ -472,7 +476,7 @@ DynamicPPL.Model{typeof(RenewalDiD._renewaldid), (:observedcases, :interventions
 ```
 """
 function renewaldid(
-    data::AbstractRenewalDiDData, g, priors::RenewalDiDPriors{Q, S, T, U, V, W, X}; 
+    data::AbstractRenewalDiDData, g, priors::RenewalDiDPriors{Q, S, T, U, V, W, X, Y}; 
     observedcases=automatic,
     interventions=automatic,
     exptdseedcases=automatic,
@@ -487,6 +491,7 @@ function renewaldid(
     V <: Distribution, 
     W <: Real, 
     X <: Distribution, 
+    Y <: Distribution, 
 }
     return _renewaldid(
         _observedcases(observedcases, data),
@@ -499,6 +504,7 @@ function renewaldid(
         priors.sigma_gammaprior,
         priors.sigma_thetaprior,
         priors.tauprior,
+        priors.negbinom_rprior,
         priors.delaydistn,
         _nseeds(data),
         priors.omegaprior,
@@ -566,11 +572,13 @@ end
     sigma_gammaprior,
     sigma_thetaprior,
     tauprior,
+    negbinom_rprior,
     delaydistn,
     n_seeds,
     omega,
     thetainterval;
     maxdelay=automatic,
+    smoothmaxepsilon=0.1,
     kwargs...
 )
     ngroups = _ngroups(interventions)
@@ -585,39 +593,58 @@ end
     thetas_raw ~ filldist(Normal(0, 1), nthetas)
     sigma_theta ~ sigma_thetaprior
     psi ~ psiprior
-    M_x ~ filldist(Normal(0, 1), ntimes + n_seeds, ngroups)
-    minsigma2 ~ Beta(1, 2)
+    negbinom_r ~ truncated(negbinom_rprior, 0, Inf)
+
+    T = typeof(alpha)
 
     gammavec = _gammavec(gammas_raw, sigma_gamma)
     thetavec = _thetavec(thetas_raw, sigma_theta, ntimes; thetainterval)
     predictedlogR_0 = _predictedlogR_0(alpha, gammavec, thetavec, logtau, interventions)
 
-    T = Complex{typeof(predictedlogR_0[1, 1])}
-    predictedinfections = _infectionsmatrix(T, predictedlogR_0, n_seeds)
-    _infections!(
-        g, predictedinfections, M_x, predictedlogR_0, expectedseedcases, Ns, n_seeds, psi; 
-        kwargs...
-    )
+    # number of infections is deterministic 
+    predictedinfections = Array{T}(undef, ntimes + n_seeds, ngroups)
+
+    for j in 1:ngroups 
+        s = one(T)  # track `s` here rather than complex numbers 
+        for t in 1:(n_seeds + ntimes) 
+            if t <= n_seeds 
+                predictedinfections[t, j] = expectedseedcases[t, j] * s
+            else
+                predictedinfections[t, j] = 
+                    exp(predictedlogR_0[(t - n_seeds), j]) * 
+                    sum(
+                        [predictedinfections[x, j] * g(t - x; kwargs...) for x in 1:(t - 1)]
+                    ) * 
+                    s
+            end
+
+            s = smoothmaxunit(
+                zero(T), s - predictedinfections[t, j] / Ns[j]; 
+                epsilon=smoothmaxepsilon
+            )
+        end
+    end
 
     # delay between infection and detection
     delayedinfections = _delayedinfections(
         T, predictedinfections, delaydistn, ngroups, ntimes, n_seeds, maxdelay
     )
 
-    # Normal approximation of Binomial to avoid forcing integer values 
-    np = real.(delayedinfections[n_seeds:n_seeds+ntimes, :]) .* psi
-    # include the square root here so no `NaN` values go to `Normal`; # add `minsigma2` to 
-    # ensure `np_1minusp > 0`
-    sqrtnp_1minusp = NaNMath.sqrt.(np .* (1 - psi) .+ minsigma2)  
-
-    if isnan(maximum(sqrtnp_1minusp))
+    # negative binomail likelihood 
+    negbinom_p = _negbinom_p(
+        negbinom_r, delayedinfections[n_seeds:(n_seeds + ntimes), :] .* psi
+    )
+    
+    if isnan(max(maximum(negbinom_r), negbinom_p))
         @addlogprob! (; loglikelihood=-Inf)
         return nothing
     end
 
-    observedcases ~ arraydist(Normal.(np, sqrtnp_1minusp))
+    observedcases ~ arraydist(NegativeBinomial.(negbinom_r, negbinom_p))
     return nothing
 end
+
+_negbinom_p(r, k) = r ./ (r .+ k)
 
 function _delayedinfections(
     T, predictedinfections, delaydistn, ngroups, ntimes, n_seeds, ::Automatic=automatic
