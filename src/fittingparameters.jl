@@ -473,7 +473,7 @@ end
         negbinom_r, delayedinfections[n_seeds:(n_seeds + ntimes), :] .* psi
     )
     
-    if isnan(max(negbinom_r, maximum(negbinom_p)))
+    if isnan(max(negbinom_r, maximum(negbinom_p))) || negbinom_p <= 0 || negbinom_p > 1
         @addlogprob! (; loglikelihood=-Inf)
         return nothing
     end
