@@ -1,6 +1,6 @@
 name = "RenewalDiD"
 uuid = "168ba0f3-27c8-4f61-a62a-678154ba4d3f"
-version = "0.0.2-DEV10"
+version = "0.0.2-DEV11"
 authors = ["Mark Pritchard <mark.pritchard@ndm.ox.ac.uk>"]
 
 [deps]

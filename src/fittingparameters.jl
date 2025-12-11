@@ -75,7 +75,7 @@ end
 
 ## Functions called by `_renewaldid`
 
-smoothmaxunit(a, b; epsilon=0.1) = (a + b + sqrt((a - b)^2 + epsilon)) / 2 
+smoothmaxunit(a, b; epsilon=0.001) = (a + b + sqrt((a - b)^2 + epsilon)) / 2 
 
 _ntimes(A::AbstractArray) = size(A, 1)
 _ngroups(A::AbstractArray) = size(A, 2)
