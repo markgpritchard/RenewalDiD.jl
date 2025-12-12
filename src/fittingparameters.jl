@@ -482,8 +482,6 @@ end
     return nothing
 end
 
-#_negbinom_p(r, k) = (r + eps()) ./ (r .+ k .+ eps())
-
 _negbinom_p(r, k) = max.(eps(), r ./ (r .+ k))
 
 function _track_s(
