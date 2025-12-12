@@ -484,7 +484,7 @@ end
 
 function _negbinom_p(r, k)
     p = max.(eps(), r ./ (r .+ k))
-    return min(p, one(p))
+    return [min(p_i, one(p_i)) for p_i in p]
 end
 
 function _track_s(
