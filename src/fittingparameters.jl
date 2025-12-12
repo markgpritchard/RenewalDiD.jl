@@ -482,7 +482,10 @@ end
     return nothing
 end
 
-_negbinom_p(r, k) = max.(eps(), r ./ (r .+ k))
+function _negbinom_p(r, k)
+    p = max.(eps(), r ./ (r .+ k))
+    return min(p, one(p))
+end
 
 function _track_s(
     s, predictedinfections::Array{T}, Ns::AbstractVector, t, j; 
