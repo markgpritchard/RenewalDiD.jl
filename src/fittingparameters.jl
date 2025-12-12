@@ -473,10 +473,7 @@ end
         negbinom_r, delayedinfections[n_seeds:(n_seeds + ntimes), :] .* psi
     )
     
-    if isnan(max(negbinom_r, maximum(negbinom_p))) || 
-        minimum(negbinom_p) <= 0 || 
-        maximum(negbinom_p) > 1
-
+    if isnan(max(negbinom_r, maximum(negbinom_p))) 
         @addlogprob! (; loglikelihood=-Inf)
         return nothing
     end
@@ -485,7 +482,7 @@ end
     return nothing
 end
 
-_negbinom_p(r, k) = r ./ (r .+ k)
+_negbinom_p(r, k) = (r + eps()) ./ (r .+ k .+ eps())
 
 function _track_s(
     s, predictedinfections::Array{T}, Ns::AbstractVector, t, j; 
