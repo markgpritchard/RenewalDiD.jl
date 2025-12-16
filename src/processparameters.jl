@@ -287,30 +287,173 @@ function _mxmatrix(df, i, ngroups, ntimes, n_seeds)
     return [getproperty(df, Symbol("M_x[$t, $j]"))[i] for t in 1:totaltimes, j in 1:ngroups]
 end
 
-function predictedR_0(model::RenewalDiDModel, chain::Chains)
-    chaindf = DataFrame(chain)
-    return _modelpredictedR_0(model, chaindf)
-end
+predictedR_0(model::RenewalDiDModel, chain::Chains) = predictedR_0(model, DataFrame(chain))
+predictedR_0(model::RenewalDiDModel, chaindf::DataFrame) = _modelpredictedR_0(model, chaindf)
 
 function _modelpredictedR_0(model, chaindf)
     nsamples = size(chaindf, 1)
     ntimes = _ntimes(model)
     ngroups = _ngroups(model)
     ninterventions = _ninterventions(model)
+    return _modelpredictedR_0(model, chaindf, nsamples, ntimes, ngroups, ninterventions)
+end
 
+function _modelpredictedR_0(model, chaindf, nsamples, ntimes, ngroups, ninterventions)
     R0s = zeros(nsamples, ntimes, ngroups)
-    
+    _modelpredictedR_0!(R0s, model, chaindf, nsamples, ntimes, ngroups, ninterventions)
+    return R0s
+end
+
+function _modelpredictedR_0!(R0s, model, chaindf, nsamples, ntimes, ngroups, ninterventions)
     for i in 1:nsamples 
-        alpha = chaindf.alpha[i]
-        gammavec = _gammavec(chaindf, i, ngroups)
-        thetavec = _thetavec(chaindf, i, ntimes; thetainterval=model.args.thetainterval)
-        tau = _tauvec(chaindf, i, ninterventions)
-        R0s[i, :, :] .= exp.(
-            _predictedlogR_0(alpha, gammavec, thetavec, tau, model.args.interventions)
+        R0s[i, :, :] .= _modelpredictedR_0iteration(
+            model, chaindf, ntimes, ngroups, ninterventions, i
         )
     end
+    return nothing
+end
 
-    return R0s
+function _modelpredictedR_0iteration(model, chaindf, ntimes, ngroups, ninterventions, i)
+    alpha = chaindf.alpha[i]
+    gammavec = _gammavec(chaindf, i, ngroups)
+    thetavec = _thetavec(chaindf, i, ntimes; thetainterval=model.args.thetainterval)
+    tau = _tauvec(chaindf, i, ninterventions)
+    return exp.(
+        _predictedlogR_0(alpha, gammavec, thetavec, tau, model.args.interventions)
+    )
+end
+
+function predictedcases(predmodel, chain; kwargs...)
+    return predictedcases(default_rng(), predmodel, DataFrame(chain); kwargs...)
+end
+
+function predictedcases(rng::AbstractRNG, predmodel, chain::Chains; kwargs...)
+    return predictedcases(rng, predmodel, DataFrame(chain); kwargs...)
+end
+
+function predictedcases(rng::AbstractRNG, predmodel, chaindf::DataFrame; kwargs...)
+    nsamples = size(chaindf, 1)
+    ntimes = _ntimes(predmodel)
+    ngroups = _ngroups(predmodel)
+    ninterventions = _ninterventions(predmodel)
+    nseeds = _nseeds(predmodel)
+    Ns = _ns(predmodel)
+    return _predictedcases(
+        rng, predmodel, chaindf, nsamples, ntimes, ngroups, ninterventions, Ns, nseeds; 
+        kwargs...
+    )
+end
+
+function _predictedcases(
+    rng::AbstractRNG, 
+    predmodel, 
+    chaindf, 
+    nsamples, 
+    ntimes, 
+    ngroups, 
+    ninterventions, 
+    Ns, 
+    nseeds; 
+    kwargs...
+)
+    outputcases = Array{Union{Float64, Missing}}(undef, nsamples, ntimes + 1, ngroups)
+    R0s = _modelpredictedR_0(predmodel, chaindf, nsamples, ntimes, ngroups, ninterventions)
+    _predictedcases!(
+        outputcases, rng, predmodel, R0s, chaindf, nsamples, ntimes, ngroups, Ns, nseeds; 
+        kwargs...
+    ) 
+    return outputcases
+end
+
+function _predictedcases!(
+    outputcases, 
+    rng::AbstractRNG, 
+    predmodel, 
+    R0s, 
+    chaindf, 
+    nsamples, 
+    ntimes, 
+    ngroups,
+    Ns, 
+    nseeds; 
+    kwargs...
+)
+    predictedinfections = Array{Float64}(undef, ntimes + nseeds, ngroups)
+
+    for i in 1:nsamples 
+        _predictedcasesiteration!(
+            outputcases, 
+            predictedinfections, 
+            rng, 
+            predmodel, 
+            R0s, 
+            chaindf, 
+            ntimes, 
+            ngroups, 
+            Ns, 
+            nseeds, 
+            i; 
+            kwargs...
+        )
+    end
+    return nothing
+end
+
+function _predictedcasesiteration!(
+    outputcases, 
+    predictedinfections, 
+    rng::AbstractRNG, 
+    predmodel, 
+    R0s, 
+    chaindf, 
+    ntimes, 
+    ngroups, 
+    Ns, 
+    nseeds, 
+    i; 
+    maxdelay=automatic, smoothmaxepsilon=0.1, kwargs...
+)
+    psi = getproperty(chaindf, :psi)[i]
+    negbinom_r = getproperty(chaindf, :negbinom_r)[i]
+
+    for j in 1:ngroups 
+        s = one(Float64)  # track `s` here rather than complex numbers 
+        for t in 1:(nseeds + ntimes) 
+            if t <= nseeds 
+                predictedinfections[t, j] = predmodel.args.expectedseedcases[t, j] * s
+            else
+                predictedinfections[t, j] = 
+                    R0s[i, (t - nseeds), j] * 
+                    sum(
+                        [
+                            predictedinfections[x, j] * predmodel.args.g(t - x; kwargs...) 
+                            for x in 1:(t - 1)
+                        ]
+                    ) * 
+                    s
+            end
+
+            s = RenewalDiD._track_s(s, predictedinfections, Ns, t, j; epsilon=smoothmaxepsilon)
+        end
+    end
+
+    # delay between infection and detection
+    delayedinfections = _delayedinfections(
+        Float64, predictedinfections, predmodel.args.delaydistn, ngroups, ntimes, nseeds, maxdelay
+    )
+
+    # negative binomail likelihood 
+    negbinom_p = _negbinom_p(
+        negbinom_r, delayedinfections[nseeds:(nseeds + ntimes), :] .* psi
+    )
+
+    if isnan(max(negbinom_r, maximum(negbinom_p))) 
+        outputcases[i, :, :] .= [missing for _ in 0:ntimes, _ in 1:ngroups]
+    else
+        outputcases[i, :, :] .= rand.(rng, NegativeBinomial.(negbinom_r, negbinom_p))
+    end
+
+    return nothing
 end
 
 

@@ -38,7 +38,8 @@ export RenewalDiDPriors
 export expectedseedcases, renewaldid, renewaldidpredmodel, renewaldidpredmodelnointervention
 export smoothmaxunit
 # processparameters.jl
-export RenewalDiDModel, nunique, predictedR_0, quantilerenewaldidinfections, rankvalues
+export RenewalDiDModel
+export nunique, predictedR_0, predictedcases, quantilerenewaldidinfections, rankvalues
 # functionsfortests.jl
 @compat public testdataframe, testmodel, testsimulation
 # Plotting.jl 
