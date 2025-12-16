@@ -12,33 +12,51 @@ end
 
 function RenewalDiD.plotmodel!(
     gl::FigOrGridLayout, modeloutputs::AbstractArray, args...; 
-    kwargs...
+    linkyaxes=true, kwargs...
 ) 
     axs = _plotmodeloutputaxs(gl, modeloutputs; kwargs...)
     RenewalDiD.plotmodel!(axs, modeloutputs, args...; kwargs...)
-    linkaxes!(axs...)
+
+    if linkyaxes
+        linkaxes!(axs...)
+    else 
+        linkxaxes!(axs...)
+    end
+
     return axs
 end
 
 function RenewalDiD.plotmodel!(
     gl::FigOrGridLayout, R0s::AbstractArray, modeloutputs::AbstractArray, args...; 
-    kwargs...
+    linkyaxes=true, kwargs...
 ) 
     r0axs = _plotmodeloutputaxs(gl, R0s; kwargs...)
     outputaxs = _plotmodeloutputaxs(gl, modeloutputs; row=2, kwargs...)
     _plotmodel2!(r0axs, outputaxs, R0s, modeloutputs, args...; kwargs...)
     linkaxes!(r0axs...)
-    linkaxes!(outputaxs...)
+
+    if linkyaxes
+        linkaxes!(outputaxs...)
+    else 
+        linkxaxes!(outputaxs...)
+    end
+    
     return nothing
 end
 
 function RenewalDiD.plotmodel!(
     gl::FigOrGridLayout, data::AbstractRenewalDiDData, args...; 
-    kwargs...
+    linkyaxes=true, kwargs...
 ) 
     axs = _plotmodeloutputaxs(gl, data; kwargs...)
     RenewalDiD.plotmodel!(axs, nothing, data, args...; kwargs...)
-    linkaxes!(axs...)
+
+    if linkyaxes
+        linkaxes!(axs...)
+    else 
+        linkxaxes!(axs...)
+    end
+
     return axs
 end
 
@@ -149,11 +167,17 @@ end
 
 function RenewalDiD.plotmodeloutput!(
     gl::FigOrGridLayout, A::AbstractArray, t=automatic; 
-    kwargs...
+    linkyaxes=true, kwargs...
 ) 
     axs = _plotmodeloutputaxs(gl, A; kwargs...)
     _plotmodeloutput!(axs, A, t; kwargs...)
-    linkaxes!(axs...)
+
+    if linkyaxes
+        linkaxes!(axs...)
+    else 
+        linkxaxes!(axs...)
+    end
+
     return axs
 end
 
@@ -272,11 +296,17 @@ end
 
 function RenewalDiD.plotmodeldata!(
     gl::FigOrGridLayout, A::AbstractArray, t=automatic; 
-    kwargs...
+    linkyaxes=true, kwargs...
 ) 
     axs = _plotmodeloutputaxs(gl, A; kwargs...)
     _plotmodeldata!(axs, A, t; kwargs...)
-    linkaxes!(axs...)
+
+    if linkyaxes
+        linkaxes!(axs...)
+    else 
+        linkxaxes!(axs...)
+    end
+
     return axs
 end
 
@@ -400,7 +430,7 @@ function RenewalDiD.plotmodelintervention!(
 ) 
     axs = _plotmodeloutputaxs(gl, A; kwargs...)
     RenewalDiD.plotmodelintervention!(axs, A; kwargs...)
-    linkaxes!(axs...)
+    #linkaxes!(axs...)
     return axs
 end
 

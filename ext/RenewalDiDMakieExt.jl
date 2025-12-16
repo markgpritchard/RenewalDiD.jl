@@ -5,7 +5,7 @@ module RenewalDiDMakieExt
 using RenewalDiD
 using RenewalDiD: Automatic, automatic
 using Makie: Axis, Cycled, Figure, GridLayout, Label
-using Makie: band!, lines!, linkaxes!, scatter!, vlines!
+using Makie: band!, lines!, linkaxes!, linkxaxes!, scatter!, vlines!
 
 const FigOrGridLayout = Union{Figure, GridLayout} 
 const StringOrSymbol = Union{<:AbstractString, Symbol} 
