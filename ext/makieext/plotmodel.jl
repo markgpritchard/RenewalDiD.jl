@@ -482,4 +482,4 @@ _plottingdenominator_false(::Nothing, naxes) = ones(Int, naxes)
 
 _linkaxes!(::Val{true}, axs...) = linkaxes!(axs...)
 _linkaxes!(::Val{false}, axs...) = linkxaxes!(axs...)
-_linkaxes!(linkyaxes::Book, axs...) = linkxaxes!(Val(linkyaxes), axs...)
+_linkaxes!(linkyaxes::Book, axs...) = _linkaxes!(Val(linkyaxes), axs...)
