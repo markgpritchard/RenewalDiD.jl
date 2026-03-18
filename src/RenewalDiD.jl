@@ -7,8 +7,7 @@ using Compat: @compat
 using DataFrames: DataFrame, insertcols!
 using Distributions: Beta, Distribution, Exponential, LogNormal, NegativeBinomial, Normal
 using Distributions: cdf, product_distribution, truncated
-using DistributionsAD: arraydist, filldist
-using DynamicPPL: @addlogprob!, @model, Model
+using DynamicPPL: @addlogprob!, @model, Model, arraydist, filldist
 using MCMCChains: Chains
 using Random: AbstractRNG, default_rng
 using StatsBase: Weights, coef, coefnames, mean, ordinalrank, quantile, sample
