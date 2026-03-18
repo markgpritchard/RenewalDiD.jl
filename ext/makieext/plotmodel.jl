@@ -16,13 +16,7 @@ function RenewalDiD.plotmodel!(
 ) 
     axs = _plotmodeloutputaxs(gl, modeloutputs; kwargs...)
     RenewalDiD.plotmodel!(axs, modeloutputs, args...; kwargs...)
-
-    if linkyaxes
-        linkaxes!(axs...)
-    else 
-        linkxaxes!(axs...)
-    end
-
+    _linkaxes!(linkyaxes, axs...)
     return axs
 end
 
@@ -34,13 +28,7 @@ function RenewalDiD.plotmodel!(
     outputaxs = _plotmodeloutputaxs(gl, modeloutputs; row=2, kwargs...)
     _plotmodel2!(r0axs, outputaxs, R0s, modeloutputs, args...; kwargs...)
     linkaxes!(r0axs...)
-
-    if linkyaxes
-        linkaxes!(outputaxs...)
-    else 
-        linkxaxes!(outputaxs...)
-    end
-    
+    _linkaxes!(linkyaxes, axs...)
     return nothing
 end
 
@@ -50,13 +38,7 @@ function RenewalDiD.plotmodel!(
 ) 
     axs = _plotmodeloutputaxs(gl, data; kwargs...)
     RenewalDiD.plotmodel!(axs, nothing, data, args...; kwargs...)
-
-    if linkyaxes
-        linkaxes!(axs...)
-    else 
-        linkxaxes!(axs...)
-    end
-
+    _linkaxes!(linkyaxes, axs...)
     return axs
 end
 
@@ -171,13 +153,7 @@ function RenewalDiD.plotmodeloutput!(
 ) 
     axs = _plotmodeloutputaxs(gl, A; kwargs...)
     _plotmodeloutput!(axs, A, t; kwargs...)
-
-    if linkyaxes
-        linkaxes!(axs...)
-    else 
-        linkxaxes!(axs...)
-    end
-
+    _linkaxes!(linkyaxes, axs...)
     return axs
 end
 
@@ -503,3 +479,6 @@ end
 
 _plottingdenominator_false(Ns::Vector{T}, naxes) where T = ones(T, naxes) 
 _plottingdenominator_false(::Nothing, naxes) = ones(Int, naxes) 
+
+_linkaxes!(::Val{true}, axs...) = linkaxes!(axs...)
+_linkaxes!(::Val{false}, axs...) = linkxaxes!(axs...)
