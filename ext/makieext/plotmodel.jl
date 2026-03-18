@@ -12,7 +12,7 @@ end
 
 function RenewalDiD.plotmodel!(
     gl::FigOrGridLayout, modeloutputs::AbstractArray, args...; 
-    linkyaxes=true, kwargs...
+    linkyaxes=Val{true}(), kwargs...
 ) 
     axs = _plotmodeloutputaxs(gl, modeloutputs; kwargs...)
     RenewalDiD.plotmodel!(axs, modeloutputs, args...; kwargs...)
@@ -22,7 +22,7 @@ end
 
 function RenewalDiD.plotmodel!(
     gl::FigOrGridLayout, R0s::AbstractArray, modeloutputs::AbstractArray, args...; 
-    linkyaxes=true, kwargs...
+    linkyaxes=Val{true}(), kwargs...
 ) 
     r0axs = _plotmodeloutputaxs(gl, R0s; kwargs...)
     outputaxs = _plotmodeloutputaxs(gl, modeloutputs; row=2, kwargs...)
@@ -34,7 +34,7 @@ end
 
 function RenewalDiD.plotmodel!(
     gl::FigOrGridLayout, data::AbstractRenewalDiDData, args...; 
-    linkyaxes=true, kwargs...
+    linkyaxes=Val{true}(), kwargs...
 ) 
     axs = _plotmodeloutputaxs(gl, data; kwargs...)
     RenewalDiD.plotmodel!(axs, nothing, data, args...; kwargs...)
@@ -149,7 +149,7 @@ end
 
 function RenewalDiD.plotmodeloutput!(
     gl::FigOrGridLayout, A::AbstractArray, t=automatic; 
-    linkyaxes=true, kwargs...
+    linkyaxes=Val{true}(), kwargs...
 ) 
     axs = _plotmodeloutputaxs(gl, A; kwargs...)
     _plotmodeloutput!(axs, A, t; kwargs...)
@@ -482,3 +482,4 @@ _plottingdenominator_false(::Nothing, naxes) = ones(Int, naxes)
 
 _linkaxes!(::Val{true}, axs...) = linkaxes!(axs...)
 _linkaxes!(::Val{false}, axs...) = linkxaxes!(axs...)
+_linkaxes!(linkyaxes::Book, axs...) = linkxaxes!(Val(linkyaxes), axs...)
